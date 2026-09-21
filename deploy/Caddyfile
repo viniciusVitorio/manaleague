@@ -1,0 +1,17 @@
+{$CADDY_DOMAINS:http://localhost} {
+    root * /var/www/html/public
+    encode zstd gzip
+    php_fastcgi app:9000
+    file_server
+
+    @hidden path /.env /.git/* /storage/*.key
+    respond @hidden 404
+
+    header {
+        -Server
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    }
+}

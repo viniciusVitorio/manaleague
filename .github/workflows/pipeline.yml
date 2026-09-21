@@ -1,0 +1,165 @@
+name: SSDLC Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Automated tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, intl
+          coverage: xdebug
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Run automated tests
+        run: php artisan test --coverage-clover=coverage.xml
+      - name: Keep coverage for Sonar
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+          retention-days: 1
+
+  security:
+    name: Dependency and filesystem scan
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Composer dependency audit
+        run: composer audit --locked --no-interaction
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+  sonar:
+    name: SonarQube Cloud quality gate
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage
+      - name: SonarQube analysis
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          args: >
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+      - name: Enforce quality gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+
+  deploy:
+    name: Deploy to AWS EC2
+    runs-on: ubuntu-latest
+    needs: [security, sonar]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    concurrency:
+      group: manaleague-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Discover runner IP
+        id: runner-ip
+        run: echo "cidr=$(curl --fail --silent https://checkip.amazonaws.com)/32" >> "$GITHUB_OUTPUT"
+      - name: Temporarily allow runner SSH
+        env:
+          SECURITY_GROUP_ID: ${{ secrets.EC2_SECURITY_GROUP_ID }}
+          RUNNER_CIDR: ${{ steps.runner-ip.outputs.cidr }}
+        run: |
+          aws ec2 authorize-security-group-ingress --group-id "$SECURITY_GROUP_ID" --protocol tcp --port 22 --cidr "$RUNNER_CIDR" 2>aws-error.log || {
+            grep -q 'InvalidPermission.Duplicate' aws-error.log || { cat aws-error.log; exit 1; }
+          }
+      - name: Validate production APP_KEY
+        env:
+          APP_KEY: ${{ secrets.APP_KEY }}
+        run: |
+          if [[ "${APP_KEY:0:7}" != "base64:" || "${#APP_KEY}" -ne 51 ]]; then
+            echo "APP_KEY must be a Laravel base64 key with 32 random bytes." >&2
+            exit 1
+          fi
+      - name: Prepare SSH and release files
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          APP_KEY: ${{ secrets.APP_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/manaleague
+          chmod 600 ~/.ssh/manaleague
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          printf 'APP_NAME=ManaLeague\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://manaleague.com.br\nLOG_CHANNEL=stderr\nLOG_LEVEL=warning\nDB_CONNECTION=sqlite\nDB_DATABASE=/var/www/html/storage/app/database.sqlite\nSESSION_DRIVER=database\nSESSION_ENCRYPT=true\nSESSION_SECURE_COOKIE=true\nSESSION_HTTP_ONLY=true\nSESSION_SAME_SITE=lax\nCACHE_STORE=database\nQUEUE_CONNECTION=database\nAPP_PORT=80\nHTTPS_PORT=443\nCADDY_DOMAINS="manaleague.com.br, www.manaleague.com.br"\n' "$APP_KEY" > deploy.env
+          tar --exclude=.git --exclude=terraform --exclude=vendor --exclude=.env --exclude=deploy.env -czf /tmp/release.tar.gz .
+      - name: Upload release
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          scp -i ~/.ssh/manaleague /tmp/release.tar.gz deploy.env "$EC2_USER@$EC2_HOST:/tmp/"
+      - name: Activate release
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh -i ~/.ssh/manaleague "$EC2_USER@$EC2_HOST" "RELEASE='${GITHUB_SHA}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          release_dir="/opt/manaleague/releases/$RELEASE"
+          mkdir -p "$release_dir"
+          tar -xzf /tmp/release.tar.gz -C "$release_dir"
+          mv /tmp/deploy.env "$release_dir/.env"
+          ln -sfn "$release_dir" /opt/manaleague/current
+          cd /opt/manaleague/current
+          for attempt in $(seq 1 30); do
+            if command -v docker >/dev/null && sudo docker info >/dev/null 2>&1; then break; fi
+            sleep 10
+          done
+          sudo docker info >/dev/null
+          sudo docker compose -p manaleague up -d --build --remove-orphans
+          sudo docker compose -p manaleague exec -T app php artisan optimize
+          curl --fail --retry 10 --retry-delay 3 --retry-all-errors --resolve manaleague.com.br:443:127.0.0.1 https://manaleague.com.br/login >/dev/null
+          REMOTE
+      - name: Remove temporary SSH access
+        if: always()
+        continue-on-error: true
+        env:
+          SECURITY_GROUP_ID: ${{ secrets.EC2_SECURITY_GROUP_ID }}
+          RUNNER_CIDR: ${{ steps.runner-ip.outputs.cidr }}
+        run: aws ec2 revoke-security-group-ingress --group-id "$SECURITY_GROUP_ID" --protocol tcp --port 22 --cidr "$RUNNER_CIDR"

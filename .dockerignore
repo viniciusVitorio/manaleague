@@ -1,0 +1,9 @@
+.git
+.github
+.env
+terraform
+vendor
+node_modules
+bootstrap/cache/*.php
+storage/logs/*
+storage/app/database.sqlite

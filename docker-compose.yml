@@ -1,0 +1,50 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      APP_NAME: "${APP_NAME:-ManaLeague}"
+      APP_ENV: "${APP_ENV:-local}"
+      APP_KEY: "${APP_KEY:-base64:1hs07BcqssbFARyoCdJnUtazb7orhpLJfHjoL7w3Aj8=}"
+      APP_DEBUG: "${APP_DEBUG:-true}"
+      APP_URL: "${APP_URL:-http://localhost:8080}"
+      LOG_CHANNEL: "${LOG_CHANNEL:-stderr}"
+      LOG_LEVEL: "${LOG_LEVEL:-debug}"
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /var/www/html/storage/app/database.sqlite
+      SESSION_DRIVER: database
+      SESSION_ENCRYPT: "true"
+      SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-false}"
+      SESSION_HTTP_ONLY: "true"
+      SESSION_SAME_SITE: lax
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+    volumes:
+      - app_storage:/var/www/html/storage
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan about >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  web:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      CADDY_DOMAINS: "${CADDY_DOMAINS:-http://localhost}"
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:80"
+      - "${HTTPS_PORT:-8443}:443"
+    volumes:
+      - .:/var/www/html:ro
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  app_storage:
+  caddy_data:
+  caddy_config:
