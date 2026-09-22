@@ -1,0 +1,15 @@
+@extends('layouts.app')
+@section('content')
+<header class="hero compact"><div><a class="back-link" href="{{ route('profiles.index') }}">← Meu perfil</a><span class="eyebrow">Configurações</span><h1>Editar perfil</h1><p>Esses dados aparecem nas suas próximas inscrições.</p></div></header>
+<div class="profile-columns">
+<section class="card section-card"><h2>Dados pessoais</h2><form method="POST" action="{{ route('profiles.update') }}">@csrf @method('PATCH')
+<label>Apelido<input name="nickname" value="{{ old('nickname',$profile->nickname) }}" maxlength="80" required></label>
+<label>Avatar <small>Use um emoji que represente você</small><input name="avatar" value="{{ old('avatar',$profile->avatar) }}" maxlength="20" placeholder="🧙"></label>
+<button class="btn btn-primary">Salvar perfil</button></form></section>
+<section class="card section-card"><span class="eyebrow">Seu arsenal</span><h2>Meus decks</h2>
+@forelse($profile->decks as $deck)<div class="history-row"><div><strong>{{ $deck->is_primary?'★ ':'' }}{{ $deck->name }}</strong><small>{{ $deck->colors?:'Cores não informadas' }}</small></div><form method="POST" action="{{ route('decks.destroy',$deck) }}">@csrf @method('DELETE')<button class="icon-button" aria-label="Remover deck">×</button></form></div>@empty<p class="muted">Nenhum deck cadastrado.</p>@endforelse
+<form method="POST" action="{{ route('decks.store') }}">@csrf<label>Nome do deck<input name="name" maxlength="100" required placeholder="Rakdos Vampires"></label>
+<label>Cores<select name="colors"><option value="">Não informar</option>@foreach(['W','U','B','R','G','WU','UB','BR','RG','GW','WB','UR','BG','RW','GU','WUB','UBR','BRG','RGW','GWU','WUBRG','C'] as $color)<option value="{{ $color }}">{{ $color }}</option>@endforeach</select></label>
+<label class="check-label"><input type="checkbox" name="is_primary" value="1"> Usar como deck principal</label><button class="btn btn-secondary">Adicionar deck</button></form>
+</section></div>
+@endsection

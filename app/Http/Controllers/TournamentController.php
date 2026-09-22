@@ -46,7 +46,7 @@ class TournamentController extends Controller
         $final = $tournament->matches->firstWhere('stage', GameMatch::STAGE_FINAL);
         $thirdPlace = $tournament->matches->firstWhere('stage', GameMatch::STAGE_THIRD_PLACE);
         $enrolledProfileIds = $tournament->players->pluck('player_profile_id')->filter();
-        $friends = $tournament->user->playerProfiles()->where('is_friend', true)->whereNotIn('id', $enrolledProfileIds)->orderBy('nickname')->get();
+        $friends = $tournament->user->friendProfiles()->whereNotIn('player_profiles.id', $enrolledProfileIds)->orderBy('nickname')->get();
         $recap = $recaps->for($tournament);
         return view('tournaments.show', compact('tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'friends', 'recap'));
     }

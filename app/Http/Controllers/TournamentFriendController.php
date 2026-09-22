@@ -13,7 +13,7 @@ class TournamentFriendController extends Controller
     {
         $this->authorize('update', $tournament);
         abort_unless($tournament->status === Tournament::STATUS_SETUP, 409);
-        abort_unless($profile->user_id === $request->user()->id && $profile->is_friend, 403);
+        abort_unless($request->user()->friendProfiles()->whereKey($profile->id)->exists(), 403);
         $player = $tournament->players()->firstOrCreate(
             ['player_profile_id' => $profile->id],
             ['name' => $profile->nickname, 'deck_name' => $profile->preferred_deck_name, 'deck_colors' => $profile->preferred_deck_colors],
