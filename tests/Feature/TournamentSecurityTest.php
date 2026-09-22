@@ -31,7 +31,7 @@ class TournamentSecurityTest extends TestCase
         ]);
 
         $this->actingAs($intruder)->get(route('tournaments.show', $tournament))->assertForbidden();
-        $this->actingAs($intruder)->post(route('players.store', $tournament), ['name' => 'Intruso'])->assertForbidden();
+        $this->actingAs($intruder)->post(route('tournaments.start', $tournament))->assertForbidden();
         $this->actingAs($intruder)->delete(route('tournaments.destroy', $tournament))->assertForbidden();
         $this->assertDatabaseHas('tournaments', ['id' => $tournament->id]);
     }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\GameMatch;
 use App\Models\Tournament;
 use App\Services\StandingsService;
+use App\Services\TournamentRecapService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,14 +18,10 @@ class TournamentController extends Controller
     public function index(Request $request): View
     {
         $tournaments = $request->user()->tournaments()->withCount('players')->latest()->get();
-
         return view('tournaments.index', compact('tournaments'));
     }
 
-    public function create(): View
-    {
-        return view('tournaments.create');
-    }
+    public function create(): View { return view('tournaments.create'); }
 
     public function store(Request $request): RedirectResponse
     {
@@ -33,32 +30,31 @@ class TournamentController extends Controller
             'format' => ['required', Rule::in(['Pauper', 'Commander', 'Standard', 'Modern', 'Draft', 'Outro'])],
             'tournament_date' => ['required', 'date'],
         ]);
-
         $validated['public_token'] = Str::random(40);
         $validated['public_slug'] = Str::slug($validated['name']).'-'.Str::lower(Str::random(8));
         $validated['invite_token'] = Str::random(40);
         $tournament = $request->user()->tournaments()->create($validated);
-
         return redirect()->route('tournaments.show', $tournament)->with('status', 'Torneio criado. Agora chame a galera!');
     }
 
-    public function show(Tournament $tournament, StandingsService $standings): View
+    public function show(Tournament $tournament, StandingsService $standings, TournamentRecapService $recaps): View
     {
         $this->authorize('view', $tournament);
-        $tournament->load(['players', 'matches' => fn ($query) => $query->orderBy('round')->orderBy('id'), 'matches.playerOne', 'matches.playerTwo']);
+        $tournament->load(['players.profile', 'matches' => fn ($query) => $query->orderBy('round')->orderBy('id'), 'matches.playerOne.profile', 'matches.playerTwo.profile']);
         $ranking = $standings->for($tournament);
         $rounds = $tournament->matches->groupBy('round');
         $final = $tournament->matches->firstWhere('stage', GameMatch::STAGE_FINAL);
         $thirdPlace = $tournament->matches->firstWhere('stage', GameMatch::STAGE_THIRD_PLACE);
-
-        return view('tournaments.show', compact('tournament', 'ranking', 'rounds', 'final', 'thirdPlace'));
+        $enrolledProfileIds = $tournament->players->pluck('player_profile_id')->filter();
+        $friends = $tournament->user->playerProfiles()->where('is_friend', true)->whereNotIn('id', $enrolledProfileIds)->orderBy('nickname')->get();
+        $recap = $recaps->for($tournament);
+        return view('tournaments.show', compact('tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'friends', 'recap'));
     }
 
     public function destroy(Tournament $tournament): RedirectResponse
     {
         $this->authorize('delete', $tournament);
         DB::transaction(fn () => $tournament->delete());
-
         return redirect()->route('tournaments.index')->with('status', 'Torneio excluido.');
     }
 }

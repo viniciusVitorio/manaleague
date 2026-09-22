@@ -9,7 +9,7 @@ use Tests\TestCase;
 class TournamentManagementTest extends TestCase
 {
  use RefreshDatabase;
- public function test_organizer_can_manage_tournament_and_players(): void
+ public function test_organizer_can_manage_tournament_and_invited_players(): void
  {
   $user=User::factory()->create();
   $this->actingAs($user)->get(route('tournaments.index'))->assertOk();
@@ -19,7 +19,7 @@ class TournamentManagementTest extends TestCase
   $this->assertNotNull($tournament->public_slug);
   $this->assertNotNull($tournament->invite_token);
   $this->actingAs($user)->get(route('tournaments.show',$tournament))->assertOk();
-  $this->actingAs($user)->post(route('players.store',$tournament),['name'=>'Jace','deck_name'=>'Mono Blue','deck_colors'=>'U'])->assertRedirect();
+  $this->post(route('tournaments.invite.store',$tournament->invite_token),['name'=>'Jace','deck_name'=>'Mono Blue','deck_colors'=>'U'])->assertRedirect();
   $player=$tournament->players()->sole();
   $this->actingAs($user)->delete(route('players.destroy',[$tournament,$player]))->assertRedirect();
   $this->assertDatabaseMissing('players',['id'=>$player->id]);

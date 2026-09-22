@@ -12,7 +12,7 @@
     <div class="container nav-inner">
         <a class="brand" href="{{ auth()->check() ? route('tournaments.index') : route('home') }}"><span class="brand-mark">M</span><span>ManaLeague</span></a>
         @auth
-            <div class="nav-actions"><span class="nav-user">{{ auth()->user()->name }}</span><form method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-ghost btn-small">Sair</button></form></div>
+            <div class="nav-actions"><a class="nav-link" href="{{ route('profiles.index') }}">Jogadores</a><span class="nav-user">{{ auth()->user()->name }}</span><form method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-ghost btn-small">Sair</button></form></div>
         @else
             <div class="nav-actions"><a class="btn btn-ghost btn-small" href="{{ route('login') }}">Entrar</a><a class="btn btn-primary btn-small nav-create" href="{{ route('register') }}">Criar conta</a></div>
         @endauth
