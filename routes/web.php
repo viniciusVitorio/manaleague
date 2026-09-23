@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DeckController;
+use App\Http\Controllers\FriendRequestController;
 use App\Http\Controllers\MatchController;
 use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\PlayerProfileController;
@@ -37,6 +38,8 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/me/decks/{deck}', [DeckController::class, 'destroy'])->name('decks.destroy');
     Route::get('/players/{profile}', [PlayerProfileController::class, 'show'])->name('profiles.show');
     Route::patch('/players/{profile}/friend', [PlayerProfileController::class, 'toggleFriend'])->name('profiles.friend');
+    Route::patch('/me/friend-requests/{requester}/accept', [FriendRequestController::class, 'accept'])->name('friends.accept');
+    Route::delete('/me/friend-requests/{requester}', [FriendRequestController::class, 'reject'])->name('friends.reject');
 
     Route::resource('tournaments', TournamentController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
     Route::post('/tournaments/{tournament}/invite/regenerate', [TournamentController::class, 'regenerateInvite'])->name('tournaments.invite.regenerate');

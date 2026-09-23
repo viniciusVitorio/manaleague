@@ -16,5 +16,5 @@ class PlayerProfile extends Model
     public function account(): BelongsTo { return $this->belongsTo(User::class, 'account_user_id'); }
     public function entries(): HasMany { return $this->hasMany(Player::class); }
     public function decks(): HasMany { return $this->hasMany(Deck::class); }
-    public function friendedBy(): BelongsToMany { return $this->belongsToMany(User::class)->withTimestamps(); }
+    public function friendedBy(): BelongsToMany { return $this->belongsToMany(User::class)->withPivot('status')->withTimestamps(); }
 }

@@ -24,7 +24,7 @@ class User extends Authenticatable
     public function tournaments(): HasMany { return $this->hasMany(Tournament::class); }
     public function playerProfiles(): HasMany { return $this->hasMany(PlayerProfile::class); }
     public function playerProfile(): HasOne { return $this->hasOne(PlayerProfile::class, 'account_user_id'); }
-    public function friendProfiles(): BelongsToMany { return $this->belongsToMany(PlayerProfile::class)->withTimestamps(); }
+    public function friendProfiles(): BelongsToMany { return $this->belongsToMany(PlayerProfile::class)->withPivot('status')->withTimestamps(); }
 
     public function ensurePlayerProfile(): PlayerProfile
     {

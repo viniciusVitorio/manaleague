@@ -35,6 +35,10 @@ class PlayerProfileTest extends TestCase
         $this->actingAs($player)->get(route('profiles.index'))->assertOk()->assertSee('Vini')->assertSee('Rakdos Vampires');
 
         $this->actingAs($organizer)->patch(route('profiles.friend', $profile))->assertRedirect();
+        $this->assertDatabaseHas('player_profile_user', ['user_id' => $organizer->id, 'player_profile_id' => $profile->id, 'status' => 'pending']);
+        $this->actingAs($player)->get(route('profiles.index'))->assertOk()->assertSee('Solicitações de amizade');
+        $this->actingAs($player)->patch(route('friends.accept', $organizer))->assertRedirect();
+        $this->assertDatabaseHas('player_profile_user', ['user_id' => $organizer->id, 'player_profile_id' => $profile->id, 'status' => 'accepted']);
         $second = $this->tournament($organizer, 'Segundo');
         $this->actingAs($organizer)->post(route('tournaments.friends.store', [$second, $profile]))->assertRedirect();
         $this->assertDatabaseHas('players', ['tournament_id' => $second->id, 'player_profile_id' => $profile->id]);
