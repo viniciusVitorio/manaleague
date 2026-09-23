@@ -13,6 +13,7 @@ class TournamentFriendController extends Controller
     {
         $this->authorize('update', $tournament);
         abort_unless($tournament->status === Tournament::STATUS_SETUP, 409);
+        abort_if($tournament->max_players && $tournament->players()->count() >= $tournament->max_players, 409, 'O torneio atingiu o limite de participantes.');
         abort_unless($request->user()->friendProfiles()->whereKey($profile->id)->exists(), 403);
         $player = $tournament->players()->firstOrCreate(
             ['player_profile_id' => $profile->id],

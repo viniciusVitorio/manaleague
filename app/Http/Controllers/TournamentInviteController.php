@@ -21,6 +21,7 @@ class TournamentInviteController extends Controller
     {
         $tournament = Tournament::query()->where('invite_token', $token)->firstOrFail();
         abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'As inscrições deste torneio foram encerradas.');
+        abort_if($tournament->max_players && $tournament->players()->count() >= $tournament->max_players, 409, 'O torneio atingiu o limite de participantes.');
         $profile = $request->user()->ensurePlayerProfile();
 
         if ($tournament->players()->where('player_profile_id', $profile->id)->exists()) {

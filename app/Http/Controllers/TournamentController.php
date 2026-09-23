@@ -15,6 +15,8 @@ use Illuminate\View\View;
 
 class TournamentController extends Controller
 {
+    private const FORMATS = ['Pauper', 'Commander', 'Standard', 'Modern', 'Draft', 'Outro'];
+
     public function index(Request $request): View
     {
         $tournaments = $request->user()->tournaments()->withCount('players')->latest()->get();
@@ -25,11 +27,7 @@ class TournamentController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
-            'format' => ['required', Rule::in(['Pauper', 'Commander', 'Standard', 'Modern', 'Draft', 'Outro'])],
-            'tournament_date' => ['required', 'date'],
-        ]);
+        $validated = $this->validateTournament($request);
         $validated['public_token'] = Str::random(40);
         $validated['public_slug'] = Str::slug($validated['name']).'-'.Str::lower(Str::random(8));
         $validated['invite_token'] = Str::random(40);
@@ -51,10 +49,47 @@ class TournamentController extends Controller
         return view('tournaments.show', compact('tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'friends', 'recap'));
     }
 
+    public function edit(Tournament $tournament): View
+    {
+        $this->authorize('update', $tournament);
+        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'Só é possível editar antes do início.');
+        return view('tournaments.edit', compact('tournament'));
+    }
+
+    public function update(Request $request, Tournament $tournament): RedirectResponse
+    {
+        $this->authorize('update', $tournament);
+        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409);
+        $validated = $this->validateTournament($request);
+        if ($validated['max_players'] && $validated['max_players'] < $tournament->players()->count()) {
+            return back()->withErrors(['max_players' => 'O limite não pode ser menor que o total de inscritos.'])->withInput();
+        }
+        $tournament->update($validated);
+        return redirect()->route('tournaments.show', $tournament)->with('status', 'Torneio atualizado.');
+    }
+
+    public function regenerateInvite(Tournament $tournament): RedirectResponse
+    {
+        $this->authorize('update', $tournament);
+        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409);
+        $tournament->update(['invite_token' => Str::random(40)]);
+        return back()->with('status', 'Novo link criado. O convite anterior não funciona mais.');
+    }
+
     public function destroy(Tournament $tournament): RedirectResponse
     {
         $this->authorize('delete', $tournament);
         DB::transaction(fn () => $tournament->delete());
         return redirect()->route('tournaments.index')->with('status', 'Torneio excluido.');
+    }
+
+    private function validateTournament(Request $request): array
+    {
+        return $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'format' => ['required', Rule::in(self::FORMATS)],
+            'tournament_date' => ['required', 'date'],
+            'max_players' => ['nullable', 'integer', 'min:4', 'max:128'],
+        ]);
     }
 }

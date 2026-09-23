@@ -19,7 +19,7 @@ class Tournament extends Model
 
     public const STATUS_FINISHED = 'finished';
 
-    protected $fillable = ['name', 'format', 'tournament_date', 'status', 'public_token', 'public_slug', 'invite_token'];
+    protected $fillable = ['name', 'format', 'tournament_date', 'max_players', 'status', 'public_token', 'public_slug', 'invite_token'];
 
     protected function casts(): array
     {

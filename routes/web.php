@@ -31,11 +31,15 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/me/profile/edit', [PlayerProfileController::class, 'edit'])->name('profiles.edit');
     Route::patch('/me/profile', [PlayerProfileController::class, 'update'])->name('profiles.update');
     Route::post('/me/decks', [DeckController::class, 'store'])->name('decks.store');
+    Route::get('/me/decks/{deck}/edit', [DeckController::class, 'edit'])->name('decks.edit');
+    Route::patch('/me/decks/{deck}', [DeckController::class, 'update'])->name('decks.update');
+    Route::patch('/me/decks/{deck}/primary', [DeckController::class, 'primary'])->name('decks.primary');
     Route::delete('/me/decks/{deck}', [DeckController::class, 'destroy'])->name('decks.destroy');
     Route::get('/players/{profile}', [PlayerProfileController::class, 'show'])->name('profiles.show');
     Route::patch('/players/{profile}/friend', [PlayerProfileController::class, 'toggleFriend'])->name('profiles.friend');
 
-    Route::resource('tournaments', TournamentController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
+    Route::resource('tournaments', TournamentController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
+    Route::post('/tournaments/{tournament}/invite/regenerate', [TournamentController::class, 'regenerateInvite'])->name('tournaments.invite.regenerate');
     Route::delete('/tournaments/{tournament}/players/{player}', [PlayerController::class, 'destroy'])->name('players.destroy');
     Route::post('/tournaments/{tournament}/friends/{profile}', [TournamentFriendController::class, 'store'])->name('tournaments.friends.store');
     Route::put('/tournaments/{tournament}/matches/{match}', [MatchController::class, 'update'])->name('matches.update');
