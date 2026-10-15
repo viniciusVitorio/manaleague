@@ -9,6 +9,7 @@
         <label>Senha<input type="password" name="password" required></label>
         <button class="btn btn-primary btn-block">Entrar</button>
     </form>
+    <p class="auth-link"><a href="{{ route('password.request') }}">Esqueci minha senha</a></p>
     <p class="auth-link">Sem conta? <a href="{{ route('register') }}">Crie sua conta</a></p>
 </div></div>
 @endsection
