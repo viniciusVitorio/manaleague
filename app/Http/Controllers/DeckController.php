@@ -13,12 +13,23 @@ use Illuminate\View\View;
 
 class DeckController extends Controller
 {
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+=======
+>>>>>>> f90ce10 (feat - deck configs)
     public function __construct(private readonly DeckBuilderService $builder) {}
 
     public function show(Request $request, Deck $deck): View
     {
         $isOwner = $this->isOwner($request, $deck);
+<<<<<<< HEAD
         abort_unless($isOwner || $this->isFriendOfOwner($request, $deck), 403);
+=======
+        $isFriend = $this->isFriendOfOwner($request, $deck);
+        abort_unless($isOwner || $isFriend, 403);
+        abort_unless($isOwner || $deck->is_visible_to_friends, 404);
+>>>>>>> f90ce10 (feat - deck configs)
 
         $deck->load('profile');
         $summary = $this->builder->summary($deck);
@@ -26,6 +37,10 @@ class DeckController extends Controller
         return view('decks.show', compact('deck', 'summary', 'isOwner'));
     }
 
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> f90ce10 (feat - deck configs)
     public function edit(Request $request, Deck $deck): View
     {
         $this->ensureOwner($request, $deck);
@@ -36,10 +51,22 @@ class DeckController extends Controller
     {
         $profile = $request->user()->ensurePlayerProfile();
         $validated = $this->validateDeck($request);
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+        DB::transaction(function () use ($profile, $validated): void {
+            if ($validated['is_primary'] ?? false) $profile->decks()->update(['is_primary' => false]);
+=======
+        $validated['is_visible_to_friends'] = $request->boolean('is_visible_to_friends');
+>>>>>>> f90ce10 (feat - deck configs)
         $deck = DB::transaction(function () use ($profile, $validated): Deck {
             // O primeiro deck vira principal automaticamente.
             $validated['is_primary'] = ($validated['is_primary'] ?? false) || ! $profile->decks()->exists();
             if ($validated['is_primary']) $profile->decks()->update(['is_primary' => false]);
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> f90ce10 (feat - deck configs)
             $deck = $profile->decks()->create($validated);
             if ($deck->is_primary) $this->syncPrimary($deck);
             return $deck;
@@ -87,6 +114,7 @@ class DeckController extends Controller
             'colors' => ['nullable', 'string', 'max:10', 'regex:/^[WUBRGC,]*$/'],
             'format' => ['nullable', Rule::in(Deck::FORMATS)],
             'is_primary' => ['nullable', 'boolean'],
+            'is_visible_to_friends' => ['sometimes', 'boolean'],
         ]);
     }
 

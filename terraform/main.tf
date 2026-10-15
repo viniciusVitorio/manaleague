@@ -101,6 +101,13 @@ resource "aws_instance" "app" {
     Environment = "academic"
     ManagedBy   = "Terraform"
   }
+
+  # Protege o banco (SQLite no disco da instancia): uma AMI mais nova ou o user_data com outra
+  # quebra de linha (CRLF no Windows x LF no Linux) nao podem forcar a recriacao da EC2.
+  # Para trocar de AMI de proposito, use: terraform apply -replace=aws_instance.app (apos backup).
+  lifecycle {
+    ignore_changes = [ami, user_data]
+  }
 }
 
 
