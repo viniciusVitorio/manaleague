@@ -26,6 +26,11 @@ class User extends Authenticatable
     public function playerProfile(): HasOne { return $this->hasOne(PlayerProfile::class, 'account_user_id'); }
     public function friendProfiles(): BelongsToMany { return $this->belongsToMany(PlayerProfile::class)->withPivot('status')->withTimestamps(); }
 
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new \App\Notifications\ResetPasswordNotification($token));
+    }
+
     public function ensurePlayerProfile(): PlayerProfile
     {
         $profile = $this->playerProfile()->first();

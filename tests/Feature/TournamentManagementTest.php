@@ -41,6 +41,7 @@ class TournamentManagementTest extends TestCase
   $user=User::factory()->create(); $tournament=$this->tournament($user);
   $this->actingAs($user)->post(route('tournaments.start',$tournament))->assertSessionHasErrors('tournament');
   $one=$tournament->players()->create(['name'=>'One']); $two=$tournament->players()->create(['name'=>'Two']);
+  $tournament->update(['status'=>Tournament::STATUS_LEAGUE]);
   $match=$tournament->matches()->create(['round'=>1,'stage'=>GameMatch::STAGE_LEAGUE,'player_one_id'=>$one->id,'player_two_id'=>$two->id]);
   $this->actingAs($user)->put(route('matches.update',[$tournament,$match]),['player_one_games'=>0,'player_two_games'=>0])->assertSessionHasErrors('score');
  }

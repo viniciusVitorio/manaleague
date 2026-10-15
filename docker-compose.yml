@@ -5,7 +5,7 @@ services:
     environment:
       APP_NAME: "${APP_NAME:-ManaLeague}"
       APP_ENV: "${APP_ENV:-local}"
-      APP_KEY: "${APP_KEY:-base64:1hs07BcqssbFARyoCdJnUtazb7orhpLJfHjoL7w3Aj8=}"
+      APP_KEY: "${APP_KEY:?Defina APP_KEY no .env (php artisan key:generate --show)}"
       APP_DEBUG: "${APP_DEBUG:-true}"
       APP_URL: "${APP_URL:-http://localhost:8080}"
       LOG_CHANNEL: "${LOG_CHANNEL:-stderr}"
@@ -19,6 +19,12 @@ services:
       SESSION_SAME_SITE: lax
       CACHE_STORE: database
       QUEUE_CONNECTION: database
+      # E-mail: log em dev; ses em producao (credenciais vem da IAM Role da EC2, nunca de chave fixa).
+      MAIL_MAILER: "${MAIL_MAILER:-log}"
+      MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:-nao-responda@manaleague.com.br}"
+      MAIL_FROM_NAME: "${MAIL_FROM_NAME:-ManaLeague}"
+      AWS_SES_REGION: "${AWS_SES_REGION:-us-east-1}"
+      AWS_SES_CONFIGURATION_SET: "${AWS_SES_CONFIGURATION_SET:-}"
     volumes:
       - app_storage:/var/www/html/storage
     healthcheck:

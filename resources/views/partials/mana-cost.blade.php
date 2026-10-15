@@ -1,0 +1,1 @@
+@foreach($symbols as $symbol)<i class="mana mana-{{ strtolower(preg_replace('/[^A-Za-z0-9]/', '', $symbol)) }}" title="{{ $symbol }}">{{ strlen($symbol) <= 2 && ! in_array($symbol, ['W','U','B','R','G','C'], true) ? $symbol : '' }}</i>@endforeach

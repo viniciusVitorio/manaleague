@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
@@ -39,7 +40,11 @@ class AuthController extends Controller
     public function login(Request $request): RedirectResponse
     {
         $credentials = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']]);
-        if (! Auth::attempt($credentials)) return back()->withErrors(['email' => 'Credenciais invalidas.'])->onlyInput('email');
+        if (! Auth::attempt($credentials)) {
+            // Evidencia para deteccao de forca bruta; nunca registra a senha.
+            Log::warning('auth.login_failed', ['email' => $credentials['email'], 'ip' => $request->ip()]);
+            return back()->withErrors(['email' => 'Credenciais invalidas.'])->onlyInput('email');
+        }
         $request->session()->regenerate();
         return redirect()->intended(route('tournaments.index'));
     }

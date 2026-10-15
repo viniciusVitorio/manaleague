@@ -6,13 +6,21 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'ManaLeague' }}</title>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}">
+    <meta name="theme-color" content="#09090b">
+    @stack('head')
 </head>
 <body>
 <nav class="topbar">
     <div class="container nav-inner">
         <a class="brand" href="{{ auth()->check() ? route('tournaments.index') : route('home') }}"><span class="brand-mark">M</span><span>ManaLeague</span></a>
         @auth
-            <div class="nav-actions"><a class="nav-link" href="{{ route('profiles.index') }}">Meu perfil</a><span class="nav-user">{{ auth()->user()->name }}</span><form method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-ghost btn-small">Sair</button></form></div>
+            @php($pendingFriends = auth()->user()->playerProfile?->friendedBy()->wherePivot('status', 'pending')->count() ?? 0)
+            <div class="nav-actions"><a class="nav-link" href="{{ route('tournaments.index') }}">Torneios</a><a class="nav-link" href="{{ route('friends.index') }}">Amigos @if($pendingFriends)<span class="nav-badge" aria-label="{{ $pendingFriends }} pedidos pendentes">{{ $pendingFriends }}</span>@endif</a><a class="nav-link" href="{{ route('profiles.index') }}">Meu perfil</a><form method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-ghost btn-small">Sair</button></form></div>
         @else
             <div class="nav-actions"><a class="btn btn-ghost btn-small" href="{{ route('login') }}">Entrar</a><a class="btn btn-primary btn-small nav-create" href="{{ route('register') }}">Criar conta</a></div>
         @endauth

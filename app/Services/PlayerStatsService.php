@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\GameMatch;
 use App\Models\PlayerProfile;
+use App\Models\Tournament;
 use Illuminate\Support\Collection;
 
 class PlayerStatsService
@@ -12,26 +13,33 @@ class PlayerStatsService
     {
         $entries = $profile->entries()->with(['tournament', 'matchesAsPlayerOne', 'matchesAsPlayerTwo'])->get();
         $wins = $losses = $draws = $gamesFor = $gamesAgainst = $currentStreak = $bestStreak = 0;
-        $cleanSweep = $zeroTwo = $bye = $champion = $runnerUp = false;
+        $titles = $runnerUps = $thirdPlaces = $undefeatedRuns = $cleanSweeps = $comebacks = 0;
+        $zeroTwo = $bye = false;
         $decks = [];
 
         foreach ($entries as $entry) {
             $matches = $this->matchesFor($entry);
+            $entryLosses = 0;
+            $deckName = $entry->deck_name ?: 'Deck não informado';
+            $deckKey = $deckName.'|'.($entry->deck_colors ?? '');
+            $decks[$deckKey] ??= ['name' => $deckName, 'colors' => $entry->deck_colors, 'wins' => 0, 'losses' => 0];
 
             foreach ($matches as $match) {
-                $isPlayerOne = $match->player_one_id === $entry->id;
-                $for = (int) ($isPlayerOne ? $match->player_one_games : $match->player_two_games);
-                $against = (int) ($isPlayerOne ? $match->player_two_games : $match->player_one_games);
+                [$for, $against] = $this->score($match, $entry->id);
                 $gamesFor += $for;
                 $gamesAgainst += $against;
                 $bye = $bye || $match->status === GameMatch::STATUS_BYE;
 
                 if ($for > $against) {
                     $wins++;
+                    $decks[$deckKey]['wins']++;
                     $bestStreak = max($bestStreak, ++$currentStreak);
-                    $cleanSweep = $cleanSweep || ($for === 2 && $against === 0);
+                    if ($for === 2 && $against === 0 && $match->status === GameMatch::STATUS_FINISHED) $cleanSweeps++;
+                    if ($against > 0 && $match->stage !== GameMatch::STAGE_LEAGUE) $comebacks++;
                 } elseif ($for < $against) {
                     $losses++;
+                    $entryLosses++;
+                    $decks[$deckKey]['losses']++;
                     $currentStreak = 0;
                     $zeroTwo = $zeroTwo || ($for === 0 && $against === 2);
                 } else {
@@ -39,43 +47,40 @@ class PlayerStatsService
                     $currentStreak = 0;
                 }
 
-                if ($match->stage === GameMatch::STAGE_FINAL && $match->status === GameMatch::STATUS_FINISHED) {
-                    $champion = $champion || $for > $against;
-                    $runnerUp = $runnerUp || $for < $against;
+                if ($match->status === GameMatch::STATUS_FINISHED) {
+                    if ($match->stage === GameMatch::STAGE_FINAL) {
+                        $for > $against ? $titles++ : $runnerUps++;
+                    } elseif ($match->stage === GameMatch::STAGE_THIRD_PLACE && $for > $against) {
+                        $thirdPlaces++;
+                    }
                 }
             }
 
-            $deckName = $entry->deck_name ?: 'Deck não informado';
-            $deckKey = $deckName.'|'.($entry->deck_colors ?? '');
-            $decks[$deckKey] ??= ['name' => $deckName, 'colors' => $entry->deck_colors, 'wins' => 0, 'losses' => 0];
-
-            foreach ($matches as $match) {
-                $isPlayerOne = $match->player_one_id === $entry->id;
-                $for = (int) ($isPlayerOne ? $match->player_one_games : $match->player_two_games);
-                $against = (int) ($isPlayerOne ? $match->player_two_games : $match->player_one_games);
-                if ($for > $against) $decks[$deckKey]['wins']++;
-                elseif ($for < $against) $decks[$deckKey]['losses']++;
+            if ($entry->tournament?->status === Tournament::STATUS_FINISHED && $matches->isNotEmpty() && $entryLosses === 0) {
+                $undefeatedRuns++;
             }
         }
 
         $played = $wins + $losses + $draws;
-        $achievements = array_values(array_filter([
-            $cleanSweep ? ['icon' => '🧹', 'name' => 'Clean Sweep', 'description' => 'Venceu uma partida por 2–0'] : null,
-            $bestStreak >= 3 ? ['icon' => '🔥', 'name' => 'On Fire', 'description' => 'Conquistou 3 vitórias seguidas'] : null,
-            $champion ? ['icon' => '👑', 'name' => 'Champion', 'description' => 'Venceu um torneio'] : null,
-            $runnerUp ? ['icon' => '🥈', 'name' => 'Almost There', 'description' => 'Chegou à final do torneio'] : null,
-            $zeroTwo ? ['icon' => '💀', 'name' => '0–2 Enjoyer', 'description' => 'Sobreviveu a uma derrota por 0–2'] : null,
-            $played > 0 && $losses === 0 ? ['icon' => '🐐', 'name' => 'Undefeated', 'description' => 'Ainda não sofreu derrotas'] : null,
-            $bye ? ['icon' => '🎲', 'name' => 'BYE Merchant', 'description' => 'Ganhou uma rodada de BYE'] : null,
-        ]));
+        $tournaments = $entries->pluck('tournament')->filter()->unique('id');
 
         return [
-            'wins' => $wins, 'losses' => $losses, 'draws' => $draws,
+            'wins' => $wins, 'losses' => $losses, 'draws' => $draws, 'played' => $played,
             'games_for' => $gamesFor, 'games_against' => $gamesAgainst,
             'winrate' => $played ? round($wins / $played * 100) : 0,
             'best_streak' => $bestStreak,
-            'tournaments' => $entries->pluck('tournament')->filter()->unique('id')->sortByDesc('tournament_date')->values(),
-            'decks' => collect($decks)->values(), 'achievements' => $achievements,
+            'tournaments' => $tournaments->sortByDesc('tournament_date')->values(),
+            'decks' => collect($decks)->values(),
+            // Fatos consumidos pelo AchievementService.
+            'facts' => [
+                'titles' => $titles, 'runner_ups' => $runnerUps, 'third_places' => $thirdPlaces,
+                'podiums' => $titles + $runnerUps + $thirdPlaces,
+                'undefeated_runs' => $undefeatedRuns, 'clean_sweeps' => $cleanSweeps, 'comebacks' => $comebacks,
+                'zero_two' => $zeroTwo, 'bye' => $bye,
+                'tournaments_played' => $tournaments->count(),
+                'tournaments_finished' => $tournaments->where('status', Tournament::STATUS_FINISHED)->count(),
+                'formats_played' => $tournaments->pluck('format')->unique()->count(),
+            ],
         ];
     }
 
@@ -87,15 +92,24 @@ class PlayerStatsService
         $wins = $losses = $gamesFor = $gamesAgainst = $streak = $bestStreak = 0;
 
         foreach ($matches as $match) {
-            $isPlayerOne = $match->player_one_id === $entry->id;
-            $for = (int) ($isPlayerOne ? $match->player_one_games : $match->player_two_games);
-            $against = (int) ($isPlayerOne ? $match->player_two_games : $match->player_one_games);
+            [$for, $against] = $this->score($match, $entry->id);
             $gamesFor += $for; $gamesAgainst += $against;
             if ($for > $against) { $wins++; $bestStreak = max($bestStreak, ++$streak); }
             elseif ($for < $against) { $losses++; $streak = 0; }
         }
 
         return compact('wins', 'losses', 'gamesFor', 'gamesAgainst', 'bestStreak') + ['entry' => $entry];
+    }
+
+    /** @return array{0:int,1:int} games a favor e contra, do ponto de vista do jogador */
+    private function score(GameMatch $match, int $playerId): array
+    {
+        $isPlayerOne = $match->player_one_id === $playerId;
+
+        return [
+            (int) ($isPlayerOne ? $match->player_one_games : $match->player_two_games),
+            (int) ($isPlayerOne ? $match->player_two_games : $match->player_one_games),
+        ];
     }
 
     private function matchesFor($entry): Collection

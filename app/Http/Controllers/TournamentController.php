@@ -29,7 +29,8 @@ class TournamentController extends Controller
     {
         $validated = $this->validateTournament($request);
         $validated['public_token'] = Str::random(40);
-        $validated['public_slug'] = Str::slug($validated['name']).'-'.Str::lower(Str::random(8));
+        // Sufixo aleatorio de 16 chars [a-z0-9] (~82 bits): a URL publica nao pode ser enumerada.
+        $validated['public_slug'] = Str::limit(Str::slug($validated['name']), 60, '').'-'.Str::lower(Str::random(16));
         $validated['invite_token'] = Str::random(40);
         $tournament = $request->user()->tournaments()->create($validated);
         return redirect()->route('tournaments.show', $tournament)->with('status', 'Torneio criado. Agora chame a galera!');
@@ -61,6 +62,7 @@ class TournamentController extends Controller
         $this->authorize('update', $tournament);
         abort_unless($tournament->status === Tournament::STATUS_SETUP, 409);
         $validated = $this->validateTournament($request);
+        $validated['max_players'] ??= null;
         if ($validated['max_players'] && $validated['max_players'] < $tournament->players()->count()) {
             return back()->withErrors(['max_players' => 'O limite não pode ser menor que o total de inscritos.'])->withInput();
         }

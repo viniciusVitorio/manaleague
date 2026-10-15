@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Tournament;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class TournamentInviteController extends Controller
@@ -21,24 +22,38 @@ class TournamentInviteController extends Controller
     {
         $tournament = Tournament::query()->where('invite_token', $token)->firstOrFail();
         abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'As inscrições deste torneio foram encerradas.');
-        abort_if($tournament->max_players && $tournament->players()->count() >= $tournament->max_players, 409, 'O torneio atingiu o limite de participantes.');
         $profile = $request->user()->ensurePlayerProfile();
-
-        if ($tournament->players()->where('player_profile_id', $profile->id)->exists()) {
-            return back()->with('status', 'Você já está inscrito neste torneio.');
-        }
 
         $validated = $request->validate([
             'deck_name' => ['nullable', 'string', 'max:100'],
             'deck_colors' => ['nullable', 'string', 'max:10', 'regex:/^[WUBRGC,]*$/'],
         ]);
 
-        $tournament->players()->create([
-            'player_profile_id' => $profile->id, 'name' => $profile->nickname,
-            'deck_name' => $validated['deck_name'] ?: $profile->preferred_deck_name,
-            'deck_colors' => $validated['deck_colors'] ?: $profile->preferred_deck_colors,
-        ]);
+        // Checagem de status, limite e duplicidade dentro da mesma transacao com lock:
+        // dois convidados entrando ao mesmo tempo nao conseguem estourar o max_players.
+        $result = DB::transaction(function () use ($tournament, $profile, $validated): string {
+            $locked = Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
 
-        return redirect()->route('arena.public', $tournament->public_slug)->with('status', 'Inscrição confirmada!');
+            if ($locked->status !== Tournament::STATUS_SETUP) return 'closed';
+            if ($locked->players()->where('player_profile_id', $profile->id)->exists()) return 'already';
+            if ($locked->players()->where('name', $profile->nickname)->exists()) return 'name_taken';
+            if ($locked->max_players && $locked->players()->count() >= $locked->max_players) return 'full';
+
+            $locked->players()->create([
+                'player_profile_id' => $profile->id, 'name' => $profile->nickname,
+                'deck_name' => ($validated['deck_name'] ?? null) ?: $profile->preferred_deck_name,
+                'deck_colors' => ($validated['deck_colors'] ?? null) ?: $profile->preferred_deck_colors,
+            ]);
+
+            return 'joined';
+        });
+
+        return match ($result) {
+            'closed' => abort(409, 'As inscrições deste torneio foram encerradas.'),
+            'full' => abort(409, 'O torneio atingiu o limite de participantes.'),
+            'already' => back()->with('status', 'Você já está inscrito neste torneio.'),
+            'name_taken' => back()->withErrors(['nickname' => 'Já existe um jogador com o apelido "'.$profile->nickname.'" neste torneio. Altere seu apelido no perfil e tente de novo.']),
+            default => redirect()->route('arena.public', $tournament->public_slug)->with('status', 'Inscrição confirmada!'),
+        };
     }
 }

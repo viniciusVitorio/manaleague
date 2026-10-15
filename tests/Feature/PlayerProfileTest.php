@@ -66,7 +66,10 @@ class PlayerProfileTest extends TestCase
         }
         $stats = app(PlayerStatsService::class)->for($profile);
         $this->assertSame(3, $stats['wins']);
-        $this->assertEqualsCanonicalizing(['Clean Sweep','On Fire','Champion','Undefeated'], collect($stats['achievements'])->pluck('name')->all());
+        $unlocked = app(\App\Services\AchievementService::class)->sync($profile);
+        // 3 vitorias 2-0 seguidas, a ultima numa final (torneio ainda nao encerrado: sem "Undefeated").
+        $this->assertEqualsCanonicalizing(['first_win', 'clean_sweep', 'on_fire', 'debut', 'podium', 'almost_there', 'champion'], $unlocked);
+        $this->assertSame([], app(\App\Services\AchievementService::class)->sync($profile), 'Desbloqueios nao se repetem.');
     }
 
     public function test_finished_tournament_generates_public_retrospective(): void
