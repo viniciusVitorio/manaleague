@@ -3,29 +3,48 @@
 namespace App\Http\Controllers;
 
 use App\Models\Deck;
+use App\Services\DeckBuilderService;
+use App\Services\FriendshipService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class DeckController extends Controller
 {
+    public function __construct(private readonly DeckBuilderService $builder) {}
+
+    public function show(Request $request, Deck $deck): View
+    {
+        $isOwner = $this->isOwner($request, $deck);
+        abort_unless($isOwner || $this->isFriendOfOwner($request, $deck), 403);
+
+        $deck->load('profile');
+        $summary = $this->builder->summary($deck);
+
+        return view('decks.show', compact('deck', 'summary', 'isOwner'));
+    }
+
     public function edit(Request $request, Deck $deck): View
     {
         $this->ensureOwner($request, $deck);
-        return view("decks.edit", compact("deck"));
+        return view('decks.edit', compact('deck'));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $profile = $request->user()->ensurePlayerProfile();
         $validated = $this->validateDeck($request);
-        DB::transaction(function () use ($profile, $validated): void {
-            if ($validated['is_primary'] ?? false) $profile->decks()->update(['is_primary' => false]);
+        $deck = DB::transaction(function () use ($profile, $validated): Deck {
+            // O primeiro deck vira principal automaticamente.
+            $validated['is_primary'] = ($validated['is_primary'] ?? false) || ! $profile->decks()->exists();
+            if ($validated['is_primary']) $profile->decks()->update(['is_primary' => false]);
             $deck = $profile->decks()->create($validated);
             if ($deck->is_primary) $this->syncPrimary($deck);
+            return $deck;
         });
-        return back()->with('status', 'Deck adicionado.');
+        return redirect()->route('decks.show', $deck)->with('status', 'Deck criado. Agora adicione as cartas!');
     }
 
     public function update(Request $request, Deck $deck): RedirectResponse
@@ -35,7 +54,9 @@ class DeckController extends Controller
         DB::transaction(function () use ($deck, $validated): void {
             if ($validated['is_primary'] ?? false) $deck->profile->decks()->whereKeyNot($deck->id)->update(['is_primary' => false]);
             $deck->update($validated);
-            if ($deck->is_primary) $this->syncPrimary($deck);
+            // Com cartas cadastradas, as cores vem da identidade de cor delas.
+            $this->builder->syncColors($deck);
+            if ($deck->is_primary) $this->syncPrimary($deck->fresh());
         });
         return back()->with('status', 'Deck atualizado.');
     }
@@ -56,7 +77,7 @@ class DeckController extends Controller
         $this->ensureOwner($request, $deck);
         if ($deck->is_primary) return back()->withErrors(['deck' => 'Escolha outro deck principal antes de excluir este.']);
         $deck->delete();
-        return back()->with('status', 'Deck removido.');
+        return redirect()->route('profiles.edit')->with('status', 'Deck removido.');
     }
 
     private function validateDeck(Request $request): array
@@ -64,13 +85,25 @@ class DeckController extends Controller
         return $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'colors' => ['nullable', 'string', 'max:10', 'regex:/^[WUBRGC,]*$/'],
+            'format' => ['nullable', Rule::in(Deck::FORMATS)],
             'is_primary' => ['nullable', 'boolean'],
         ]);
     }
 
+    private function isOwner(Request $request, Deck $deck): bool
+    {
+        return $deck->player_profile_id === $request->user()->ensurePlayerProfile()->id;
+    }
+
+    private function isFriendOfOwner(Request $request, Deck $deck): bool
+    {
+        return $request->user()->friendProfiles()->whereKey($deck->player_profile_id)
+            ->wherePivot('status', FriendshipService::ACCEPTED)->exists();
+    }
+
     private function ensureOwner(Request $request, Deck $deck): void
     {
-        abort_unless($deck->player_profile_id === $request->user()->ensurePlayerProfile()->id, 403);
+        abort_unless($this->isOwner($request, $deck), 403);
     }
 
     private function syncPrimary(Deck $deck): void
