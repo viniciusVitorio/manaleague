@@ -121,12 +121,16 @@ jobs:
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
           APP_KEY: ${{ secrets.APP_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          # SES so e ativado quando a variavel de repositorio MAIL_MAILER=ses existir
+          # (Settings > Secrets and variables > Actions > Variables). Sem ela, e-mails vao para o log.
+          MAIL_MAILER: ${{ vars.MAIL_MAILER || 'log' }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/manaleague
           chmod 600 ~/.ssh/manaleague
           ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
-          printf 'APP_NAME=ManaLeague\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://manaleague.com.br\nLOG_CHANNEL=stderr\nLOG_LEVEL=warning\nDB_CONNECTION=sqlite\nDB_DATABASE=/var/www/html/storage/app/database.sqlite\nSESSION_DRIVER=database\nSESSION_ENCRYPT=true\nSESSION_SECURE_COOKIE=true\nSESSION_HTTP_ONLY=true\nSESSION_SAME_SITE=lax\nCACHE_STORE=database\nQUEUE_CONNECTION=database\nAPP_PORT=80\nHTTPS_PORT=443\nCADDY_DOMAINS="manaleague.com.br, www.manaleague.com.br"\n' "$APP_KEY" > deploy.env
+          printf 'APP_NAME=ManaLeague\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://manaleague.com.br\nLOG_CHANNEL=stderr\nLOG_LEVEL=warning\nDB_CONNECTION=sqlite\nDB_DATABASE=/var/www/html/storage/app/database.sqlite\nSESSION_DRIVER=database\nSESSION_ENCRYPT=true\nSESSION_SECURE_COOKIE=true\nSESSION_HTTP_ONLY=true\nSESSION_SAME_SITE=lax\nCACHE_STORE=database\nQUEUE_CONNECTION=database\nAPP_PORT=80\nHTTPS_PORT=443\nCADDY_DOMAINS="manaleague.com.br, www.manaleague.com.br"\nMAIL_MAILER=%s\nMAIL_FROM_ADDRESS=nao-responda@manaleague.com.br\nMAIL_FROM_NAME=ManaLeague\nAWS_SES_REGION=%s\nAWS_SES_CONFIGURATION_SET=manaleague-transactional\n' "$APP_KEY" "$MAIL_MAILER" "$AWS_REGION" > deploy.env
           tar --exclude=.git --exclude=terraform --exclude=vendor --exclude=.env --exclude=deploy.env -czf /tmp/release.tar.gz .
       - name: Upload release
         env:

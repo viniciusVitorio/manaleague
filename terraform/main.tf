@@ -63,10 +63,13 @@ resource "aws_instance" "app" {
   vpc_security_group_ids      = [aws_security_group.web.id]
   associate_public_ip_address = true
   user_data_replace_on_change = true
+  iam_instance_profile        = aws_iam_instance_profile.app.name
 
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
+    # 2 saltos: o container Docker (PHP-FPM) precisa alcancar o IMDSv2 para obter as credenciais da role.
+    http_put_response_hop_limit = 2
   }
 
   root_block_device {
