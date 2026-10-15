@@ -3,24 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\FriendshipService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class FriendRequestController extends Controller
 {
+    public function __construct(private readonly FriendshipService $friendships) {}
+
     public function accept(Request $request, User $requester): RedirectResponse
     {
-        $profile = $request->user()->ensurePlayerProfile();
-        abort_unless($profile->friendedBy()->whereKey($requester->id)->wherePivot('status', 'pending')->exists(), 404);
-        $profile->friendedBy()->updateExistingPivot($requester->id, ['status' => 'accepted']);
+        abort_unless($this->friendships->accept($request->user(), $requester), 404);
+
         return back()->with('status', 'Solicitação aceita.');
     }
 
     public function reject(Request $request, User $requester): RedirectResponse
     {
-        $profile = $request->user()->ensurePlayerProfile();
-        abort_unless($profile->friendedBy()->whereKey($requester->id)->exists(), 404);
-        $profile->friendedBy()->detach($requester->id);
+        abort_unless($request->user()->ensurePlayerProfile()->friendedBy()->whereKey($requester->id)->exists(), 404);
+        $this->friendships->remove($request->user(), $requester->ensurePlayerProfile());
+
         return back()->with('status', 'Solicitação recusada.');
     }
 }
