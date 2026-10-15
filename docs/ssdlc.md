@@ -2,11 +2,11 @@
 
 | Fase | Atividade realizada | Evidencia no repositorio |
 |---|---|---|
-| Planejamento | escopo pequeno e ativos identificados | `README.md`, `requirements.md` |
+| Planejamento | escopo pequeno e ativos identificados | `README.md`, `docs/requirements.md` |
 | Requisitos | requisitos funcionais e de seguranca antes do codigo | `docs/requirements.md` |
 | Design | arquitetura, fronteiras e decisoes | `docs/architecture.md` |
 | Modelagem | STRIDE e riscos priorizados | `docs/threat-model.md` |
-| Implementacao | validacao, auth, CSRF, ownership e secrets externos | `app/`, `routes/`, `.gitignore` |
+| Implementacao | validacao, auth, CSRF, ownership, headers de seguranca, logs de auditoria e secrets externos | `app/`, `routes/`, `.gitignore` |
 | Verificacao | PHPUnit, Composer Audit, Trivy e Sonar | `tests/`, workflow, Sonar |
 | Entrega | Quality Gate bloqueia deploy inseguro | job `deploy` depende de `security` e `sonar` |
 | Operacao | health check, logs e infra reproduzivel | `/up`, Docker, Terraform |
