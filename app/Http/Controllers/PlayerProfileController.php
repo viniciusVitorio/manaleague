@@ -30,22 +30,12 @@ class PlayerProfileController extends Controller
 
         $friendRequests = $profile->friendedBy()->wherePivot('status', FriendshipService::PENDING)->with('playerProfile')->get();
         $friendshipStatus = null;
-<<<<<<< HEAD
-        $decks = $profile->decks()->withSum('cards', 'quantity')->orderByDesc('is_primary')->orderBy('name')->get();
-        $friendsCount = $this->friendships->friends($request->user())->count();
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount'));
-=======
-<<<<<<< Updated upstream
-        return view('players.show', compact('profile', 'summary', 'friendRequests', 'friendshipStatus'));
-=======
         $decks = $profile->decks()->withSum('cards', 'quantity')->orderByDesc('is_primary')->orderBy('name')->get();
-        $showPreferredDeck = true;
         $friendsCount = $this->friendships->friends($request->user())->count();
+        $showPreferredDeck = true;
 
         return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck'));
->>>>>>> Stashed changes
->>>>>>> f90ce10 (feat - deck configs)
     }
 
     public function show(Request $request, PlayerProfile $profile): View
@@ -58,22 +48,8 @@ class PlayerProfileController extends Controller
         $this->achievements->sync($profile, $summary);
         $achievements = $this->achievements->catalog($profile, $summary);
         $friendRequests = collect();
-<<<<<<< HEAD
-        $friendshipStatus = $this->friendships->status($user, $profile);
-        // Decks so ficam visiveis para o dono e para amigos.
-        $decks = ($isOwner || $friendshipStatus === FriendshipService::ACCEPTED)
-            ? $profile->decks()->withSum('cards', 'quantity')->orderByDesc('is_primary')->orderBy('name')->get()
-            : collect();
-        $friendsCount = null;
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount'));
-=======
-<<<<<<< Updated upstream
-        $friendshipStatus = $request->user()->friendProfiles()->whereKey($profile->id)->first()?->pivot?->status;
-        return view('players.show', compact('profile', 'summary', 'friendRequests', 'friendshipStatus'));
-=======
         $friendshipStatus = $this->friendships->status($user, $profile);
-        // Decks ficam visíveis ao dono; amigos veem apenas os que o dono compartilhou.
         if ($isOwner) {
             $decks = $profile->decks()->withSum('cards', 'quantity')->orderByDesc('is_primary')->orderBy('name')->get();
         } elseif ($friendshipStatus === FriendshipService::ACCEPTED) {
@@ -85,8 +61,6 @@ class PlayerProfileController extends Controller
         $friendsCount = null;
 
         return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck'));
->>>>>>> Stashed changes
->>>>>>> f90ce10 (feat - deck configs)
     }
 
     public function edit(Request $request): View

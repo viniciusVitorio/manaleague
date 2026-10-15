@@ -170,8 +170,8 @@ class DeckCardsTest extends TestCase
         $this->assertSame(0, $deck->cards()->count());
     }
 
-<<<<<<< HEAD
-=======
+
+
     public function test_owner_can_hide_saved_deck_from_friends_and_reveal_it_again(): void
     {
         [$owner, $deck] = $this->deck('Secret CEDH list', 'Commander');
@@ -204,7 +204,7 @@ class DeckCardsTest extends TestCase
         $this->actingAs($friend)->get(route('decks.show', $deck))->assertOk();
     }
 
->>>>>>> f90ce10 (feat - deck configs)
+
     public function test_deck_page_is_visible_to_owner_and_friends_only(): void
     {
         [$owner, $deck] = $this->deck('Burn', 'Modern');
@@ -265,19 +265,19 @@ class DeckCardsTest extends TestCase
     public function test_new_deck_redirects_to_builder_and_first_deck_is_primary(): void
     {
         $user = User::factory()->create();
-<<<<<<< HEAD
-=======
+
+
         $this->actingAs($user)->get(route('profiles.edit'))->assertOk()->assertSee('Novos decks começam privados; marque para compartilhar com amigos');
->>>>>>> f90ce10 (feat - deck configs)
+
         $this->actingAs($user)->post(route('decks.store'), ['name' => 'Primeiro', 'format' => 'Pauper'])->assertRedirect();
         $deck = Deck::query()->sole();
 
         $this->assertTrue($deck->is_primary);
         $this->assertSame('Pauper', $deck->format);
-<<<<<<< HEAD
-=======
+
+
         $this->assertFalse($deck->is_visible_to_friends);
->>>>>>> f90ce10 (feat - deck configs)
+
     }
 
     /** @return array{0: User, 1: Deck} */
