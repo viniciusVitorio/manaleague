@@ -12,9 +12,9 @@ class PlayerProfile extends Model
     /** Sem 0/O/1/I/L para o codigo ser facil de ditar na mesa. */
     private const CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 
-    protected $fillable = ['user_id', 'account_user_id', 'nickname', 'avatar', 'preferred_deck_name', 'preferred_deck_colors', 'is_friend', 'discoverable', 'friends_list_visible'];
+    protected $fillable = ['user_id', 'account_user_id', 'nickname', 'avatar', 'preferred_deck_name', 'preferred_deck_colors', 'is_friend', 'discoverable'];
 
-    protected function casts(): array { return ['is_friend' => 'boolean', 'discoverable' => 'boolean', 'friends_list_visible' => 'boolean']; }
+    protected function casts(): array { return ['is_friend' => 'boolean', 'discoverable' => 'boolean']; }
 
     protected static function booted(): void
     {

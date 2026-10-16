@@ -70,16 +70,6 @@ class FriendController extends Controller
             : 'Seu perfil só pode ser encontrado pelo código de amigo.');
     }
 
-    public function friendsListPrivacy(Request $request): RedirectResponse
-    {
-        $validated = $request->validate(['friends_list_visible' => ['required', 'boolean']]);
-        $request->user()->ensurePlayerProfile()->update($validated);
-
-        return back()->with('status', $validated['friends_list_visible']
-            ? 'Seus amigos agora podem ver sua lista de amigos.'
-            : 'Sua lista de amigos está privada.');
-    }
-
     private function respond(string $result, PlayerProfile $profile): RedirectResponse
     {
         return match ($result) {

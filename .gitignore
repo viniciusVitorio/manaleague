@@ -6,7 +6,6 @@
 /auth.json
 /node_modules
 /vendor
-/public/vendor/tesseract
 /storage/app/database.sqlite
 /storage/*.key
 /storage/logs/*.log

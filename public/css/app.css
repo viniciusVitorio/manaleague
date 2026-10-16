@@ -23,11 +23,7 @@ html{color-scheme:dark}body{background:var(--bg);color:var(--text);font-family:I
 .check-label{display:flex;align-items:center;gap:9px}.check-label input{width:auto;margin:0}
 .separator{border:0;border-top:1px solid var(--line);margin:28px 0}.deck-actions{display:flex;align-items:center;gap:7px}.deck-actions form{margin:0}@media(max-width:640px){.deck-actions{flex-wrap:wrap;justify-content:flex-end}}
 
-/* Menu responsivo */
-.menu-toggle{display:none;width:38px;height:36px;padding:8px;border:1px solid #27272a;border-radius:7px;background:#0c0c0f;color:#fafafa;cursor:pointer}
-.menu-toggle span{display:block;height:2px;margin:4px 0;background:currentColor;border-radius:2px}
-@media(max-width:640px){.nav-inner{position:relative}.menu-toggle{display:block}.nav-actions#primary-menu{display:none;position:absolute;top:calc(100% + 1px);left:-10px;right:-10px;padding:10px;background:#09090b;border:1px solid #27272a;border-top:0;border-radius:0 0 10px 10px;box-shadow:0 12px 24px rgba(0,0,0,.35);align-items:stretch;flex-direction:column;gap:2px}.nav-actions#primary-menu.is-open{display:flex}.nav-actions#primary-menu .nav-link{display:flex;padding:12px 10px;border-radius:6px}.nav-actions#primary-menu .nav-link:hover{background:#18181b}.nav-actions#primary-menu form{padding:6px 0 2px;border-top:1px solid #27272a;margin-top:4px}.nav-actions#primary-menu form button{width:100%;justify-content:flex-start}.nav-actions#primary-menu .nav-badge{margin-left:4px}}
-
+/* ===== Amigos ===== */
 .nav-link{display:inline-flex;align-items:center;gap:6px}
 .nav-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#ef4444;color:#fff;font-size:.66rem;font-weight:700}
 .friends-layout{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);gap:20px;align-items:start}
@@ -63,8 +59,6 @@ html{color-scheme:dark}body{background:var(--bg);color:var(--text);font-family:I
 /* ===== Perfil e conquistas ===== */
 .profile-meta{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;color:#a1a1aa;font-size:.8rem}
 .profile-meta a{text-decoration:none}
-#scan-video{width:100%;max-height:360px;object-fit:contain;background:#000;border-radius:8px;margin:10px 0}.scan-viewfinder{position:relative}.scan-viewfinder>span{position:absolute;left:50%;top:50%;width:min(72%,260px);aspect-ratio:5/7;transform:translate(-50%,-50%);border:2px dashed rgba(255,255,255,.8);border-radius:8px;box-shadow:0 0 0 999px rgba(0,0,0,.2);pointer-events:none}.scan-result-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
-
 .profile-meta b{font-family:ui-monospace,monospace;color:#fafafa}
 .unlock-banner{display:flex;align-items:center;gap:16px;padding:18px 22px;margin-bottom:20px;border-color:#a16207;background:linear-gradient(110deg,#2a1d05,#0c0c0f 70%);animation:pop .5s ease-out}
 .unlock-banner h2{margin:0;font-size:1.05rem}

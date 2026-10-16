@@ -212,7 +212,7 @@ class DeckCardsTest extends TestCase
 
         $this->actingAs($owner)->get(route('decks.show', $deck))
             ->assertOk()->assertSee('Lightning Bolt')->assertSee('Curva de mana')->assertSee('Buscar no Scryfall')
-            ->assertSee('pelo menos 60 cartas')->assertSee('Escanear carta')->assertSee('vendor/tesseract/tesseract.min.js');
+            ->assertSee('pelo menos 60 cartas');
 
         $stranger = User::factory()->create();
         $this->actingAs($stranger)->get(route('decks.show', $deck))->assertForbidden();

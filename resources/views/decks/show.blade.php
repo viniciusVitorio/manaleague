@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@push('head')<script src="{{ asset('js/deck-builder.js') }}" defer></script><script src="{{ asset('vendor/tesseract/tesseract.min.js') }}" defer></script><script src="{{ asset('js/card-scanner.js') }}" defer></script>@endpush
+@push('head')<script src="{{ asset('js/deck-builder.js') }}" defer></script>@endpush
 @section('content')
 @php
     $boardLabel = ['main' => 'Deck', 'side' => 'Sideboard', 'commander' => 'Comandante'];
@@ -68,17 +68,6 @@
 </div>
 
 <aside class="deck-sidebar">
-    @if($isOwner)
-    <section class="card section-card" id="scan-cards" data-store-endpoint="{{ route('decks.cards.store', $deck) }}" data-worker="{{ asset('vendor/tesseract/worker.min.js') }}" data-core="{{ asset('vendor/tesseract') }}/" data-language="{{ asset('vendor/tesseract') }}/">
-        <span class="eyebrow">Câmera</span><h2>Escanear carta</h2>
-        <p class="muted small-note">Aponte para a carta. O OCR roda neste aparelho; confirme antes de adicionar.</p>
-        <button class="btn btn-secondary btn-block" id="scan-capture" type="button">Abrir câmera</button>
-        <div class="scan-viewfinder"><video id="scan-video" playsinline autoplay hidden></video><span aria-hidden="true"></span></div>
-        <canvas id="scan-canvas" hidden></canvas>
-        <div id="scan-results" aria-live="polite"></div>
-    </section>
-    @endif
-
     @if($isOwner)
     <section class="card section-card" id="add-card">
         <span class="eyebrow">Adicionar cartas</span><h2>Buscar no Scryfall</h2>
