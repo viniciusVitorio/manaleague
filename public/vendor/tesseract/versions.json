@@ -1,0 +1,8 @@
+{
+  "tesseract": "7.0.0",
+  "core": "7.0.0",
+  "languages": [
+    "eng",
+    "por"
+  ]
+}

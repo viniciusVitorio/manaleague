@@ -46,6 +46,7 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/me/friends', [FriendController::class, 'index'])->middleware('throttle:60,1')->name('friends.index');
     Route::patch('/me/friends/privacy', [FriendController::class, 'privacy'])->name('friends.privacy');
+    Route::patch('/me/friends/list-privacy', [FriendController::class, 'friendsListPrivacy'])->name('friends.list-privacy');
     Route::post('/me/friends/{code}', [FriendController::class, 'store'])->middleware('throttle:20,1')->name('friends.store');
     Route::patch('/me/friends/{code}', [FriendController::class, 'accept'])->name('friends.accept-code');
     Route::delete('/me/friends/{code}', [FriendController::class, 'destroy'])->name('friends.destroy');

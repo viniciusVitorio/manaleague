@@ -58,9 +58,14 @@ class PlayerProfileController extends Controller
             $decks = collect();
         }
         $showPreferredDeck = $isOwner || $decks->contains('is_primary', true);
+        $friendList = collect();
+        $canViewFriends = $isOwner || ($friendshipStatus === FriendshipService::ACCEPTED && $profile->friends_list_visible);
+        if ($canViewFriends) {
+            $friendList = $this->friendships->friends($profile->account)->filter(fn (PlayerProfile $friendProfile) => $friendProfile->account_user_id !== null)->values();
+        }
         $friendsCount = null;
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck'));
+        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck', 'friendList', 'canViewFriends'));
     }
 
     public function edit(Request $request): View

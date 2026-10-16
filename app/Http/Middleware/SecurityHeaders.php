@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 class SecurityHeaders
 {
     private const CSP = "default-src 'self'; "
-        ."script-src 'self' 'unsafe-inline'; "   // handlers inline simples (copiar link, confirm())
+        ."script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; "   // WASM do OCR local; sem eval generico
         ."style-src 'self' 'unsafe-inline'; "
         ."img-src 'self' data: https://cards.scryfall.io; "   // imagens oficiais das cartas
         ."font-src 'self'; "
@@ -32,7 +32,7 @@ class SecurityHeaders
             'X-Frame-Options' => 'SAMEORIGIN',
             'X-Content-Type-Options' => 'nosniff',
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
-            'Permissions-Policy' => 'geolocation=(), microphone=(), camera=()',
+            'Permissions-Policy' => 'geolocation=(), microphone=(), camera=(self)',
             'Cross-Origin-Opener-Policy' => 'same-origin',
         ];
 

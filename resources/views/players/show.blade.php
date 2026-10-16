@@ -36,6 +36,26 @@
 
 
 
+@if($isOwner)
+    <section class="card section-card">
+        <div class="section-heading"><div><span class="eyebrow">Privacidade</span><h2>Lista de amigos</h2></div></div>
+        <form method="POST" action="{{ route('friends.list-privacy') }}">@csrf @method('PATCH')
+            <input type="hidden" name="friends_list_visible" value="0">
+            <label class="check-label"><input type="checkbox" name="friends_list_visible" value="1" @checked(old('friends_list_visible', $profile->friends_list_visible))> Permitir que meus amigos vejam minha lista de amigos</label>
+            <button class="btn btn-secondary">Salvar privacidade</button>
+        </form>
+    </section>
+@elseif($canViewFriends && $friendList->isNotEmpty())
+    <section class="card section-card">
+        <span class="eyebrow">Playgroup</span><h2>Amigos de {{ $profile->nickname }}</h2>
+        <div class="friend-list-public">
+            @foreach($friendList as $friendProfile)
+                <a class="friend-public-row" href="{{ route('profiles.show', $friendProfile) }}"><span class="profile-avatar">{{ $friendProfile->avatar ?: mb_strtoupper(mb_substr($friendProfile->nickname, 0, 1)) }}</span><strong>{{ $friendProfile->nickname }}</strong><span>Ver perfil →</span></a>
+            @endforeach
+        </div>
+    </section>
+@endif
+
 @if($isOwner && $fresh->isNotEmpty())
 <section class="card unlock-banner">
     <span class="unlock-burst">🎉</span>
