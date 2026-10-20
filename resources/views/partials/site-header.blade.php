@@ -7,7 +7,6 @@
         ['tournaments.index', 'Torneios', 'trophy', 'tournaments.*|clubs.tournaments.*|matches.submissions.queue|tournaments.qr.*'],
         ['matches.mine', 'Partidas', 'target', 'matches.mine'],
     ];
-    if (config('ranked.enabled')) $primary[] = ['ranked.index', 'Ranked', 'chart', 'ranked.*'];
     $primary[] = ['challenges.index', 'Desafios', 'swords', 'challenges.*|achievements.*|ranked.matches.*'];
     $more = [
         ['collection.index', 'Coleção', 'library', 'collection.*|decks.history|decks.versions.*|decks.compare'],

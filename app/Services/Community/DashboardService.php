@@ -65,7 +65,6 @@ class DashboardService
             || ($m->status === 'reported' && $m->submissions->where('status', 'pending')->sortByDesc('id')->first()?->submitted_by !== $user->id))->values();
         $rankedRatings = $profileId ? \App\Models\PlayerRating::query()->with('season')->where('player_profile_id', $profileId)
             ->whereHas('season', fn ($q) => $q->whereIn('status', ['active', 'closing']))->where('played', '>', 0)->orderByDesc('rating')->limit(3)->get() : collect();
-        $queue = config('ranked.enabled') ? app(\App\Services\Ranked\MatchmakingService::class)->status($user) : ['state' => 'idle'];
 
         // Todas as partidas de torneio em aberto em que estou sentado (inclui assentos de mesas Commander).
         $myIds = $myPlayerIds->map(fn ($id) => (int) $id)->all();
@@ -96,7 +95,6 @@ class DashboardService
             'profileId' => $profileId,
             'rankedNeedsMe' => $rankedNeedsMe,
             'rankedRatings' => $rankedRatings,
-            'queue' => $queue,
             'nextMatch' => $this->nextMatch($user, $openTournamentMatches, $rankedOpen, $myIds),
             'pendingMatches' => $openTournamentMatches->count() + $rankedOpen->count() + $openCasual->count(),
             'stats' => $stats,

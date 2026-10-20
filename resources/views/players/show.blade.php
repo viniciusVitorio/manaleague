@@ -13,7 +13,7 @@
             <div>
                 <span class="eyebrow">{{ $isOwner ? 'Meu perfil' : 'Perfil do jogador' }}</span>
                 <h1>{{ $profile->nickname }}</h1>
-                @if(config('ranked.enabled') && $profile->account_user_id && ($isOwner || $profile->ranked_public))<p><a href="{{ route('ranked.players.show', $profile) }}">Histórico ranqueado →</a></p>@endif
+                @if($ranked && $ranked['ratings']->isNotEmpty())<p><a href="#ranque">@include('ranked.partials.tier', ['rating' => $ranked['ratings']->first()->rating, 'tiers' => $ranked['tiers']])</a> <span class="muted">{{ $ranked['ratings']->first()->format }} · {{ $ranked['ratings']->first()->rating }} ELO</span></p>@endif
 
                 @if($showPreferredDeck)<p>{{ $profile->preferred_deck_name ?: 'Deck principal não informado' }} @if($profile->preferred_deck_colors) · @include('partials.color-pips', ['colors' => $profile->preferred_deck_colors]) @endif</p>@endif
 
@@ -96,7 +96,7 @@
     @endif
     @if($ranked['snapshots']->isNotEmpty())
         <h3 class="achievement-category">Temporadas encerradas</h3>
-        @foreach($ranked['snapshots'] as $snap)<p class="muted"><strong>{{ $snap->season->name }}</strong> · {{ $snap->format }}: {{ $snap->tier }} ({{ $snap->final_rating }})@if($snap->rank) · {{ $snap->rank }}º lugar@endif</p>@endforeach
+        @foreach($ranked['snapshots'] as $snap)<p class="muted"><strong>{{ $snap->season->name }}</strong> · {{ $snap->format }}: {{ $snap->tier }} ({{ $snap->final_rating }})@if($snap->rank) · {{ $snap->rank }}º lugar @endif</p>@endforeach
     @endif
     @if($isOwner)
         <form method="POST" action="{{ route('ranked.privacy') }}" class="ranked-privacy">@csrf @method('PATCH')<input type="hidden" name="ranked_public" value="0"><label class="check-row"><input type="checkbox" name="ranked_public" value="1" @checked($profile->ranked_public) data-autosubmit> Mostrar meu ranque para amigos e organizadores que veem meu perfil</label><noscript><button class="btn btn-small">Salvar</button></noscript></form>
