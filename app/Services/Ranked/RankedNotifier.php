@@ -2,7 +2,6 @@
 
 namespace App\Services\Ranked;
 
-use App\Models\MatchmakingProposal;
 use App\Models\PlayerProfile;
 use App\Models\RankedMatch;
 use App\Models\RankedSeason;
@@ -20,17 +19,6 @@ class RankedNotifier
         $m->loadMissing(['playerOne', 'playerTwo']);
         foreach ([[$m->playerOne, $m->playerTwo], [$m->playerTwo, $m->playerOne]] as [$me, $other]) {
             $this->send($me, 'ranked.match', "Partida ranqueada marcada contra {$other->nickname} ({$m->format})", $m, "ranked:{$m->id}:created");
-        }
-    }
-
-    public function proposal(MatchmakingProposal $p): void
-    {
-        $p->loadMissing(['entryOne.profile', 'entryTwo.profile']);
-        foreach ([$p->entryOne, $p->entryTwo] as $entry) {
-            $user = $this->user($entry->profile);
-            if ($user) {
-                $this->notifications->send($user, 'ranked.queue', "Oponente encontrado em {$entry->format}: aceite em até 3 minutos", '/ranked', "ranked:proposal:{$p->id}:user:{$user->id}");
-            }
         }
     }
 
@@ -77,7 +65,7 @@ class RankedNotifier
             $profile = PlayerProfile::find($profileId);
             $user = $profile ? $this->user($profile) : null;
             if ($user && ! $m->involvesUser($user)) {
-                $this->notifications->send($user, 'ranked.result', 'Seu rating foi corrigido após uma revisão da moderação', '/ranked', "ranked:{$m->id}:corrected:{$profileId}");
+                $this->notifications->send($user, 'ranked.result', 'Seu rating foi corrigido após uma revisão da moderação', '/me/profile', "ranked:{$m->id}:corrected:{$profileId}");
             }
         }
     }
@@ -97,7 +85,7 @@ class RankedNotifier
         foreach ($profiles as $profile) {
             $user = $this->user($profile);
             if ($user) {
-                $this->notifications->send($user, 'ranked.season', "Temporada {$season->name} encerrada: confira sua patente final", '/ranked/seasons/'.$season->slug, "season:{$season->id}:finished:{$user->id}");
+                $this->notifications->send($user, 'ranked.season', "Temporada {$season->name} encerrada: confira sua patente final", '/me/profile', "season:{$season->id}:finished:{$user->id}");
             }
         }
     }

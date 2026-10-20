@@ -1,2 +1,2 @@
+{{-- A navegacao destas paginas agora fica so no cabecalho global (sem links duplicados). --}}
 @push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/community.css') }}">@endpush
-<nav class="community-nav" aria-label="Comunidade"><a href="{{ route('dashboard') }}">Meu painel</a><a href="{{ route('clubs.index') }}">Clubes</a><a href="{{ route('feed.index') }}">Atividades</a><a href="{{ route('notifications.index') }}">Notificações</a><a href="{{ route('tournaments.index') }}">Torneios</a></nav>

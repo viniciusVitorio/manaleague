@@ -68,6 +68,42 @@
     <article class="card stat-card"><b>{{ $summary['best_streak'] }}</b><span>Maior sequência</span></article>
 </div>
 
+
+@if($ranked)
+@push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/ranked.css') }}">@endpush
+<section class="card section-card profile-ranked" id="ranque">
+    <div class="section-heading"><div><span class="eyebrow">ELO / PDL</span><h2>Ranque</h2></div>@if($isOwner && $ranked['activeFormats']->isNotEmpty())<a class="btn btn-small btn-secondary" href="{{ route('challenges.index', ['ranked' => 1]) }}">Desafio ranqueado</a>@endif</div>
+    @if($ranked['ratings']->isEmpty())
+        <p class="muted">@if($isOwner){{ $ranked['activeFormats']->isEmpty() ? 'Nenhuma temporada ranqueada em andamento.' : 'Você ainda não jogou ranqueado.' }} Todos começam com <strong>{{ $ranked['start'] }} ({{ $ranked['tiers']->resolve($ranked['start'])['division'] }})</strong> em cada formato.@else Sem partidas ranqueadas nesta temporada.@endif</p>
+    @else
+        <div class="ranked-grid">
+        @foreach($ranked['ratings'] as $rating)
+            @php($t = $ranked['tiers']->resolve($rating->rating))
+            <article class="rating-card tier-{{ $t['key'] }}">
+                <div class="rating-head">@include('ranked.partials.tier', ['rating' => $rating->rating, 'tiers' => $ranked['tiers']])<span class="muted">{{ $rating->format }} · {{ $rating->season->name }}</span></div>
+                <div class="rating-value"><strong>{{ $rating->rating }}</strong> ELO @if($rating->isProvisional())<span class="provisional" title="Primeiras partidas da temporada">Provisório</span>@endif</div>
+                @if($t['pdl_max'])<div class="pdl" role="progressbar" aria-label="Progresso na divisão" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $t['pdl'] }}"><span style="width: {{ $t['pdl'] }}%"></span></div><small>{{ $t['pdl'] }}/100 PDL</small>@else<small>{{ $t['pdl'] }} PDL acima de Mestre</small>@endif
+                <p class="muted">{{ $rating->wins }}V {{ $rating->draws }}E {{ $rating->losses }}D · pico {{ $rating->peak_rating }}</p>
+            </article>
+        @endforeach
+        </div>
+    @endif
+    @if($ranked['history']->isNotEmpty())
+        <h3 class="achievement-category">Últimas variações</h3>
+        @foreach($ranked['history'] as $tx)
+            <div class="tx-row"><span class="delta {{ $tx->delta >= 0 ? 'up' : 'down' }}">{{ $tx->delta >= 0 ? '+' : '' }}{{ $tx->delta }}</span><div>@if($tx->event_type === 'correction')<strong>Correção da moderação</strong><small>{{ $tx->note }}</small>@else<strong>@if($isOwner)<a href="{{ route('ranked.matches.show', $tx->ranked_match_id) }}">@endif{{ $tx->rankedMatch?->playerOne?->nickname }} {{ $tx->rankedMatch?->score_one }}×{{ $tx->rankedMatch?->score_two }} {{ $tx->rankedMatch?->playerTwo?->nickname }}@if($isOwner)</a>@endif</strong><small>{{ $tx->format }} · {{ $tx->rating_before }} → {{ $tx->rating_after }}</small>@endif</div><time datetime="{{ $tx->effective_at->toIso8601String() }}">{{ $tx->effective_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}</time></div>
+        @endforeach
+    @endif
+    @if($ranked['snapshots']->isNotEmpty())
+        <h3 class="achievement-category">Temporadas encerradas</h3>
+        @foreach($ranked['snapshots'] as $snap)<p class="muted"><strong>{{ $snap->season->name }}</strong> · {{ $snap->format }}: {{ $snap->tier }} ({{ $snap->final_rating }})@if($snap->rank) · {{ $snap->rank }}º lugar@endif</p>@endforeach
+    @endif
+    @if($isOwner)
+        <form method="POST" action="{{ route('ranked.privacy') }}" class="ranked-privacy">@csrf @method('PATCH')<input type="hidden" name="ranked_public" value="0"><label class="check-row"><input type="checkbox" name="ranked_public" value="1" @checked($profile->ranked_public) data-autosubmit> Mostrar meu ranque para amigos e organizadores que veem meu perfil</label><noscript><button class="btn btn-small">Salvar</button></noscript></form>
+        <script src="{{ \App\Support\VersionedAsset::url('js/ranked-queue.js') }}" defer></script>
+    @endif
+</section>
+@endif
 <section class="card section-card">
     <div class="section-heading"><div><span class="eyebrow">Badges</span><h2>Conquistas</h2></div><span class="muted">{{ $unlocked->count() }} de {{ $achievements->count() }}</span></div>
     <div class="achievement-progress"><span style="width: {{ round($unlocked->count() / max(1, $achievements->count()) * 100) }}%"></span></div>

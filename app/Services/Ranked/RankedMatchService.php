@@ -70,7 +70,7 @@ class RankedMatchService
     /** Chamado quando OS DOIS ja aceitaram jogar ranqueado (desafio aceito ou proposta aceita). */
     public function create(RankedSeason $season, string $format, PlayerProfile $one, PlayerProfile $two, string $sourceType, int $sourceId, int $bestOf = 3): RankedMatch
     {
-        $this->fail(! in_array($sourceType, ['challenge', 'matchmaking'], true), 'Origem inválida.');
+        $this->fail($sourceType !== 'challenge', 'Origem inválida.');
         $this->fail(! in_array($bestOf, [1, 3, 5], true), 'Melhor de 1, 3 ou 5.');
         $match = DB::transaction(function () use ($season, $format, $one, $two, $sourceType, $sourceId, $bestOf) {
             $season = RankedSeason::query()->with('formats')->lockForUpdate()->findOrFail($season->id);

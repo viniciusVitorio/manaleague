@@ -51,7 +51,7 @@ class RankedMatchController extends Controller
     {
         $this->service->cancel($match, $request->user());
 
-        return redirect()->route('ranked.index')->with('status', 'Partida cancelada. Nada foi pontuado.');
+        return redirect()->route('dashboard')->with('status', 'Partida cancelada. Nada foi pontuado.');
     }
 
     public function resolve(ResolveRankedMatchRequest $request, RankedMatch $match)

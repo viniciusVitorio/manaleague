@@ -8,7 +8,7 @@ final class VersionedAsset
     public static function coreRelease(): string
     {
         $hashes = [];
-        foreach (['css/app.css', 'js/nav.js', 'js/release-notice.js'] as $path) {
+        foreach (['css/app.css', 'css/ui.css', 'js/nav.js', 'js/release-notice.js'] as $path) {
             $file = public_path($path);
             $hashes[] = is_file($file) ? hash_file('sha256', $file) : $path;
         }

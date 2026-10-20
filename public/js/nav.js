@@ -50,7 +50,72 @@
         });
     }
 
-    function boot() { init(); initToggles(); }
+    // Menus do cabecalho (Mais, conta, menu mobile): <button data-menu-button aria-controls="id">.
+    // Um aberto por vez; fecha com Esc (devolvendo o foco), clique fora ou ao navegar.
+    function initMenus() {
+        var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-menu-button]'));
+        if (!buttons.length) return;
+
+        function panelOf(button) { return document.getElementById(button.getAttribute('aria-controls')); }
+        function close(button) {
+            var panel = panelOf(button);
+            if (!panel || panel.hidden) return;
+            panel.hidden = true;
+            button.setAttribute('aria-expanded', 'false');
+            if (button.classList.contains('site-menu-toggle')) button.setAttribute('aria-label', 'Abrir menu');
+        }
+        function closeAll(except) { buttons.forEach(function (b) { if (b !== except) close(b); }); }
+        function items(panel) { return Array.prototype.slice.call(panel.querySelectorAll('a, button')); }
+
+        buttons.forEach(function (button) {
+            button.addEventListener('click', function (event) {
+                event.stopPropagation();
+                var panel = panelOf(button);
+                if (!panel) return;
+                var open = panel.hidden;
+                closeAll(button);
+                panel.hidden = !open;
+                button.setAttribute('aria-expanded', open ? 'true' : 'false');
+                if (button.classList.contains('site-menu-toggle')) button.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+            });
+            var panel = panelOf(button);
+            if (!panel) return;
+            button.addEventListener('keydown', function (event) {
+                if (event.key !== 'ArrowDown') return;
+                event.preventDefault();
+                if (panel.hidden) button.click();
+                var first = items(panel)[0];
+                if (first) first.focus();
+            });
+            panel.addEventListener('focusout', function (event) {
+                if (!panel.hidden && event.relatedTarget && !panel.contains(event.relatedTarget) && event.relatedTarget !== button) close(button);
+            });
+            panel.addEventListener('keydown', function (event) {
+                if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+                var list = items(panel), index = list.indexOf(document.activeElement);
+                event.preventDefault();
+                var next = event.key === 'ArrowDown' ? index + 1 : index - 1;
+                list[(next + list.length) % list.length].focus();
+            });
+        });
+
+        document.addEventListener('click', function (event) {
+            buttons.forEach(function (button) {
+                var panel = panelOf(button);
+                if (panel && !panel.contains(event.target)) close(button);
+            });
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape') return;
+            buttons.forEach(function (button) {
+                var panel = panelOf(button);
+                if (panel && !panel.hidden) { close(button); button.focus(); }
+            });
+        });
+        window.matchMedia('(min-width: 961px)').addEventListener('change', function () { closeAll(null); });
+    }
+
+    function boot() { init(); initToggles(); initMenus(); }
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', boot);

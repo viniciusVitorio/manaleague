@@ -20,3 +20,4 @@
 .ranked-rules h2{margin-top:22px}.ranked-rules code{background:#18181b;padding:1px 5px;border-radius:4px}
 .admin-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:4px 14px;align-items:end}.admin-form fieldset{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 18px;border:1px solid #27272a;border-radius:8px;padding:8px 12px}.admin-form fieldset label{margin:6px 0}
 @media(max-width:600px){.tx-row{grid-template-columns:48px 1fr}.tx-row time{grid-column:2}.rating-value strong{font-size:1.6rem}}
+.profile-ranked .ranked-grid{margin:0 0 8px}.profile-ranked .rating-card{margin:0}.ranked-privacy{margin-top:16px;padding-top:12px;border-top:1px solid #27272a}.profile-title .tier-badge{vertical-align:middle}

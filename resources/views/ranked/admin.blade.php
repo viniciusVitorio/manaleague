@@ -17,8 +17,7 @@
 
 <section class="card section-card"><h2>Temporadas</h2>@forelse($seasons as $s)<div class="history-row"><div><strong>{{ $s->name }}</strong><small>{{ $s->statusLabel() }} · {{ $s->starts_at->timezone('America/Sao_Paulo')->format('d/m/Y H:i') }} – {{ $s->ends_at->timezone('America/Sao_Paulo')->format('d/m/Y H:i') }} · {{ $s->formats->pluck('format')->join(', ') }}@if($s->club) · {{ $s->club->name }}@endif</small></div><div>
 @if($s->status === 'draft')<form method="POST" action="{{ route('ranked.admin.seasons.schedule', $s) }}">@csrf<button class="btn btn-small btn-primary">Publicar</button></form>@endif
-@if($s->status === 'active')<form method="POST" action="{{ route('ranked.admin.seasons.close', $s) }}">@csrf<button class="btn btn-small btn-danger" data-confirm="Encerrar a temporada agora? Novas partidas deixam de pontuar.">Encerrar</button></form>@endif
-@if($s->status !== 'draft')<a class="btn btn-small btn-ghost" href="{{ route('ranked.seasons.show', $s) }}">Ver</a>@endif</div></div>@empty<p>Nenhuma temporada criada.</p>@endforelse</section>
+@if($s->status === 'active')<form method="POST" action="{{ route('ranked.admin.seasons.close', $s) }}">@csrf<button class="btn btn-small btn-danger" data-confirm="Encerrar a temporada agora? Novas partidas deixam de pontuar.">Encerrar</button></form>@endif</div></div>@empty<p>Nenhuma temporada criada.</p>@endforelse</section>
 
 <section class="card section-card"><h2>Placares em revisão</h2>@forelse($disputes as $m)<a class="history-row" href="{{ route('ranked.matches.show', $m) }}"><div><strong>#{{ $m->id }} · {{ $m->playerOne->nickname }} × {{ $m->playerTwo->nickname }}</strong><small>{{ $m->season->name }} · {{ $m->format }} · {{ $m->statusLabel() }} desde {{ $m->updated_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}</small></div><span>Abrir →</span></a>@empty<p class="muted">Nada aguardando.</p>@endforelse</section>
 

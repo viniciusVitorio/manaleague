@@ -350,18 +350,6 @@ class RankedEloTest extends TestCase
         Carbon::setTestNow();
     }
 
-    public function test_new_season_starts_everyone_at_1000_without_touching_previous(): void
-    {
-        $old = $this->season(['Pauper']);
-        $a = $this->player('A');
-        $b = $this->player('B');
-        $this->play($this->match($old, $a, $b), $a, $b, 2, 0);
-        $old->update(['status' => 'finished']);
-        $new = $this->season(['Pauper']);
-        $this->play($this->match($new, $a, $b), $a, $b, 0, 2);
-        $this->assertSame([1016, 984], [$this->rating($old, $a), $this->rating($new, $a)]);
-    }
-
     public function test_scheduling_rejects_overlapping_season_in_same_scope_and_format(): void
     {
         $this->season(['Pauper']);
@@ -394,127 +382,52 @@ class RankedEloTest extends TestCase
         Carbon::setTestNow();
     }
 
-    public function test_leaderboard_minimum_games_privacy_provisional_and_tiebreak(): void
+    public function test_new_seasons_start_at_600_ferro_two_without_touching_previous(): void
+    {
+        $old = $this->season(['Pauper']); // temporada antiga criada com 1000
+        $a = $this->player('A'); $b = $this->player('B');
+        $this->play($this->match($old, $a, $b), $a, $b, 2, 0);
+        $old->update(['status' => 'finished']);
+        $admin = $this->player('Admin'); $admin->forceFill(['is_admin' => true])->save();
+        $svc = app(SeasonService::class);
+        $new = $svc->create($admin, ['name' => 'Nova', 'starts_at' => now()->subHour(), 'ends_at' => now()->addMonth(), 'formats' => ['Pauper'], 'scope' => 'global']);
+        $svc->schedule($new);
+        $svc->refresh();
+        $new = $new->fresh('formats');
+        $this->assertSame([600, 'elo-v2'], [$new->formatConfig('Pauper')->starting_rating, $new->rules_version]);
+        $this->assertSame('Ferro II', app(\App\Services\Ranked\RankTierResolver::class)->resolve(600)['division']);
+        $this->play($this->match($new, $a, $b), $a, $b, 0, 2);
+        $this->assertSame([1016, 584, 616], [$this->rating($old, $a), $this->rating($new, $a), $this->rating($new, $b)]);
+    }
+
+    public function test_rank_lives_on_profile_with_privacy_and_old_section_is_gone(): void
     {
         $s = $this->season(['Pauper']);
-        $a = $this->player('Ana');
-        $b = $this->player('Bia');
-        $c = $this->player('Caio');
-        Carbon::setTestNow(now()->subDays(3));
-        foreach (range(1, 3) as $i) {
-            $this->play($this->match($s, $a, $b), $a, $b, 2, 0);
+        $a = $this->player('Ana'); $b = $this->player('Bia'); $this->friends($a, $b);
+        $this->play($this->match($s, $a, $b), $a, $b, 2, 0);
+
+        $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('Ranque')->assertSee('1016')->assertSee('Prata II')
+            ->assertSee('Últimas variações')->assertSee('Mostrar meu ranque');
+        $this->actingAs($b)->get('/players/'.$a->playerProfile->id)->assertOk()->assertSee('1016')->assertDontSee('Mostrar meu ranque');
+        $this->actingAs($a)->patch('/me/profile/ranked-privacy', ['ranked_public' => 0])->assertRedirect();
+        $this->actingAs($b)->get('/players/'.$a->playerProfile->id)->assertOk()->assertDontSee('1016');
+        $this->actingAs($a)->get('/me/profile')->assertSee('1016');
+
+        foreach (['/ranked', '/ranked/regulamento', '/ranked/leaderboard', '/players/'.$a->playerProfile->id.'/ranked'] as $gone) {
+            $this->actingAs($a)->get($gone)->assertNotFound();
         }
-        Carbon::setTestNow();
-        $this->play($this->match($s, $a, $c), $a, $c, 2, 0);
-        $b->playerProfile->update(['ranked_public' => false]);
-        $page = $this->actingAs($c)->get('/ranked/leaderboard?format=Pauper')->assertOk();
-        $page->assertSee('Ana')->assertSee('Jogador oculto')->assertDontSee('Bia')->assertSee('Provisório');
-        $this->assertStringNotContainsString('Caio</a>', $page->getContent()); // 1 partida: fora do ranking publico
-        $this->actingAs($c)->get('/players/'.$b->playerProfile->id.'/ranked')->assertNotFound();
-        $this->actingAs($b)->get('/players/'.$b->playerProfile->id.'/ranked')->assertOk()->assertSee('Só você vê');
-        $this->actingAs($c)->get('/players/'.$a->playerProfile->id.'/ranked')->assertOk()->assertSee('Lançamentos');
+        $this->actingAs($a)->get('/dashboard')->assertDontSee(url('/ranked').'"', false);
     }
 
-    public function test_matchmaking_proposes_within_window_and_creates_match_after_both_accept(): void
-    {
-        $s = $this->season(['Pauper']);
-        $a = $this->player('A');
-        $b = $this->player('B');
-        $c = $this->player('C');
-        PlayerRating::create(['season_id' => $s->id, 'format' => 'Pauper', 'player_profile_id' => $c->playerProfile->id, 'rating' => 1250, 'peak_rating' => 1250, 'provisional_games_remaining' => 0]);
-        $q = app(MatchmakingService::class);
-
-        $this->actingAs($a)->post('/ranked/queue', ['format' => 'Pauper', 'available' => 1])->assertRedirect('/ranked');
-        $this->assertSame('searching', $q->status($a)['state']);
-        $this->actingAs($c)->post('/ranked/queue', ['format' => 'Pauper', 'available' => 1]);
-        $this->assertSame('searching', $q->status($a)['state'], 'diferença de 250 fora da janela inicial');
-        $this->assertArrayNotHasKey('opponent', $q->status($a)); // nada sobre outros jogadores antes da proposta
-        $this->actingAs($b)->post('/ranked/queue', ['format' => 'Pauper', 'available' => 1]);
-        $status = $q->status($a);
-        $this->assertSame(['proposal', 'B', 0], [$status['state'], $status['opponent'], $status['gap']]);
-        $this->assertTrue(CommunityNotification::where('user_id', $b->id)->where('type', 'ranked.queue')->exists());
-
-        $proposal = $status['proposal_id'];
-        $this->actingAs($c)->post("/ranked/proposals/{$proposal}/accept")->assertForbidden();
-        $this->actingAs($a)->post("/ranked/proposals/{$proposal}/accept")->assertRedirect();
-        $this->assertSame(0, RankedMatch::count());
-        $this->actingAs($b)->post("/ranked/proposals/{$proposal}/accept")->assertRedirect();
-        $m = RankedMatch::sole();
-        $this->assertSame(['matchmaking', $proposal], [$m->source_type, $m->source_id]);
-        $this->assertSame('matched', $q->status($a)['state']);
-        $this->actingAs($a)->get('/ranked')->assertSee('Partida criada!')->assertSee('/ranked/matches/'.$m->id);
-        $this->actingAs($b)->post("/ranked/proposals/{$proposal}/accept")->assertRedirect(); // repetido: sem segunda partida
-        $this->assertSame(1, RankedMatch::count());
-    }
-
-    public function test_progressive_window_decline_and_expiry(): void
-    {
-        $s = $this->season(['Pauper']);
-        $a = $this->player('A');
-        $c = $this->player('C');
-        $d = $this->player('D');
-        PlayerRating::create(['season_id' => $s->id, 'format' => 'Pauper', 'player_profile_id' => $c->playerProfile->id, 'rating' => 1250, 'peak_rating' => 1250, 'provisional_games_remaining' => 0]);
-        $q = app(MatchmakingService::class);
-        $q->join($a, 'Pauper', null, null);
-        $q->join($c, 'Pauper', null, null);
-        Carbon::setTestNow(now()->addMinutes(3));
-        $q->heartbeat($c); // 3 min de espera: janela 200, ainda nao
-        $this->assertSame('searching', $q->status($a)['state']);
-        Carbon::setTestNow(now()->addMinutes(3)); // 6 min: janela 300
-        $q->heartbeat($a);
-        $st = $q->status($a);
-        $this->assertSame(['proposal', 250], [$st['state'], $st['gap']]);
-        $this->assertFalse($st['wide_gap']);
-
-        $this->actingAs($c)->post("/ranked/proposals/{$st['proposal_id']}/decline")->assertRedirect();
-        $this->assertSame('idle', $q->status($c)['state']);       // quem recusou sai
-        $this->assertSame('searching', $q->status($a)['state']);  // o outro continua com a posicao
-        $q->join($d, 'Pauper', null, null);
-        $st = $q->status($a);
-        $this->assertSame('proposal', $st['state']);
-        $q->accept(MatchmakingProposal::find($st['proposal_id']), $a);
-        Carbon::setTestNow(now()->addMinutes(4)); // D nao respondeu em 3 min
-        $q->heartbeat($a);
-        $this->assertSame('searching', $q->status($a)['state']);
-        $this->assertSame('expired', MatchmakingEntry::where('player_profile_id', $d->playerProfile->id)->value('status'));
-        Carbon::setTestNow(now()->addMinutes(11)); // sem presenca por mais de 10 min
-        $q->runMatching();
-        $this->assertSame('expired', $q->status($a)['state']);
-        Carbon::setTestNow();
-    }
-
-    public function test_queue_respects_club_scope_suspension_and_single_entry(): void
-    {
-        $this->season(['Pauper']);
-        $a = $this->player('A');
-        $b = $this->player('B');
-        $club = app(ClubService::class)->create($a, ['name' => 'Loja', 'privacy' => 'private']);
-        $this->actingAs($b)->post('/ranked/queue', ['format' => 'Pauper', 'club_id' => $club->id, 'available' => 1])->assertSessionHasErrors('ranked');
-        $this->actingAs($a)->post('/ranked/queue', ['format' => 'Pauper', 'club_id' => $club->id, 'available' => 1])->assertSessionHasNoErrors();
-        $this->actingAs($a)->post('/ranked/queue', ['format' => 'Pauper', 'available' => 1])->assertSessionHasErrors('ranked');
-        $this->actingAs($b)->post('/ranked/queue', ['format' => 'Pauper', 'available' => 1])->assertSessionHasNoErrors();
-        $this->assertSame('searching', app(MatchmakingService::class)->status($a)['state'], 'clube e comunidade não se misturam');
-        $s = $this->player('Suspenso');
-        $s->playerProfile->forceFill(['ranked_suspended_until' => now()->addDay()])->save();
-        $this->actingAs($s)->post('/ranked/queue', ['format' => 'Pauper', 'available' => 1])->assertSessionHasErrors('ranked');
-        $this->actingAs($b)->post('/ranked/queue', ['format' => 'Commander', 'available' => 1])->assertSessionHasErrors('format');
-    }
-
-    public function test_pages_render_for_players_and_admin(): void
+    public function test_match_and_admin_pages_still_work(): void
     {
         $s = $this->season();
-        $a = $this->player('Ana');
-        $b = $this->player('Bruno');
-        $admin = $this->player('Admin');
-        $admin->forceFill(['is_admin' => true])->save();
+        $a = $this->player('Ana'); $b = $this->player('Bruno');
+        $admin = $this->player('Admin'); $admin->forceFill(['is_admin' => true])->save();
         $m = $this->match($s, $a, $b);
-        $this->actingAs($a)->get('/ranked')->assertOk()->assertSee('Procurar partida')->assertSee('Partidas em aberto')->assertSee('1000 ELO (Prata II)');
         $this->actingAs($a)->get('/dashboard')->assertOk()->assertSee('Enviar resultado ranqueado');
-        $this->actingAs($a)->get('/ranked/regulamento')->assertOk()->assertSee('+24');
-        $this->actingAs($a)->get("/ranked/seasons/{$s->slug}")->assertOk()->assertSee('Top 10 · Pauper');
-        $this->actingAs($a)->get("/ranked/matches/{$m->id}")->assertOk()->assertSee('Informar resultado');
+        $this->actingAs($a)->get("/ranked/matches/{$m->id}")->assertOk()->assertSee('Informar resultado')->assertSee('Meu perfil');
+        $this->actingAs($a)->post("/ranked/matches/{$m->id}/cancel")->assertRedirect('/dashboard');
         $this->actingAs($admin)->get('/ranked/admin')->assertOk()->assertSee('Nova temporada');
-        $this->actingAs($admin)->get("/ranked/matches/{$m->id}")->assertOk();
-        $this->actingAs($a)->get('/tournaments')->assertSee(url('/ranked'), false);
     }
 }

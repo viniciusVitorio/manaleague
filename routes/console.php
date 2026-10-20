@@ -45,10 +45,9 @@ Artisan::command('ml:admin {email : E-mail da conta} {--revoke : Remove o acesso
 
 Artisan::command('ranked:tick', function (): int {
     app(\App\Services\Ranked\SeasonService::class)->refresh();
-    $proposals = app(\App\Services\Ranked\MatchmakingService::class)->runMatching();
-    $this->info("Temporadas atualizadas; {$proposals} proposta(s) de partida criada(s).");
+    $this->info('Temporadas atualizadas.');
     return 0;
-})->purpose('Avança temporadas por data, expira e roda a fila de matchmaking');
+})->purpose('Avança temporadas por data (agendada → em andamento → encerrada)');
 
 Artisan::command('ranked:prune', function (): int {
     $days = (int) config('ranked.ip_retention_days');

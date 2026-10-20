@@ -58,7 +58,7 @@ class FriendsPageTest extends TestCase
         $this->actingAs($alice)->post(route('friends.store', $bobProfile->friend_code))->assertSessionHas('status', 'Pedido já enviado; aguardando resposta.');
 
         // Bob ve o badge no menu e o pedido na pagina de amigos.
-        $this->actingAs($bob)->get(route('friends.index'))->assertOk()->assertSee('Pedidos recebidos')->assertSee('nav-badge', false);
+        $this->actingAs($bob)->get(route('friends.index'))->assertOk()->assertSee('Pedidos recebidos')->assertSee('1 pedido de amizade pendente', false);
         $this->actingAs($bob)->patch(route('friends.accept-code', $aliceProfile->friend_code))->assertSessionHas('status');
 
         $this->actingAs($alice)->get(route('friends.index'))->assertOk()->assertSee('Meus amigos')->assertSee('Bob');

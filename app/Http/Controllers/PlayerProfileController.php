@@ -35,7 +35,9 @@ class PlayerProfileController extends Controller
         $friendsCount = $this->friendships->friends($request->user())->count();
         $showPreferredDeck = true;
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck'));
+        $ranked = $this->ranked($profile, $profile->account_user_id === $request->user()->id);
+
+        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck', 'ranked'));
     }
 
     public function show(Request $request, PlayerProfile $profile): View
@@ -60,7 +62,35 @@ class PlayerProfileController extends Controller
         $showPreferredDeck = $isOwner || $decks->contains('is_primary', true);
         $friendsCount = null;
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck'));
+        $ranked = $this->ranked($profile, $profile->account_user_id === $request->user()->id);
+
+        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck', 'ranked'));
+    }
+
+    /** Patente por formato (temporadas em andamento) + historico. Outros so veem se o dono permitir. */
+    private function ranked(PlayerProfile $profile, bool $isOwner): ?array
+    {
+        if (! config('ranked.enabled') || ! $profile->account_user_id || (! $isOwner && ! $profile->ranked_public)) {
+            return null;
+        }
+        $ratings = \App\Models\PlayerRating::query()->with('season')->where('player_profile_id', $profile->id)
+            ->whereHas('season', fn ($q) => $q->whereIn('status', ['active', 'closing']))->orderByDesc('rating')->get();
+        $history = \App\Models\RatingTransaction::query()->with(['rankedMatch.playerOne', 'rankedMatch.playerTwo'])
+            ->where('player_profile_id', $profile->id)->latest('effective_at')->latest('id')->limit(8)->get();
+        $snapshots = \App\Models\RatingSeasonSnapshot::query()->with('season')->where('player_profile_id', $profile->id)->latest('id')->limit(6)->get();
+        $activeFormats = \App\Models\RankedSeason::query()->where('status', 'active')->where('scope', 'global')->with('formats')->get()
+            ->flatMap(fn ($s) => $s->formats->where('enabled', true)->pluck('format'))->unique()->values();
+
+        return ['ratings' => $ratings, 'history' => $history, 'snapshots' => $snapshots, 'activeFormats' => $activeFormats,
+            'start' => (int) config('ranked.defaults.starting_rating'), 'tiers' => app(\App\Services\Ranked\RankTierResolver::class)];
+    }
+
+    public function rankedPrivacy(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['ranked_public' => ['required', 'boolean']]);
+        $this->ownProfile($request)->update(['ranked_public' => (bool) $data['ranked_public']]);
+
+        return back()->with('status', $data['ranked_public'] ? 'Seu ranque aparece no seu perfil para quem pode vê-lo.' : 'Seu ranque agora só aparece para você.');
     }
 
     public function edit(Request $request): View

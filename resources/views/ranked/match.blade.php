@@ -2,7 +2,7 @@
 @section('content')
 @include('ranked.partials.head')
 @php($me = auth()->user())
-<a class="back-link" href="{{ route('ranked.index') }}">← Ranked</a>
+<a class="back-link" href="{{ route('profiles.index') }}">← Meu perfil</a>
 <header><span class="eyebrow">Partida ranqueada #{{ $match->id }} · {{ $match->format }} · MD{{ $match->best_of }} · {{ $match->season->name }}</span><h1>{{ $match->playerOne->nickname }} × {{ $match->playerTwo->nickname }}</h1><p><span class="status-pill status-{{ $match->status }}">{{ $match->statusLabel() }}</span> · K {{ $match->k_factor }} · origem: {{ $match->source_type === 'challenge' ? 'desafio' : 'fila' }}</p></header>
 
 @if($match->status === 'confirmed' || $match->status === 'invalidated')
