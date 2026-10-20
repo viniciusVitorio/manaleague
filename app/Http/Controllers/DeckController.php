@@ -89,6 +89,18 @@ class DeckController extends Controller
         return back()->with('status', 'Deck principal atualizado.');
     }
 
+    /** Escolhe a carta do banner. card_id vazio volta para a escolha automatica. */
+    public function cover(Request $request, Deck $deck): RedirectResponse
+    {
+        $this->ensureOwner($request, $deck);
+        $validated = $request->validate([
+            'card_id' => ['nullable', 'integer', Rule::exists('deck_cards', 'id')->where('deck_id', $deck->id)->whereNotNull('art_url')],
+        ]);
+        $deck->forceFill(['cover_card_id' => $validated['card_id'] ?? null])->save();
+
+        return back()->with('status', ($validated['card_id'] ?? null) ? 'Capa do deck atualizada.' : 'Capa automática restaurada.');
+    }
+
     public function destroy(Request $request, Deck $deck): RedirectResponse
     {
         $this->ensureOwner($request, $deck);

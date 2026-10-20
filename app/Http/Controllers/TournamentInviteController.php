@@ -15,7 +15,8 @@ class TournamentInviteController extends Controller
         $tournament = Tournament::query()->where('invite_token', $token)->firstOrFail();
         $profile = $request->user()->ensurePlayerProfile();
         $profile->load('decks');
-        return view('tournaments.invite', compact('tournament', 'profile'));
+        $entry = $tournament->players()->where('player_profile_id', $profile->id)->first();
+        return view('tournaments.invite', compact('tournament', 'profile', 'entry'));
     }
 
     public function store(Request $request, string $token): RedirectResponse
@@ -24,10 +25,7 @@ class TournamentInviteController extends Controller
         abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'As inscrições deste torneio foram encerradas.');
         $profile = $request->user()->ensurePlayerProfile();
 
-        $validated = $request->validate([
-            'deck_name' => ['nullable', 'string', 'max:100'],
-            'deck_colors' => ['nullable', 'string', 'max:10', 'regex:/^[WUBRGC,]*$/'],
-        ]);
+        $validated = TournamentEntryController::validatedDeck($request, $profile);
 
         // Checagem de status, limite e duplicidade dentro da mesma transacao com lock:
         // dois convidados entrando ao mesmo tempo nao conseguem estourar o max_players.
@@ -40,9 +38,9 @@ class TournamentInviteController extends Controller
             if ($locked->max_players && $locked->players()->count() >= $locked->max_players) return 'full';
 
             $locked->players()->create([
-                'player_profile_id' => $profile->id, 'name' => $profile->nickname,
-                'deck_name' => ($validated['deck_name'] ?? null) ?: $profile->preferred_deck_name,
-                'deck_colors' => ($validated['deck_colors'] ?? null) ?: $profile->preferred_deck_colors,
+                'player_profile_id' => $profile->id, 'name' => $profile->nickname, 'deck_id' => $validated['deck_id'],
+                'deck_name' => $validated['deck_name'] ?: $profile->preferred_deck_name,
+                'deck_colors' => $validated['deck_colors'] ?: $profile->preferred_deck_colors,
             ]);
 
             return 'joined';

@@ -48,4 +48,27 @@ class DeckCard extends Model
 
         return $matches[1];
     }
+
+    /**
+     * Custos por face: "{5}{R}{R} // {4}{R}" vira [['5','R','R'], ['4','R']].
+     * Cartas de uma face so retornam um grupo.
+     */
+    public function manaGroups(): array
+    {
+        $groups = [];
+        foreach (explode('//', (string) $this->mana_cost) as $part) {
+            preg_match_all('/\{([^}]+)\}/', $part, $matches);
+            if ($matches[1] !== []) {
+                $groups[] = $matches[1];
+            }
+        }
+
+        return $groups;
+    }
+
+    /** Nome das faces: "Smaug, the Great Calamity // Spew Flame" vira ['Smaug, the Great Calamity', 'Spew Flame']. */
+    public function faceNames(): array
+    {
+        return array_values(array_filter(array_map('trim', explode('//', (string) $this->name)), 'strlen'));
+    }
 }

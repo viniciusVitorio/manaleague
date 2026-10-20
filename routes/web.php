@@ -11,6 +11,7 @@ use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\PlayerProfileController;
 use App\Http\Controllers\PublicArenaController;
 use App\Http\Controllers\TournamentController;
+use App\Http\Controllers\TournamentEntryController;
 use App\Http\Controllers\TournamentFlowController;
 use App\Http\Controllers\TournamentFriendController;
 use App\Http\Controllers\TournamentInviteController;
@@ -59,6 +60,7 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/me/decks/{deck}/cards/{card}', [DeckCardController::class, 'destroy'])->name('decks.cards.destroy');
     Route::post('/me/decks/{deck}/import', [DeckCardController::class, 'import'])->middleware('throttle:10,1')->name('decks.cards.import');
     Route::patch('/me/decks/{deck}', [DeckController::class, 'update'])->name('decks.update');
+    Route::patch('/me/decks/{deck}/cover', [DeckController::class, 'cover'])->name('decks.cover');
     Route::patch('/me/decks/{deck}/primary', [DeckController::class, 'primary'])->name('decks.primary');
     Route::delete('/me/decks/{deck}', [DeckController::class, 'destroy'])->name('decks.destroy');
     Route::get('/players/{profile}', [PlayerProfileController::class, 'show'])->name('profiles.show');
@@ -71,6 +73,7 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/tournaments/{tournament}/players/{player}', [PlayerController::class, 'destroy'])->name('players.destroy');
     Route::post('/tournaments/{tournament}/friends/{profile}', [TournamentFriendController::class, 'store'])->name('tournaments.friends.store');
     Route::put('/tournaments/{tournament}/matches/{match}', [MatchController::class, 'update'])->name('matches.update');
+    Route::patch('/tournaments/{tournament}/my-entry', [TournamentEntryController::class, 'update'])->middleware('throttle:20,1')->name('tournaments.entry.update');
     Route::post('/tournaments/{tournament}/start', [TournamentFlowController::class, 'start'])->name('tournaments.start');
     Route::post('/tournaments/{tournament}/finals', [TournamentFlowController::class, 'finals'])->name('tournaments.finals');
 });

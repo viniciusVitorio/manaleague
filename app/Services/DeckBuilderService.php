@@ -160,10 +160,23 @@ class DeckBuilderService
             'commanders' => $cards->where('board', DeckCard::BOARD_COMMANDER)->values(),
             'groups' => $groups,
             'sideboard' => $cards->where('board', DeckCard::BOARD_SIDE)->values(),
-            'cover' => $cards->firstWhere('board', DeckCard::BOARD_COMMANDER)?->art_url
-                ?? $cards->where('board', DeckCard::BOARD_MAIN)->reject(fn (DeckCard $card) => $card->isLand())->sortByDesc('cmc')->first()?->art_url,
+            'cover' => $this->coverFor($deck, $cards),
+            'cover_card_id' => $cards->firstWhere('id', $deck->cover_card_id)?->art_url ? $deck->cover_card_id : null,
+            'cover_options' => $cards->filter(fn (DeckCard $card) => filled($card->art_url))->unique('scryfall_id')
+                ->sortBy([['board', 'asc'], ['cmc', 'desc'], ['name', 'asc']])->values(),
             'warnings' => $this->warnings($deck, $cards),
         ];
+    }
+
+    /**
+     * Banner do deck: carta escolhida pelo dono; senao o comandante; senao a nao-terreno de maior CMC.
+     * Se a carta escolhida saiu do deck, cai para a escolha automatica.
+     */
+    private function coverFor(Deck $deck, $cards): ?string
+    {
+        return ($deck->cover_card_id ? $cards->firstWhere('id', $deck->cover_card_id)?->art_url : null)
+            ?? $cards->firstWhere('board', DeckCard::BOARD_COMMANDER)?->art_url
+            ?? $cards->where('board', DeckCard::BOARD_MAIN)->reject(fn (DeckCard $card) => $card->isLand())->sortByDesc('cmc')->first()?->art_url;
     }
 
     /** Avisos de construcao por formato (nao bloqueiam: o deck pode estar em montagem). */

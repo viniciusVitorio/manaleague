@@ -18,8 +18,32 @@
             @unless($isOwner)<span>por <b>{{ $deck->profile->nickname }}</b></span>@endunless
         </div>
     </div>
-    @if($isOwner)<a class="btn btn-ghost btn-small deck-edit" href="{{ route('decks.edit', $deck) }}">Editar deck</a>@endif
+    @if($isOwner)
+    <div class="deck-edit">
+        @if($summary['cover_options']->isNotEmpty())<button type="button" class="btn btn-ghost btn-small" data-toggle="cover-picker" aria-controls="cover-picker" aria-expanded="false">🖼 Trocar capa</button>@endif
+        <a class="btn btn-ghost btn-small" href="{{ route('decks.edit', $deck) }}">Editar deck</a>
+    </div>
+    @endif
 </header>
+
+@if($isOwner && $summary['cover_options']->isNotEmpty())
+<section class="card section-card cover-picker" id="cover-picker" hidden>
+    <div class="section-heading"><div><span class="eyebrow">Banner</span><h2>Escolha a carta da capa</h2></div>
+        <button type="button" class="btn btn-ghost btn-small" data-toggle="cover-picker" aria-controls="cover-picker">Fechar</button></div>
+    <form method="POST" action="{{ route('decks.cover', $deck) }}" class="cover-grid">@csrf @method('PATCH')
+        <button class="cover-option cover-auto @if(! $summary['cover_card_id']) is-selected @endif" name="card_id" value="" aria-pressed="{{ $summary['cover_card_id'] ? 'false' : 'true' }}">
+            <span class="cover-auto-icon">✨</span><span class="cover-name">Automática</span>
+        </button>
+        @foreach($summary['cover_options'] as $option)
+            @php($selected = $summary['cover_card_id'] === $option->id)
+            <button class="cover-option @if($selected) is-selected @endif" name="card_id" value="{{ $option->id }}" aria-pressed="{{ $selected ? 'true' : 'false' }}" title="{{ $option->name }}">
+                <img src="{{ $option->art_url }}" alt="" loading="lazy" width="200" height="146">
+                <span class="cover-name">{{ $option->faceNames()[0] ?? $option->name }}</span>
+            </button>
+        @endforeach
+    </form>
+</section>
+@endif
 
 @if($summary['warnings'])
 <div class="alert alert-warning"><strong>Construção:</strong><ul>@foreach($summary['warnings'] as $warning)<li>{{ $warning }}</li>@endforeach</ul></div>

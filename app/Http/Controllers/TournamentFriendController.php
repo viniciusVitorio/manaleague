@@ -25,6 +25,7 @@ class TournamentFriendController extends Controller
 
             $locked->players()->create([
                 'player_profile_id' => $profile->id, 'name' => $profile->nickname,
+                'deck_id' => $profile->decks()->where('is_primary', true)->value('id'),
                 'deck_name' => $profile->preferred_deck_name, 'deck_colors' => $profile->preferred_deck_colors,
             ]);
 

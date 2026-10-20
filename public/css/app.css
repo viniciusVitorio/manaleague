@@ -132,3 +132,59 @@ details>summary::-webkit-details-marker{display:none}
 .type-breakdown b{color:#fafafa}
 
 @media(max-width:900px){.friends-layout,.deck-layout{grid-template-columns:1fr}.deck-sidebar{position:static}.card-preview{display:none !important}}
+
+/* ===== Menu hamburger (telas pequenas) ===== */
+.nav-inner{position:relative}
+.nav-toggle{display:none;position:relative;flex-direction:column;justify-content:center;gap:4px;width:38px;height:38px;padding:0 10px;border:1px solid #27272a;border-radius:7px;background:#0c0c0f;color:#fafafa;cursor:pointer}
+.nav-toggle:hover{background:#18181b}
+.nav-toggle:focus-visible{outline:2px solid #a1a1aa;outline-offset:2px}
+.nav-toggle-bar{display:block;width:100%;height:2px;border-radius:2px;background:currentColor;transition:transform .2s,opacity .2s}
+.nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(2){opacity:0}
+.nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+.nav-toggle-dot{position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;background:#ef4444;border:2px solid #09090b}
+@media(max-width:780px){
+  .nav-toggle{display:inline-flex}
+  .nav-menu{display:none;position:absolute;top:calc(100% + 1px);right:0;left:0;flex-direction:column;align-items:stretch;gap:2px;padding:8px;background:rgba(9,9,11,.97);border:1px solid #27272a;border-top:0;border-radius:0 0 10px 10px;box-shadow:0 18px 40px rgba(0,0,0,.55)}
+  .nav-menu.is-open{display:flex}
+  .nav-menu .nav-link{display:flex;justify-content:space-between;padding:12px;border-radius:7px;font-size:.92rem;color:#e4e4e7}
+  .nav-menu .nav-link:hover{background:#18181b}
+  .nav-menu form{margin:6px 0 0;padding-top:8px;border-top:1px solid #27272a}
+  .nav-menu form .btn{width:100%;min-height:40px}
+}
+
+/* ===== Nome de carta longo (ex.: cartas duplas "A // B") ===== */
+.card-name{min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.3}
+.card-face,.card-back{display:block}
+.card-back{color:#71717a;font-size:.78rem}
+.card-cost{flex-direction:column;align-items:flex-end;gap:3px}
+.cost-group{display:inline-flex;align-items:center}
+@media(max-width:480px){
+  .card-line{grid-template-columns:18px minmax(0,1fr) auto auto;gap:6px;padding:5px 0}
+  .card-controls{gap:3px}
+  .card-controls .qty-btn{min-width:24px;height:26px}
+  .card-controls .qty-btn.wide{padding:0 5px}
+}
+@media(hover:none){.card-controls{opacity:1}}
+
+/* ===== Capa do deck (escolha da carta do banner) ===== */
+.deck-edit{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.cover-picker{margin-top:-6px}
+.cover-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;max-height:460px;overflow-y:auto;padding:2px}
+.cover-option{position:relative;display:flex;min-width:0;flex-direction:column;padding:0;border:1px solid #27272a;border-radius:8px;background:#09090b;color:#e4e4e7;cursor:pointer;overflow:hidden;text-align:left;transition:border-color .15s,transform .15s}
+.cover-option img{display:block;width:100%;aspect-ratio:626/457;height:auto;object-fit:cover;background:#18181b}
+.cover-option:hover{border-color:#71717a}
+.cover-option:focus-visible{outline:2px solid #a1a1aa;outline-offset:2px}
+.cover-option.is-selected{border-color:#fafafa;box-shadow:0 0 0 1px #fafafa}
+.cover-option.is-selected:after{content:"✓";position:absolute;top:6px;right:6px;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#fafafa;color:#09090b;font-size:.75rem;font-weight:800}
+.cover-name{display:block;padding:7px 9px;font-size:.76rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cover-auto{justify-content:flex-end}
+.cover-auto-icon{display:grid;place-items:center;flex:1;aspect-ratio:626/457;font-size:1.6rem;background:repeating-linear-gradient(135deg,#111113 0 10px,#0c0c0f 10px 20px)}
+@media(max-width:480px){.cover-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.deck-hero{padding-top:64px}}
+
+/* ===== Sua inscricao: troca de deck ===== */
+.my-entry h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.my-entry .section-heading{flex-direction:row;align-items:center}
+.my-entry-form{max-width:460px}
+.my-entry-form label{margin:12px 0}
+.my-entry .section-heading .btn{white-space:nowrap;flex:0 0 auto}

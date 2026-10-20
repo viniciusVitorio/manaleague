@@ -47,7 +47,10 @@ class TournamentController extends Controller
         $enrolledProfileIds = $tournament->players->pluck('player_profile_id')->filter();
         $friends = $tournament->user->friendProfiles()->wherePivot('status', 'accepted')->whereNotIn('player_profiles.id', $enrolledProfileIds)->orderBy('nickname')->get();
         $recap = $recaps->for($tournament);
-        return view('tournaments.show', compact('tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'friends', 'recap'));
+        // O organizador tambem pode jogar: mostra o card de troca de deck da propria inscricao.
+        $profile = auth()->user()->playerProfile()->with('decks')->first();
+        $entry = $profile ? $tournament->players->firstWhere('player_profile_id', $profile->id) : null;
+        return view('tournaments.show', compact('tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'friends', 'recap', 'profile', 'entry'));
     }
 
     public function edit(Tournament $tournament): View

@@ -19,6 +19,8 @@ class PublicArenaController extends Controller
         $final = $tournament->matches->firstWhere('stage', GameMatch::STAGE_FINAL);
         $thirdPlace = $tournament->matches->firstWhere('stage', GameMatch::STAGE_THIRD_PLACE);
         $recap = $recaps->for($tournament);
-        return view('arena.public', compact('tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'recap'));
+        $profile = auth()->user()?->playerProfile()->with('decks')->first();
+        $entry = $profile ? $tournament->players->firstWhere('player_profile_id', $profile->id) : null;
+        return view('arena.public', compact('tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'recap', 'profile', 'entry'));
     }
 }

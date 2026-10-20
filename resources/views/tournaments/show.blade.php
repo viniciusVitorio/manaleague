@@ -8,6 +8,7 @@ $leaguePending=$tournament->matches->where('stage','league')->where('status','pe
 
 @include('partials.podium')
 @include('partials.retrospective')
+@include('tournaments.partials.my-entry')
 
 <section class="card section-card"><div class="section-heading"><div><span class="eyebrow">Ranking ao vivo</span><h2>Classificação</h2></div>@if($tournament->status==='league')<form method="POST" action="{{ route('tournaments.finals',$tournament) }}">@csrf<button class="btn btn-gold" @disabled($leaguePending>0)>Gerar final + 3º lugar</button></form>@endif</div>@include('partials.standings')</section>
 
