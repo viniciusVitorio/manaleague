@@ -4,11 +4,11 @@
     $me = auth()->user();
     $dashboard = app(\App\Services\Community\DashboardService::class);
     $activeOrganizing = $organizing->whereIn('status', ['setup', 'league', 'finals']);
-    $activeTournaments = $playing->pluck('id')->merge($activeOrganizing->pluck('id'))->unique()->count();
+    $activeTournaments = $playing->toBase()->pluck('id')->merge($activeOrganizing->toBase()->pluck('id'))->unique()->count();
     $challengeActions = $challenges->filter(fn ($c) => $dashboard->challengeNeedsMe($c, $me));
     $reviewQueue = $organizing->filter(fn ($t) => $awaitingReview->get($t->id));
-    $tournamentRows = $playing->map(fn ($t) => ['t' => $t, 'role' => 'Jogador', 'url' => route('arena.public', $t->public_slug)])
-        ->merge($organizing->map(fn ($t) => ['t' => $t, 'role' => 'Organizador', 'url' => route('tournaments.show', $t)]))
+    $tournamentRows = $playing->toBase()->map(fn ($t) => ['t' => $t, 'role' => 'Jogador', 'url' => route('arena.public', $t->public_slug)])
+        ->merge($organizing->toBase()->map(fn ($t) => ['t' => $t, 'role' => 'Organizador', 'url' => route('tournaments.show', $t)]))
         ->unique(fn ($r) => $r['t']->id)->take(6);
     $tiers = config('ranked.enabled') ? app(\App\Services\Ranked\RankTierResolver::class) : null;
     $firstName = \Illuminate\Support\Str::of($me->playerProfile?->nickname ?: $me->name)->explode(' ')->first();
