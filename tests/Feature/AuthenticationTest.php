@@ -19,7 +19,7 @@ class AuthenticationTest extends TestCase
             'password_confirmation' => 'Secure123',
         ]);
 
-        $response->assertRedirect('/tournaments');
+        $response->assertRedirect('/dashboard');
         $this->assertAuthenticated();
         $this->assertDatabaseHas('users', ['email' => 'vini@example.com']);
     }
@@ -29,7 +29,7 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create(['password' => 'Secure123']);
 
         $this->post('/login', ['email' => $user->email, 'password' => 'Secure123'])
-            ->assertRedirect('/tournaments');
+            ->assertRedirect('/dashboard');
         $this->assertAuthenticatedAs($user);
 
         $this->post('/logout')->assertRedirect('/login');

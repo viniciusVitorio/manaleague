@@ -34,7 +34,7 @@ class AuthController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
-        return redirect()->intended(route('tournaments.index'))->with('status', 'Conta e perfil criados com sucesso.');
+        return redirect()->intended(route('dashboard'))->with('status', 'Conta e perfil criados com sucesso.');
     }
 
     public function login(Request $request): RedirectResponse
@@ -46,7 +46,7 @@ class AuthController extends Controller
             return back()->withErrors(['email' => 'Credenciais invalidas.'])->onlyInput('email');
         }
         $request->session()->regenerate();
-        return redirect()->intended(route('tournaments.index'));
+        return redirect()->intended(route('dashboard'));
     }
 
     public function logout(Request $request): RedirectResponse

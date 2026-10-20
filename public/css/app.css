@@ -146,7 +146,7 @@ details>summary::-webkit-details-marker{display:none}
 @media(max-width:780px){
   .nav-toggle{display:inline-flex}
   .nav-menu{display:none;position:absolute;top:calc(100% + 1px);right:0;left:0;flex-direction:column;align-items:stretch;gap:2px;padding:8px;background:rgba(9,9,11,.97);border:1px solid #27272a;border-top:0;border-radius:0 0 10px 10px;box-shadow:0 18px 40px rgba(0,0,0,.55)}
-  .nav-menu.is-open{display:flex}
+  .nav-menu.is-open{display:flex;z-index:60;max-height:calc(100vh - 70px);overflow-y:auto;background:#09090b}
   .nav-menu .nav-link{display:flex;justify-content:space-between;padding:12px;border-radius:7px;font-size:.92rem;color:#e4e4e7}
   .nav-menu .nav-link:hover{background:#18181b}
   .nav-menu form{margin:6px 0 0;padding-top:8px;border-top:1px solid #27272a}
@@ -188,3 +188,6 @@ details>summary::-webkit-details-marker{display:none}
 .my-entry-form{max-width:460px}
 .my-entry-form label{margin:12px 0}
 .my-entry .section-heading .btn{white-space:nowrap;flex:0 0 auto}
+
+/* Menu acima de cards com contexto de empilhamento proprio (live, comunidade, competicao). */
+.topbar{z-index:50}

@@ -25,13 +25,13 @@ class GameMatch extends Model
     protected $table = 'matches';
 
     protected $fillable = [
-        'round', 'stage', 'player_one_id', 'player_two_id',
+        'round', 'stage', 'player_one_id', 'player_two_id', 'bracket', 'pod_player_ids', 'pod_scores',
         'player_one_games', 'player_two_games', 'status', 'played_at',
     ];
 
     protected function casts(): array
     {
-        return ['played_at' => 'datetime'];
+        return ['played_at' => 'datetime', 'pod_player_ids' => 'array', 'pod_scores' => 'array'];
     }
 
     public function tournament(): BelongsTo
@@ -47,5 +47,10 @@ class GameMatch extends Model
     public function playerTwo(): BelongsTo
     {
         return $this->belongsTo(Player::class, 'player_two_id');
+    }
+
+    public function submission(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(MatchResultSubmission::class, 'match_id');
     }
 }

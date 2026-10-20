@@ -48,6 +48,12 @@ class SecurityHeaders
 
         $response->headers->remove('X-Powered-By');
 
+        // HTML contains session-dependent controls and CSRF tokens; never persist it in shared caches.
+        if (str_contains((string) $response->headers->get('Content-Type'), 'text/html')) {
+            $response->headers->set('Cache-Control', 'private, no-store, max-age=0');
+            $response->headers->set('X-ManaLeague-Assets', \App\Support\VersionedAsset::coreRelease());
+        }
+
         return $response;
     }
 }

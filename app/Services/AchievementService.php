@@ -25,6 +25,8 @@ class AchievementService
     public static function definitions(): array
     {
         return [
+            'secret_comeback' => ['↗', 'De virada', 'Vença uma série casual confirmada após perder o primeiro game, com ordem registrada.', 'matches', 1, 'casual_comeback'],
+            'secret_tribal' => ['✦', 'Uma só tribo', 'Cadastre 20 criaturas do mesmo subtipo no deck principal (sem sideboard).', 'collection', 20, 'tribal_count'],
             // Partidas
             'first_win' => ['🗡️', 'First Blood', 'Vença sua primeira partida', 'matches', 1, 'wins'],
             'clean_sweep' => ['🧹', 'Clean Sweep', 'Vença uma partida por 2–0', 'matches', 1, 'clean_sweeps'],
@@ -74,9 +76,30 @@ class AchievementService
         $fiveColor = Deck::query()->whereIn('id', $deckIds)->get()
             ->contains(fn (Deck $deck) => $deck->computedColors() === 'WUBRG');
 
+        // Only actual mainboard creature subtypes count; names and lands never do.
+        $tribes = [];
+        foreach (DeckCard::query()->whereIn('deck_id', $deckIds)->where('board', DeckCard::BOARD_MAIN)->get() as $card) {
+            foreach (explode(' // ', $card->type_line ?? '') as $face) {
+                if (! preg_match('/\bCreature\b[^—]*—\s*(.+)$/u', $face, $parts)) continue;
+                foreach (array_unique(preg_split('/\s+/u', trim($parts[1]))) as $type) {
+                    $tribes[$card->deck_id][$type] = ($tribes[$card->deck_id][$type] ?? 0) + $card->quantity;
+                }
+                break; // A double-faced card is still one physical card.
+            }
+        }
+        $tribalCount = collect($tribes)->flatMap(fn ($types) => array_values($types))->max() ?? 0;
+        $comeback = \App\Models\CasualMatch::query()->with('challenge')->where('status', 'confirmed')
+            ->whereHas('challenge', fn ($q) => $q->where(fn ($q) => $q->where('challenger_id', $profile->id)->orWhere('opponent_id', $profile->id)))
+            ->get()->contains(function ($match) use ($profile) {
+                $side = $match->challenge->challenger_id === $profile->id ? 1 : 2;
+                $winner = $match->challenger_games > $match->opponent_games ? 1 : 2;
+                return $winner === $side && count($match->game_order ?? []) > 1 && $match->game_order[0] !== $side;
+            });
         $account = $profile->account;
 
         return [
+            'casual_comeback' => (int) $comeback,
+            'tribal_count' => (int) $tribalCount,
             'wins' => $summary['wins'],
             'played' => $summary['played'],
             'best_streak' => $summary['best_streak'],
@@ -112,8 +135,8 @@ class AchievementService
 
         foreach (self::definitions() as $key => [, , , , $target, $metric]) {
             if (! in_array($key, $owned, true) && ($metrics[$metric] ?? 0) >= $target) {
-                $profile->achievements()->create(['achievement' => $key, 'unlocked_at' => now()]);
-                $new[] = $key;
+                $record = $profile->achievements()->firstOrCreate(['achievement' => $key], ['unlocked_at' => now()]);
+                if ($record->wasRecentlyCreated) $new[] = $key;
             }
         }
 
@@ -133,13 +156,18 @@ class AchievementService
         return collect(self::definitions())->map(function (array $definition, string $key) use ($metrics, $owned, $players, $holders): array {
             [$icon, $name, $description, $category, $target, $metric] = $definition;
             $record = $owned->get($key);
+            $secret = str_starts_with($key, 'secret_');
             $current = min($target, (int) ($metrics[$metric] ?? 0));
+            if ($secret && ! $record) {
+                $icon = '🔒'; $name = 'Conquista secreta'; $description = 'Continue jogando e explorando para descobrir.';
+                $current = 0; $target = 1;
+            }
 
             return [
                 'key' => $key, 'icon' => $icon, 'name' => $name, 'description' => $description,
                 'category' => $category, 'target' => $target, 'current' => $record ? $target : $current,
                 'percent' => $record ? 100 : (int) floor($current / $target * 100),
-                'unlocked' => (bool) $record,
+                'unlocked' => (bool) $record, 'secret' => $secret,
                 'unlocked_at' => $record?->unlocked_at,
                 'is_new' => $record && $record->seen_at === null,
                 'rarity' => min(100, (int) round(((int) ($holders[$key] ?? 0)) / $players * 100)),

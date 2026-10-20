@@ -13,6 +13,10 @@ class PairingService
 
     public function generateLeague(Tournament $tournament): void
     {
+        if ($tournament->system !== 'round_robin') {
+            app(CompetitionService::class)->start($tournament);
+            return;
+        }
         DB::transaction(function () use ($tournament): void {
             $locked = Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
 
@@ -30,6 +34,7 @@ class PairingService
                 $slots[] = null;
             }
 
+            app(\App\Services\Decks\DeckVersionService::class)->snapshotForTournament($locked);
             $slotCount = count($slots);
             $roundCount = $slotCount - 1;
 
@@ -70,7 +75,7 @@ class PairingService
         DB::transaction(function () use ($tournament): void {
             $locked = Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
 
-            if ($locked->status !== Tournament::STATUS_LEAGUE) {
+            if ($locked->system !== 'round_robin' || $locked->status !== Tournament::STATUS_LEAGUE) {
                 throw new LogicException('As finais nao podem ser geradas neste momento.');
             }
 

@@ -21,6 +21,8 @@ class PublicArenaController extends Controller
         $recap = $recaps->for($tournament);
         $profile = auth()->user()?->playerProfile()->with('decks')->first();
         $entry = $profile ? $tournament->players->firstWhere('player_profile_id', $profile->id) : null;
-        return view('arena.public', compact('tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'recap', 'profile', 'entry'));
+        $snapshot = app(\App\Services\LiveDisplayService::class)->snapshot($tournament);
+        $slug = $tournament->public_slug;
+        return view('arena.public', compact('snapshot', 'slug', 'tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'recap', 'profile', 'entry'));
     }
 }

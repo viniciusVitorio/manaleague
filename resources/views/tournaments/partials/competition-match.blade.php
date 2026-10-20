@@ -1,0 +1,13 @@
+<article class="match-card {{ $match->stage!=='league'?'decisive':'' }}">
+@php($stageLabel = match($match->bracket) { 'winners' => 'CHAVE PRINCIPAL', 'losers' => 'REPESCAGEM', 'grand_final' => 'GRANDE FINAL', 'reset_final' => 'FINAL DE DESEMPATE', 'swiss' => 'SUÍÇO', 'pod' => 'POD COMMANDER', 'final' => 'FINAL', default => match($match->stage) { 'final' => 'FINAL', 'third_place' => '3º LUGAR', default => $match->status === 'bye' ? 'BYE' : 'LIGA' } })
+<div class="match-stage">{{ $stageLabel }}</div>
+@if($match->pod_player_ids)
+<form class="pod-score-form" method="POST" action="{{ route('matches.update',[$tournament,$match]) }}">@csrf @method('PUT')
+@foreach($match->pod_player_ids as $id)<label>{{ $tournament->players->firstWhere('id',$id)?->name }}<select name="placements[{{ $id }}]" aria-label="Posição de {{ $tournament->players->firstWhere('id',$id)?->name }}" @disabled(!app(\App\Services\MatchResultService::class)->editable($tournament,$match))><option value="">Posição</option>@foreach(range(1,count($match->pod_player_ids)) as $rank)<option value="{{ $rank }}" @selected(($match->pod_scores[$id]??null)===$rank)>{{ $rank }}º</option>@endforeach</select></label>@endforeach
+@if(app(\App\Services\MatchResultService::class)->editable($tournament,$match))<button class="btn btn-small btn-secondary">{{ $match->status==='finished'?'Corrigir posições':'Salvar posições' }}</button>@else<p class="bye-note">Resultado travado.</p>@endif
+</form>
+@else
+<div class="versus"><span>{{ $match->playerOne->name }}</span><b>{{ $match->player_one_games??'–' }} × {{ $match->player_two_games??'–' }}</b><span>{{ $match->playerTwo?->name??'Folga' }}</span></div>
+@if($match->status==='bye')<p class="bye-note">Vitória automática por 2×0.</p>@elseif(app(\App\Services\MatchResultService::class)->editable($tournament,$match))<form class="score-form" method="POST" action="{{ route('matches.update',[$tournament,$match]) }}">@csrf @method('PUT')<input type="number" name="player_one_games" min="0" max="3" value="{{ $match->player_one_games??0 }}" aria-label="Games de {{ $match->playerOne->name }}"><span>×</span><input type="number" name="player_two_games" min="0" max="3" value="{{ $match->player_two_games??0 }}" aria-label="Games de {{ $match->playerTwo?->name }}"><button class="btn btn-small btn-secondary">{{ $match->status==='finished'?'Corrigir':'Salvar' }}</button></form>@else<p class="bye-note">Resultado travado: uma fase dependente foi gerada ou o torneio encerrado.</p>@endif
+@endif
+</article>

@@ -1,0 +1,16 @@
+@extends('layouts.app')
+@section('content')
+@include('community.nav')
+<h1>{{ $club->name }}</h1><p>{{ $club->description }}</p><p>{{ $club->privacy === 'private' ? 'Clube privado' : 'Clube público' }}</p>
+@if(!$club->roleFor(auth()->user()))<form method="POST" action="{{ route('clubs.join',$club) }}">@csrf<button class="btn btn-primary">Entrar no clube</button></form>@endif
+<div class="community-grid"><section class="community-card"><h2>Membros</h2>
+@foreach($club->members as $member)<article><strong>{{ $member->name }}</strong> · {{ ['owner'=>'Dono','organizer'=>'Organizador','member'=>'Membro'][$member->pivot->role] }}
+@if($member->pivot->role !== 'owner')
+@can('update',$club)<form method="POST" action="{{ route('clubs.members.role',[$club,$member]) }}">@csrf @method('PATCH')<label>Papel de {{ $member->name }}<select name="role"><option value="member" @selected($member->pivot->role==='member')>Membro</option><option value="organizer" @selected($member->pivot->role==='organizer')>Organizador</option></select></label><button class="btn btn-small">Salvar papel</button></form>@endcan
+@if(auth()->id()===$member->id || auth()->user()->can('manage',$club))<form method="POST" action="{{ route('clubs.members.remove',[$club,$member]) }}">@csrf @method('DELETE')<button class="btn btn-small">{{ auth()->id()===$member->id ? 'Sair do clube' : 'Remover' }}</button></form>@endif
+@endif</article>@endforeach
+@can('manage',$club)<h3>Adicionar membro</h3><form method="POST" action="{{ route('clubs.members.store',$club) }}">@csrf<label>E-mail da conta<input type="email" name="email" required></label><button class="btn">Adicionar</button></form>@endcan</section>
+<section class="community-card"><h2>Torneios do clube</h2>@forelse($tournaments as $tournament)@can('view',$tournament)<p><a href="{{ route('tournaments.show',$tournament) }}">{{ $tournament->name }}</a> · {{ $tournament->status }}</p>@endcan @empty<p>Ainda não há torneios.</p>@endforelse
+@can('manage',$club)<h3>Novo torneio</h3><form method="POST" action="{{ route('clubs.tournaments.store',$club) }}">@csrf<label>Nome<input name="name" maxlength="120" required></label><label>Formato<select name="format">@foreach(['Pauper','Commander','Standard','Modern','Draft','Outro'] as $format)<option>{{ $format }}</option>@endforeach</select></label><label>Data<input type="date" name="tournament_date" required></label><label>Limite de jogadores<input type="number" name="max_players" min="4" max="128"></label><button class="btn btn-primary">Criar torneio</button></form>@endcan</section></div>
+@can('update',$club)<section class="community-card"><h2>Configurações do clube</h2><form method="POST" action="{{ route('clubs.update',$club) }}">@csrf @method('PATCH')<label>Nome<input name="name" value="{{ $club->name }}" required maxlength="120"></label><label>Descrição<textarea name="description" maxlength="2000">{{ $club->description }}</textarea></label><label>Privacidade<select name="privacy"><option value="private" @selected($club->privacy==='private')>Privado</option><option value="public" @selected($club->privacy==='public')>Público</option></select></label><button class="btn">Salvar</button></form></section>@endcan
+@endsection

@@ -1,0 +1,2 @@
+.competition-status{padding:1.25rem;margin:1rem 0}.competition-status p{max-width:80ch}.pod-score-form{display:grid;gap:.75rem}.pod-score-form label{display:flex;align-items:center;justify-content:space-between;gap:1rem}.pod-score-form select{width:auto;min-width:7rem}.pod-score-form button{min-height:44px}@media(max-width:600px){.competition-status .btn{width:100%}.pod-score-form label{flex-wrap:wrap}}
+.qr-inline-form{display:inline}.tournament-tools .btn{margin:.25rem .25rem .25rem 0}

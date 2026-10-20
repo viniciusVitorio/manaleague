@@ -66,7 +66,7 @@ class PasswordResetTest extends TestCase
         $this->assertDatabaseCount('password_reset_tokens', 0);
         Notification::assertSentTo($user, PasswordChangedNotification::class);
 
-        $this->post(route('login'), ['email' => $user->email, 'password' => 'novaSenha123'])->assertRedirect(route('tournaments.index'));
+        $this->post(route('login'), ['email' => $user->email, 'password' => 'novaSenha123'])->assertRedirect(route('dashboard'));
     }
 
     public function test_reset_token_cannot_be_reused_or_forged(): void

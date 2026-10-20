@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@push('head')<script src="{{ asset('js/deck-builder.js') }}" defer></script>@endpush
+@push('head')<script src="{{ \App\Support\VersionedAsset::url('js/deck-builder.js') }}" defer></script>@endpush
 @section('content')
 @php
     $boardLabel = ['main' => 'Deck', 'side' => 'Sideboard', 'commander' => 'Comandante'];

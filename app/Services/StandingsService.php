@@ -28,11 +28,19 @@ class StandingsService
         }
 
         $matches = $tournament->matches()
-            ->where('stage', GameMatch::STAGE_LEAGUE)
+            ->when(!in_array($tournament->system, ['single_elimination','double_elimination']), fn ($query) => $query->where('stage', GameMatch::STAGE_LEAGUE))
             ->whereIn('status', [GameMatch::STATUS_FINISHED, GameMatch::STATUS_BYE])
             ->get();
 
         foreach ($matches as $match) {
+            if ($match->pod_player_ids) {
+                foreach ($match->pod_scores ?? [] as $id=>$rank) {
+                    $table[$id]['played']++;
+                    $table[$id][$rank===1?'wins':'losses']++;
+                    $table[$id]['points'] += count($match->pod_player_ids) - $rank;
+                }
+                continue;
+            }
             $one = $match->player_one_id;
             $two = $match->player_two_id;
             $oneGames = (int) $match->player_one_games;
