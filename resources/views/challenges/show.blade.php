@@ -2,13 +2,15 @@
 @section('content')
 @php($match = $challenge->casualMatch)
 <a class="back-link" href="{{ route('challenges.index') }}">← Desafios</a>
-<header><span class="eyebrow">Casual · {{ $challenge->format }} · MD{{ $challenge->best_of }}</span><h1>{{ $challenge->challenger->nickname }} × {{ $challenge->opponent->nickname }}</h1><p>{{ $challenge->statusLabel() }}</p></header>
+<header><span class="eyebrow">{{ $challenge->is_ranked ? 'Ranqueada' : 'Casual' }} · {{ $challenge->format }} · MD{{ $challenge->best_of }}</span><h1>{{ $challenge->challenger->nickname }} × {{ $challenge->opponent->nickname }}</h1><p>{{ $challenge->statusLabel() }}</p></header>
 <section class="card section-card">
 @if($challenge->status === 'pending')
 <p>Convite válido até {{ $challenge->expires_at->format('d/m/Y H:i') }}.</p>
 <form method="POST" action="{{ route('challenges.transition', $challenge) }}">@csrf
 @if($challenge->opponent->account_user_id === auth()->id())<button class="btn btn-primary" name="action" value="accept">Aceitar</button> <button class="btn btn-secondary" name="action" value="decline">Recusar</button>
 @else<button class="btn btn-secondary" name="action" value="cancel">Cancelar convite</button>@endif</form>
+@elseif($challenge->is_ranked)
+@if($rankedMatch)<p>Esta série vale ELO/PDL. O placar é enviado e confirmado na página da partida ranqueada.</p><a class="btn btn-primary" href="{{ route('ranked.matches.show', $rankedMatch) }}">Abrir partida ranqueada</a>@else<p>Este convite foi encerrado.</p>@endif
 @elseif($match)
 @if($match->challenger_games !== null)<h2>{{ $match->challenger_games }} × {{ $match->opponent_games }}</h2><p>Placar na ordem: {{ $challenge->challenger->nickname }} / {{ $challenge->opponent->nickname }}</p>@if($match->game_order)<p>Vencedores dos games: {{ implode(', ', $match->game_order) }}</p>@endif @endif
 @if($match->status === 'confirmed')<p>✓ Resultado confirmado pelos dois jogadores em {{ $match->confirmed_at->format('d/m/Y H:i') }}.</p><a href="{{ route('challenges.rivalries') }}">Ver rivalidades</a>

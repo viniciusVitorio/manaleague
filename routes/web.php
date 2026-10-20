@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 Route::pattern('code', '[A-Za-z0-9]{4}-?[A-Za-z0-9]{4}');
 
 // Each module declares its own auth/public middleware. Static routes load before model bindings.
-foreach (['competition', 'live', 'deck-tools', 'community', 'challenges'] as $module) {
+foreach (['competition', 'live', 'deck-tools', 'community', 'challenges', 'ranked'] as $module) {
     $moduleRoutes = __DIR__."/{$module}.php";
     if (is_file($moduleRoutes)) {
         require $moduleRoutes;

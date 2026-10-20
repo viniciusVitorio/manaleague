@@ -12,15 +12,20 @@ class PlayerProfile extends Model
     /** Sem 0/O/1/I/L para o codigo ser facil de ditar na mesa. */
     private const CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 
-    protected $fillable = ['user_id', 'account_user_id', 'nickname', 'avatar', 'preferred_deck_name', 'preferred_deck_colors', 'is_friend', 'discoverable'];
+    protected $fillable = ['user_id', 'account_user_id', 'nickname', 'avatar', 'preferred_deck_name', 'preferred_deck_colors', 'is_friend', 'discoverable', 'ranked_public'];
 
-    protected function casts(): array { return ['is_friend' => 'boolean', 'discoverable' => 'boolean']; }
+    protected function casts(): array { return ['is_friend' => 'boolean', 'discoverable' => 'boolean', 'ranked_public' => 'boolean', 'ranked_suspended_until' => 'datetime']; }
 
     protected static function booted(): void
     {
         static::creating(function (PlayerProfile $profile): void {
             $profile->friend_code ??= static::generateFriendCode();
         });
+    }
+
+    public function rankedSuspended(): bool
+    {
+        return $this->ranked_suspended_until !== null && $this->ranked_suspended_until->isFuture();
     }
 
     public static function generateFriendCode(): string

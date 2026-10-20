@@ -13,6 +13,7 @@
             <div>
                 <span class="eyebrow">{{ $isOwner ? 'Meu perfil' : 'Perfil do jogador' }}</span>
                 <h1>{{ $profile->nickname }}</h1>
+                @if(config('ranked.enabled') && $profile->account_user_id && ($isOwner || $profile->ranked_public))<p><a href="{{ route('ranked.players.show', $profile) }}">Histórico ranqueado →</a></p>@endif
 
                 @if($showPreferredDeck)<p>{{ $profile->preferred_deck_name ?: 'Deck principal não informado' }} @if($profile->preferred_deck_colors) · @include('partials.color-pips', ['colors' => $profile->preferred_deck_colors]) @endif</p>@endif
 

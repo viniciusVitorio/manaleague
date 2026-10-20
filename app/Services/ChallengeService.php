@@ -10,10 +10,17 @@ class ChallengeService {
     private function require(bool $condition, string $message): void {
         if (! $condition) throw ValidationException::withMessages(['challenge' => $message]);
     }
-    public function create(User $actor, PlayerProfile $opponent, string $format, int $bestOf, CarbonInterface $expires): Challenge {
+    public function create(User $actor, PlayerProfile $opponent, string $format, int $bestOf, CarbonInterface $expires, bool $ranked = false): Challenge {
         $this->require($opponent->account_user_id !== null && $opponent->account_user_id !== $actor->id && $actor->friendProfiles()->whereKey($opponent->id)->wherePivot('status', 'accepted')->exists(), 'Escolha um amigo com conta.');
         $this->require(in_array($bestOf, [1, 3, 5], true) && mb_strlen(trim($format)) > 0 && mb_strlen($format) <= 60 && $expires->isFuture(), 'Formato, melhor de ou validade inválidos.');
-        $challenge = Challenge::create(['challenger_id' => $actor->ensurePlayerProfile()->id, 'opponent_id' => $opponent->id, 'format' => trim($format), 'best_of' => $bestOf, 'expires_at' => $expires, 'status' => 'pending']);
+        if ($ranked) {
+            // Os dois concordam ANTES da partida: o convite ja diz que e ranqueado.
+            $season = app(Ranked\SeasonService::class)->activeFor(trim($format));
+            $this->require($season !== null, 'Não há temporada ranqueada ativa para '.trim($format).'.');
+            $error = app(Ranked\RankedMatchService::class)->eligibilityError($season, trim($format), $actor->ensurePlayerProfile(), $opponent);
+            $this->require($error === null, (string) $error);
+        }
+        $challenge = Challenge::create(['challenger_id' => $actor->ensurePlayerProfile()->id, 'opponent_id' => $opponent->id, 'format' => trim($format), 'best_of' => $bestOf, 'expires_at' => $expires, 'status' => 'pending', 'is_ranked' => $ranked]);
         app(CommunityEvents::class)->challengeCreated($challenge);
         return $challenge;
     }
@@ -74,7 +81,13 @@ class ChallengeService {
             elseif ($action === 'cancel') abort_unless($challenge->challenger->account_user_id === $actor->id, 403);
             else $this->require(false, 'Ação inválida.');
             $challenge->update(['status' => match ($action) { 'accept' => 'accepted', 'decline' => 'declined', 'cancel' => 'cancelled' }]);
-            if ($action === 'accept') $challenge->casualMatch()->create(['status' => 'pending']);
+            if ($action === 'accept' && $challenge->is_ranked) {
+                $season = app(Ranked\SeasonService::class)->activeFor($challenge->format);
+                $this->require($season !== null, 'A temporada ranqueada deste formato não está mais ativa.');
+                app(Ranked\RankedMatchService::class)->create($season, $challenge->format, $challenge->challenger, $challenge->opponent, 'challenge', $challenge->id, $challenge->best_of);
+            } elseif ($action === 'accept') {
+                $challenge->casualMatch()->create(['status' => 'pending']);
+            }
             return $challenge;
         });
         app(CommunityEvents::class)->challengeTransition($challenge, $action);

@@ -55,6 +55,7 @@ Cada modulo registra as proprias rotas (com middleware explicito) e e carregado 
 | Decks (versoes imutaveis, simulador de mao, colecao, comparador) | `routes/deck-tools.php` | `Decks\DeckVersionService`, `Decks\DeckAccessService` |
 | Comunidade (painel, feed, notificacoes, clubes) | `routes/community.php` | `Community\DashboardService`, `ActivityService`, `NotificationService`, `ClubService`, `CommunityAccess` |
 | Desafios e conquistas (1v1 casual, rivalidades, conquistas secretas, compartilhamento) | `routes/challenges.php` | `ChallengeService`, `AchievementService` |
+| Ranked ELO/PDL (temporadas, ledger, fila presencial, ranking, moderação) — ver [ranked.md](ranked.md) | `routes/ranked.php` | `Ranked\RatingLedgerService`, `RankedMatchService`, `MatchmakingService`, `SeasonService` |
 
 ### Integracao entre modulos
 

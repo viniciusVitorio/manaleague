@@ -57,6 +57,16 @@ class DashboardService
 
         $activities = app(ActivityService::class)->visible($user, 1, 5);
 
+        // Ranked: placares para confirmar, partidas marcadas e propostas da fila.
+        $rankedOpen = $profileId ? \App\Models\RankedMatch::query()->with(['playerOne', 'playerTwo', 'submissions'])
+            ->whereIn('status', ['pending', 'reported', 'disputed'])
+            ->where(fn ($q) => $q->where('player_one_profile_id', $profileId)->orWhere('player_two_profile_id', $profileId))->latest('id')->limit(10)->get() : collect();
+        $rankedNeedsMe = $rankedOpen->filter(fn ($m) => $m->status === 'pending'
+            || ($m->status === 'reported' && $m->submissions->where('status', 'pending')->sortByDesc('id')->first()?->submitted_by !== $user->id))->values();
+        $rankedRatings = $profileId ? \App\Models\PlayerRating::query()->with('season')->where('player_profile_id', $profileId)
+            ->whereHas('season', fn ($q) => $q->whereIn('status', ['active', 'closing']))->where('played', '>', 0)->orderByDesc('rating')->limit(3)->get() : collect();
+        $queue = config('ranked.enabled') ? app(\App\Services\Ranked\MatchmakingService::class)->status($user) : ['state' => 'idle'];
+
         return [
             'toConfirm' => $toConfirm,
             'toReport' => $toReport,
@@ -69,7 +79,10 @@ class DashboardService
             'latestUnread' => $unreadList->take(5),
             'activities' => $activities,
             'profileId' => $profileId,
-            'actionCount' => $toConfirm->count() + $toReport->count() + $challenges->filter(fn ($c) => $this->challengeNeedsMe($c, $user))->count() + $awaitingReview->sum(),
+            'rankedNeedsMe' => $rankedNeedsMe,
+            'rankedRatings' => $rankedRatings,
+            'queue' => $queue,
+            'actionCount' => $rankedNeedsMe->count() + ($queue['state'] === 'proposal' ? 1 : 0) + $toConfirm->count() + $toReport->count() + $challenges->filter(fn ($c) => $this->challengeNeedsMe($c, $user))->count() + $awaitingReview->sum(),
         ];
     }
 

@@ -30,3 +30,32 @@ Artisan::command('mail:test {to : E-mail de destino}', function (string $to): in
     $this->info('Enviado.');
     return 0;
 })->purpose('Envia um e-mail de teste para validar a configuracao (SES em producao)');
+
+
+Artisan::command('ml:admin {email : E-mail da conta} {--revoke : Remove o acesso de admin}', function (string $email): int {
+    $user = \App\Models\User::where('email', $email)->first();
+    if (! $user) {
+        $this->error('Conta não encontrada.');
+        return 1;
+    }
+    $user->forceFill(['is_admin' => ! $this->option('revoke')])->save();
+    $this->info($this->option('revoke') ? "{$email} não é mais admin." : "{$email} agora é admin (moderação do ranked).");
+    return 0;
+})->purpose('Concede ou remove o papel de admin (moderação do ranked)');
+
+Artisan::command('ranked:tick', function (): int {
+    app(\App\Services\Ranked\SeasonService::class)->refresh();
+    $proposals = app(\App\Services\Ranked\MatchmakingService::class)->runMatching();
+    $this->info("Temporadas atualizadas; {$proposals} proposta(s) de partida criada(s).");
+    return 0;
+})->purpose('Avança temporadas por data, expira e roda a fila de matchmaking');
+
+Artisan::command('ranked:prune', function (): int {
+    $days = (int) config('ranked.ip_retention_days');
+    $n = \App\Models\RankedResultSubmission::whereNotNull('ip_address')->where('created_at', '<', now()->subDays($days))->update(['ip_address' => null]);
+    $this->info("IP removido de {$n} envio(s) de placar com mais de {$days} dias.");
+    return 0;
+})->purpose('Aplica a retenção limitada de IP dos envios de placar ranqueado');
+
+\Illuminate\Support\Facades\Schedule::command('ranked:tick')->everyMinute()->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('ranked:prune')->daily();

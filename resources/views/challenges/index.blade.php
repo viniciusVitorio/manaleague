@@ -8,9 +8,10 @@
 <label>Adversário<select name="opponent_id" required>@foreach($friends as $friend)<option value="{{ $friend->id }}" @selected(old('opponent_id', request('opponent')) == $friend->id)>{{ $friend->nickname }}</option>@endforeach</select></label>
 <label>Formato<input name="format" maxlength="60" value="{{ old('format', 'Pauper') }}" required></label>
 <label>Melhor de<select name="best_of">@foreach([1,3,5] as $n)<option value="{{ $n }}" @selected(old('best_of', 3) == $n)>{{ $n }} games</option>@endforeach</select></label>
+<label class="check-row"><input type="checkbox" name="ranked" value="1" @checked(old('ranked', request('ranked')))> Partida ranqueada (vale ELO/PDL)</label><p class="muted">Ranqueada exige temporada ativa no formato ({{ implode(', ', config('ranked.formats')) }}). Os dois aceitam antes de jogar; limite de {{ config('ranked.defaults.pair_limit_24h') }} ranqueadas entre a mesma dupla em 24h.</p>
 <label>Validade do convite<select name="expires_in"><option value="24">24 horas</option><option value="48">48 horas</option><option value="168">7 dias</option></select></label><button class="btn btn-primary">Enviar desafio</button></form>
 @endif</section>
 <section class="card section-card"><h2>Meus desafios</h2>
-@forelse($challenges as $challenge)<a class="history-row" href="{{ route('challenges.show', $challenge) }}"><div><strong>{{ $challenge->challenger->nickname }} × {{ $challenge->opponent->nickname }}</strong><small>{{ $challenge->format }} · MD{{ $challenge->best_of }} · {{ $challenge->statusLabel() }}</small></div><span>Ver →</span></a>@empty<p>Nenhum desafio ainda. Convide um amigo para a primeira série.</p>@endforelse
+@forelse($challenges as $challenge)<a class="history-row" href="{{ route('challenges.show', $challenge) }}"><div><strong>{{ $challenge->challenger->nickname }} × {{ $challenge->opponent->nickname }}</strong><small>@if($challenge->is_ranked)<b>Ranqueada</b> · @endif{{ $challenge->format }} · MD{{ $challenge->best_of }} · {{ $challenge->statusLabel() }}</small></div><span>Ver →</span></a>@empty<p>Nenhum desafio ainda. Convide um amigo para a primeira série.</p>@endforelse
 {{ $challenges->links() }}</section>
 @endsection

@@ -18,8 +18,11 @@ class User extends Authenticatable
 
     protected function casts(): array
     {
-        return ['email_verified_at' => 'datetime', 'password' => 'hashed'];
+        return ['email_verified_at' => 'datetime', 'password' => 'hashed', 'is_admin' => 'boolean'];
     }
+
+    /** is_admin nao e fillable: so via `php artisan ml:admin`. */
+    public function isAdmin(): bool { return (bool) $this->is_admin; }
 
     public function tournaments(): HasMany { return $this->hasMany(Tournament::class); }
     public function playerProfiles(): HasMany { return $this->hasMany(PlayerProfile::class); }

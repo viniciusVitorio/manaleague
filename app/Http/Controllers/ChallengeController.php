@@ -19,14 +19,15 @@ class ChallengeController extends Controller
         return view('challenges.index', compact('challenges', 'friends'));
     }
     public function store(Request $request) {
-        $data = $request->validate(['opponent_id' => 'required|integer|exists:player_profiles,id', 'format' => 'required|string|max:60', 'best_of' => 'required|integer|in:1,3,5', 'expires_in' => 'required|integer|min:1|max:168']);
-        $challenge = $this->service->create($request->user(), PlayerProfile::findOrFail($data['opponent_id']), $data['format'], (int) $data['best_of'], now()->addHours((int) $data['expires_in']));
+        $data = $request->validate(['opponent_id' => 'required|integer|exists:player_profiles,id', 'format' => 'required|string|max:60', 'best_of' => 'required|integer|in:1,3,5', 'expires_in' => 'required|integer|min:1|max:168', 'ranked' => 'sometimes|boolean']);
+        $challenge = $this->service->create($request->user(), PlayerProfile::findOrFail($data['opponent_id']), $data['format'], (int) $data['best_of'], now()->addHours((int) $data['expires_in']), $request->boolean('ranked'));
         return redirect()->route('challenges.show', $challenge)->with('status', 'Convite enviado.');
     }
     public function show(Request $request, Challenge $challenge) {
         abort_unless($challenge->involves($request->user()), 403);
         $this->service->expire();
-        return view('challenges.show', ['challenge' => $challenge->fresh(['challenger', 'opponent', 'casualMatch'])]);
+        $ranked = $challenge->is_ranked ? \App\Models\RankedMatch::where(['source_type' => 'challenge', 'source_id' => $challenge->id])->first() : null;
+        return view('challenges.show', ['challenge' => $challenge->fresh(['challenger', 'opponent', 'casualMatch']), 'rankedMatch' => $ranked]);
     }
     public function transition(Request $request, Challenge $challenge) {
         $data = $request->validate(['action' => 'required|in:accept,decline,cancel']);
