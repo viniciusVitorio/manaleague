@@ -191,3 +191,5 @@ details>summary::-webkit-details-marker{display:none}
 
 /* Menu acima de cards com contexto de empilhamento proprio (live, comunidade, competicao). */
 .topbar{z-index:50}
+
+.people-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));column-gap:24px}

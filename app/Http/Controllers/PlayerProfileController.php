@@ -50,7 +50,9 @@ class PlayerProfileController extends Controller
     {
         $user = $request->user();
         $isOwner = $profile->account_user_id === $user->id;
-        abort_unless($isOwner || $this->organizedTournamentWith($user, $profile) || $this->hasRelationship($user, $profile), 403);
+        // Amigo de amigo ve o perfil (sem decks) se a pessoa aparece na busca (discoverable).
+        $viaFriend = ! $isOwner && $profile->discoverable && $this->friendships->isFriendOfFriend($user, $profile);
+        abort_unless($isOwner || $viaFriend || $this->organizedTournamentWith($user, $profile) || $this->hasRelationship($user, $profile), 403);
 
         $summary = $this->stats->for($profile);
         $this->achievements->sync($profile, $summary);
@@ -69,8 +71,10 @@ class PlayerProfileController extends Controller
         $friendsCount = null;
 
         $ranked = $this->ranked($profile, $profile->account_user_id === $request->user()->id);
+        // Lista de amigos: o dono e os amigos aceitos veem; amigo de amigo nao (evita navegar a rede inteira).
+        $profileFriends = ($isOwner || $friendshipStatus === FriendshipService::ACCEPTED) ? $this->friendships->friendsOf($user, $profile) : null;
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck', 'ranked'));
+        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck', 'ranked', 'profileFriends'));
     }
 
     /** Patente por formato (temporadas em andamento) + historico. Visivel para quem pode ver o perfil. */

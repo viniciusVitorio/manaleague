@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\PlayerProfile;
-use App\Models\User;
 use App\Services\FriendshipService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,7 +27,9 @@ class FriendController extends Controller
             ->union($outgoing->pluck('id')->mapWithKeys(fn ($id) => [$id => 'sent']))
             ->union($incoming->pluck('id')->mapWithKeys(fn ($id) => [$id => 'incoming']));
 
-        return view('friends.index', compact('profile', 'term', 'results', 'friends', 'incoming', 'outgoing', 'statusById'));
+        $suggestions = $this->friendships->suggestions($user);
+
+        return view('friends.index', compact('profile', 'term', 'results', 'friends', 'incoming', 'outgoing', 'statusById', 'suggestions'));
     }
 
     /** Pedido por codigo de amigo: o codigo vem da busca ou foi compartilhado pelo dono. */

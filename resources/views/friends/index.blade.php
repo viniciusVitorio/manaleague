@@ -47,6 +47,21 @@
     </section>
     @endif
 
+    @if($suggestions->isNotEmpty())
+    <section class="card section-card">
+        <span class="eyebrow">Amigos de amigos</span><h2>Talvez você conheça</h2>
+        <div class="people-list">
+        @foreach($suggestions as $s)
+            <div class="person-row">
+                <span class="profile-avatar">{{ $s['profile']->avatar ?: mb_strtoupper(mb_substr($s['profile']->nickname, 0, 1)) }}</span>
+                <div class="person-info"><a href="{{ route('profiles.show', $s['profile']) }}"><strong>{{ $s['profile']->nickname }}</strong></a><small>{{ $s['mutual']->count() === 1 ? 'Amigo de '.$s['mutual'][0]->nickname : $s['mutual']->count().' amigos em comum: '.$s['mutual']->take(2)->pluck('nickname')->join(', ').($s['mutual']->count() > 2 ? '…' : '') }}</small></div>
+                <form method="POST" action="{{ route('friends.store', $s['profile']->friend_code) }}">@csrf<button class="btn btn-small btn-secondary">Adicionar</button></form>
+            </div>
+        @endforeach
+        </div>
+    </section>
+    @endif
+
     <section class="card section-card">
         <span class="eyebrow">Playgroup</span><h2>Meus amigos <span class="count">{{ $friends->count() }}</span></h2>
         <div class="people-list">

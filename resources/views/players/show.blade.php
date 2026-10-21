@@ -96,6 +96,30 @@
     @endif
 </section>
 @endif
+@if(($profileFriends ?? null) !== null)
+<section class="card section-card" id="amigos">
+    <div class="section-heading"><div><span class="eyebrow">Playgroup</span><h2>Amigos de {{ $profile->nickname }} <span class="count">{{ $profileFriends->count() }}</span></h2></div></div>
+    @if($profileFriends->isEmpty())
+        <p class="muted">Nenhum amigo para mostrar ainda.</p>
+    @else
+        <div class="people-grid">
+        @foreach($profileFriends as $person)
+            <div class="person-row">
+                <span class="profile-avatar">{{ $person->avatar ?: mb_strtoupper(mb_substr($person->nickname, 0, 1)) }}</span>
+                <div class="person-info">
+                    @if($person->friend_state === 'me')<strong>{{ $person->nickname }}</strong><small>Você</small>
+                    @else<a href="{{ route('profiles.show', $person) }}"><strong>{{ $person->nickname }}</strong></a><small>{{ $person->friend_state === 'friend' ? 'Amigo em comum' : ($person->preferred_deck_name ?: 'Deck principal não informado') }}</small>@endif
+                </div>
+                @if($person->friend_state === 'friend')<span class="pill pill-ok">Amigos</span>
+                @elseif($person->friend_state === 'sent')<span class="pill">Pedido enviado</span>
+                @elseif($person->friend_state === 'incoming')<form method="POST" action="{{ route('friends.accept-code', $person->friend_code) }}">@csrf @method('PATCH')<button class="btn btn-small btn-primary">Aceitar</button></form>
+                @elseif($person->friend_state === 'none')<form method="POST" action="{{ route('friends.store', $person->friend_code) }}">@csrf<button class="btn btn-small btn-secondary">Adicionar</button></form>@endif
+            </div>
+        @endforeach
+        </div>
+    @endif
+</section>
+@endif
 <section class="card section-card">
     <div class="section-heading"><div><span class="eyebrow">Badges</span><h2>Conquistas</h2></div><span class="muted">{{ $unlocked->count() }} de {{ $achievements->count() }}</span></div>
     <div class="achievement-progress"><span style="width: {{ round($unlocked->count() / max(1, $achievements->count()) * 100) }}%"></span></div>

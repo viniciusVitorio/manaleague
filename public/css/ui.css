@@ -216,3 +216,6 @@ input[type=checkbox].ui-switch:checked::before{background:var(--ui-primary-fg);t
 @media(max-width:900px){.notif-layout{grid-template-columns:1fr}}
 @media(max-width:640px){.page-head{flex-direction:column;align-items:stretch}.page-head h1{font-size:1.45rem}.rival-bar{display:none}}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+input[type=radio]::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ui-primary-fg);transform:scale(0);transition:transform .1s}
+input[type=radio]:checked{background:var(--ui-primary);border-color:var(--ui-primary)}
+input[type=radio]:checked::before{transform:scale(1)}
