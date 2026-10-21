@@ -88,6 +88,8 @@
         @endforeach
         </div>
     @endif
+    <h3 class="achievement-category">Progressão</h3>
+    @include('ranked.partials.ladder', ['rating' => $ranked['ratings']->max('rating') ?? $ranked['start'], 'tiers' => $ranked['tiers']])
     @if($ranked['history']->isNotEmpty())
         <h3 class="achievement-category">Últimas variações</h3>
         @foreach($ranked['history'] as $tx)

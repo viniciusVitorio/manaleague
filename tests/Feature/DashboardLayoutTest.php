@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\NotificationPreference;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -35,7 +36,9 @@ class DashboardLayoutTest extends TestCase
             'public_token' => Str::random(40), 'public_slug' => 'copa-'.Str::random(20), 'invite_token' => Str::random(40)]);
         $t->players()->create(['name' => 'Vini', 'deck_name' => 'Affinity', 'player_profile_id' => $me->ensurePlayerProfile()->id]);
         $t->players()->create(['name' => 'Lucas', 'deck_name' => 'Elfos', 'player_profile_id' => $rival->ensurePlayerProfile()->id]);
-        foreach (['C', 'D'] as $n) $t->players()->create(['name' => $n]);
+        foreach (['C', 'D'] as $n) {
+            $t->players()->create(['name' => $n]);
+        }
         $this->actingAs($owner)->post(route('tournaments.start', $t));
         $mine = $t->matches()->where('status', 'pending')->get()->first(fn ($m) => in_array('Vini', [$m->playerOne->name, $m->playerTwo?->name], true));
         $opponent = $mine->playerOne->name === 'Vini' ? $mine->playerTwo->name : $mine->playerOne->name;
@@ -59,5 +62,34 @@ class DashboardLayoutTest extends TestCase
             $page->assertSee(url($path), false);
         }
         $page->assertSee('aria-controls="menu-mobile"', false)->assertSee('aria-controls="menu-account"', false);
+    }
+
+    public function test_notifications_page_uses_switches_and_mutes_only_switched_off_categories(): void
+    {
+        $user = User::factory()->create();
+        $user->ensurePlayerProfile();
+        NotificationPreference::create(['user_id' => $user->id, 'enabled' => true, 'muted_types' => ['club']]);
+        $html = $this->actingAs($user)->get('/notifications')->assertOk()->assertSee('Caixa de entrada')->assertSee('Tudo em dia por aqui.')
+            ->assertSee('Preferências')->assertDontSee('Silenciar categorias')->assertDontSee('Marcar todas como lidas')->getContent();
+        // clube silenciado: switch desligado e hidden habilitado; desafio: switch ligado e hidden desabilitado
+        $this->assertMatchesRegularExpression('/data-mute="club"\s*>/', $html);
+        $this->assertMatchesRegularExpression('/value="club"\s+data-mute-field/', $html);
+        $this->assertMatchesRegularExpression('/data-mute="challenge" checked/', $html);
+        $this->assertMatchesRegularExpression('/value="challenge" disabled/', $html);
+        $this->patch('/notifications/preferences', ['enabled' => 1, 'muted_types' => ['ranked']])->assertRedirect();
+        $this->assertSame(['ranked'], NotificationPreference::where('user_id', $user->id)->value('muted_types'));
+    }
+
+    public function test_rivalries_page_explains_how_it_works(): void
+    {
+        $user = User::factory()->create();
+        $user->ensurePlayerProfile();
+        $this->actingAs($user)->get('/challenges/rivalries')->assertOk()->assertSee('Como funcionam as rivalidades')
+            ->assertSee('placar confirmado pelos dois')->assertSee('Nenhuma rivalidade ainda.');
+        $friend = User::factory()->create();
+        $friend->ensurePlayerProfile();
+        $user->friendProfiles()->attach($friend->playerProfile, ['status' => 'accepted']);
+        $friend->friendProfiles()->attach($user->playerProfile, ['status' => 'accepted']);
+        $this->actingAs($user)->get('/challenges')->assertOk()->assertSee('class="ui-switch"', false)->assertSee('Partida ranqueada');
     }
 }

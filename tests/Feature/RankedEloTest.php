@@ -4,8 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Challenge;
 use App\Models\CommunityNotification;
-use App\Models\MatchmakingEntry;
-use App\Models\MatchmakingProposal;
 use App\Models\PlayerProfile;
 use App\Models\PlayerRating;
 use App\Models\RankedMatch;
@@ -13,9 +11,8 @@ use App\Models\RankedSeason;
 use App\Models\RatingTransaction;
 use App\Models\User;
 use App\Services\ChallengeService;
-use App\Services\Community\ClubService;
-use App\Services\Ranked\MatchmakingService;
 use App\Services\Ranked\RankedMatchService;
+use App\Services\Ranked\RankTierResolver;
 use App\Services\Ranked\RatingLedgerService;
 use App\Services\Ranked\SeasonService;
 use Illuminate\Database\QueryException;
@@ -385,17 +382,19 @@ class RankedEloTest extends TestCase
     public function test_new_seasons_start_at_600_ferro_two_without_touching_previous(): void
     {
         $old = $this->season(['Pauper']); // temporada antiga criada com 1000
-        $a = $this->player('A'); $b = $this->player('B');
+        $a = $this->player('A');
+        $b = $this->player('B');
         $this->play($this->match($old, $a, $b), $a, $b, 2, 0);
         $old->update(['status' => 'finished']);
-        $admin = $this->player('Admin'); $admin->forceFill(['is_admin' => true])->save();
+        $admin = $this->player('Admin');
+        $admin->forceFill(['is_admin' => true])->save();
         $svc = app(SeasonService::class);
         $new = $svc->create($admin, ['name' => 'Nova', 'starts_at' => now()->subHour(), 'ends_at' => now()->addMonth(), 'formats' => ['Pauper'], 'scope' => 'global']);
         $svc->schedule($new);
         $svc->refresh();
         $new = $new->fresh('formats');
         $this->assertSame([600, 'elo-v2'], [$new->formatConfig('Pauper')->starting_rating, $new->rules_version]);
-        $this->assertSame('Ferro II', app(\App\Services\Ranked\RankTierResolver::class)->resolve(600)['division']);
+        $this->assertSame('Ferro II', app(RankTierResolver::class)->resolve(600)['division']);
         $this->play($this->match($new, $a, $b), $a, $b, 0, 2);
         $this->assertSame([1016, 584, 616], [$this->rating($old, $a), $this->rating($new, $a), $this->rating($new, $b)]);
     }
@@ -403,7 +402,9 @@ class RankedEloTest extends TestCase
     public function test_rank_lives_on_profile_with_privacy_and_old_section_is_gone(): void
     {
         $s = $this->season(['Pauper']);
-        $a = $this->player('Ana'); $b = $this->player('Bia'); $this->friends($a, $b);
+        $a = $this->player('Ana');
+        $b = $this->player('Bia');
+        $this->friends($a, $b);
         $this->play($this->match($s, $a, $b), $a, $b, 2, 0);
 
         $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('Ranque')->assertSee('1016')->assertSee('Prata II')
@@ -422,8 +423,10 @@ class RankedEloTest extends TestCase
     public function test_match_and_admin_pages_still_work(): void
     {
         $s = $this->season();
-        $a = $this->player('Ana'); $b = $this->player('Bruno');
-        $admin = $this->player('Admin'); $admin->forceFill(['is_admin' => true])->save();
+        $a = $this->player('Ana');
+        $b = $this->player('Bruno');
+        $admin = $this->player('Admin');
+        $admin->forceFill(['is_admin' => true])->save();
         $m = $this->match($s, $a, $b);
         $this->actingAs($a)->get('/dashboard')->assertOk()->assertSee('Enviar resultado ranqueado');
         $this->actingAs($a)->get("/ranked/matches/{$m->id}")->assertOk()->assertSee('Informar resultado')->assertSee('Meu perfil');
@@ -435,7 +438,9 @@ class RankedEloTest extends TestCase
     {
         config(['ranked.auto_yearly_season' => true]);
         Carbon::setTestNow(Carbon::create(2026, 10, 20, 12, 0, 0, 'America/Sao_Paulo'));
-        $a = $this->player('Ana'); $b = $this->player('Bia'); $this->friends($a, $b);
+        $a = $this->player('Ana');
+        $b = $this->player('Bia');
+        $this->friends($a, $b);
         $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('Temporada 2026')->assertSee('rank-emblem-ferro', false)->assertDontSee('Nenhuma temporada');
         $season = RankedSeason::where('slug', 'temporada-2026')->sole();
         $this->assertSame('active', $season->status);
@@ -454,11 +459,37 @@ class RankedEloTest extends TestCase
 
     public function test_rank_emblems_render_for_every_tier(): void
     {
-        $tiers = app(\App\Services\Ranked\RankTierResolver::class);
+        $tiers = app(RankTierResolver::class);
         foreach ([600 => 'ferro', 850 => 'bronze', 1050 => 'prata', 1250 => 'ouro', 1450 => 'platina', 1650 => 'diamante', 1900 => 'mestre'] as $rating => $key) {
             $html = view('ranked.partials.tier', ['rating' => $rating, 'tiers' => $tiers])->render();
             $this->assertStringContainsString('rank-emblem-'.$key, $html);
             $this->assertStringContainsString('<path', $html);
         }
+    }
+
+    public function test_profile_shows_tier_progression_ladder(): void
+    {
+        $s = $this->season(['Pauper']);
+        $a = $this->player('Ana');
+        $b = $this->player('Bia');
+        $this->play($this->match($s, $a, $b), $a, $b, 2, 0); // 1016 = Prata II
+        $html = $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('Progressão')->assertSee('Faltam <strong>184 pontos</strong> para Ouro', false)->getContent();
+        $this->assertMatchesRegularExpression('/rank-step is-done.*?Bronze/s', $html);
+        $this->assertMatchesRegularExpression('/rank-step is-current"[^>]*aria-current="step".*?Prata/s', $html);
+        $this->assertMatchesRegularExpression('/rank-step is-locked.*?Mestre/s', $html);
+    }
+
+    public function test_rivalries_count_confirmed_ranked_challenges(): void
+    {
+        $s = $this->season(['Pauper']);
+        $a = $this->player('Ana');
+        $b = $this->player('Bia');
+        $this->friends($a, $b);
+        $this->play($this->match($s, $a, $b), $a, $b, 2, 1);
+        $this->play($this->match($s, $a, $b), $a, $b, 1, 1);
+        $this->match($s, $a, $b); // pendente: nao conta
+        $this->actingAs($a)->get('/challenges/rivalries')->assertOk()->assertSee('Bia')->assertSee('2 séries')->assertSee('2 ranqueadas')
+            ->assertSee('<strong>1</strong>–0–1', false);
+        $this->actingAs($b)->get('/challenges/rivalries')->assertSee('<strong>0</strong>–1–1', false);
     }
 }

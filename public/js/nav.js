@@ -115,7 +115,17 @@
         window.matchMedia('(min-width: 961px)').addEventListener('change', function () { closeAll(null); });
     }
 
-    function boot() { init(); initToggles(); initMenus(); }
+    // Switches "ligado = recebe": desligar habilita o hidden que envia a categoria como silenciada.
+    function initMuteSwitches() {
+        document.querySelectorAll('[data-mute]').forEach(function (sw) {
+            sw.addEventListener('change', function () {
+                var field = document.querySelector('[data-mute-field="' + sw.dataset.mute + '"]');
+                if (field) field.disabled = sw.checked;
+            });
+        });
+    }
+
+    function boot() { init(); initToggles(); initMenus(); initMuteSwitches(); }
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', boot);
