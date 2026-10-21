@@ -74,6 +74,7 @@ class SeasonService
     public function refresh(?CarbonInterface $now = null): void
     {
         $now ??= now();
+        $this->ensureYearlySeason($now);
 
         RankedSeason::query()->where('status', 'scheduled')->where('starts_at', '<=', $now)->update(['status' => 'active']);
         RankedSeason::query()->where('status', 'active')->where('ends_at', '<=', $now)->update(['status' => 'closing']);
@@ -85,6 +86,38 @@ class SeasonService
             }
         }
 
+    }
+
+    /**
+     * Temporada anual automatica ("Temporada 2026": 01/01 a 31/12, horario de Brasilia, todos os formatos 1v1).
+     * Criada so se nao houver temporada global em andamento cobrindo a data. Idempotente pelo slug unico.
+     */
+    public function ensureYearlySeason(CarbonInterface $now): ?RankedSeason
+    {
+        if (! config('ranked.auto_yearly_season')) return null;
+        $covered = RankedSeason::query()->where('scope', 'global')->whereIn('status', ['scheduled', 'active'])
+            ->where('starts_at', '<=', $now)->where('ends_at', '>', $now)->exists();
+        if ($covered) return null;
+        $year = $now->copy()->timezone('America/Sao_Paulo')->year;
+        $slug = 'temporada-'.$year;
+        if (RankedSeason::query()->where('slug', $slug)->exists()) return null; // ja existiu e foi encerrada antes: respeita
+
+        return DB::transaction(function () use ($year, $slug) {
+            $season = RankedSeason::query()->firstOrCreate(['slug' => $slug], [
+                'name' => 'Temporada '.$year, 'status' => 'active', 'scope' => 'global',
+                'starts_at' => \Illuminate\Support\Carbon::create($year, 1, 1, 0, 0, 0, 'America/Sao_Paulo')->timezone(config('app.timezone')),
+                'ends_at' => \Illuminate\Support\Carbon::create($year + 1, 1, 1, 0, 0, 0, 'America/Sao_Paulo')->timezone(config('app.timezone')),
+                'rules_version' => config('ranked.rules_version'),
+            ]);
+            if ($season->wasRecentlyCreated) {
+                foreach (config('ranked.formats') as $format) {
+                    $season->formats()->create(['format' => $format, 'k_factor' => (int) config('ranked.defaults.k_factor'),
+                        'starting_rating' => (int) config('ranked.defaults.starting_rating'), 'allow_draws' => (bool) config('ranked.defaults.allow_draws')]);
+                }
+            }
+
+            return $season;
+        });
     }
 
     /** Fecha a temporada: cancela o que nao foi concluido e grava snapshot imutavel. */

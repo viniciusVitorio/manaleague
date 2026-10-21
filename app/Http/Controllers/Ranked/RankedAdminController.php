@@ -34,7 +34,7 @@ class RankedAdminController extends Controller
         $d = $request->validated();
         $tz = 'America/Sao_Paulo';
         $season = $seasons->create($request->user(), [
-            'name' => $d['name'], 'starts_at' => Carbon::parse($d['starts_at'], $tz)->utc(), 'ends_at' => Carbon::parse($d['ends_at'], $tz)->utc(),
+            'name' => $d['name'], 'starts_at' => Carbon::parse($d['starts_at'], $tz)->timezone(config('app.timezone')), 'ends_at' => Carbon::parse($d['ends_at'], $tz)->timezone(config('app.timezone')),
             'formats' => $d['formats'], 'scope' => $d['scope'], 'club_id' => $d['club_id'] ?? null, 'k_factor' => $d['k_factor'],
             'allow_draws' => $request->boolean('allow_draws'), 'settings' => ['pair_limit_24h' => (int) $d['pair_limit_24h']],
         ]);

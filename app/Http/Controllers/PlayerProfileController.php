@@ -73,6 +73,7 @@ class PlayerProfileController extends Controller
         if (! config('ranked.enabled') || ! $profile->account_user_id || (! $isOwner && ! $profile->ranked_public)) {
             return null;
         }
+        app(\App\Services\Ranked\SeasonService::class)->refresh();
         $ratings = \App\Models\PlayerRating::query()->with('season')->where('player_profile_id', $profile->id)
             ->whereHas('season', fn ($q) => $q->whereIn('status', ['active', 'closing']))->orderByDesc('rating')->get();
         $history = \App\Models\RatingTransaction::query()->with(['rankedMatch.playerOne', 'rankedMatch.playerTwo'])
@@ -80,8 +81,9 @@ class PlayerProfileController extends Controller
         $snapshots = \App\Models\RatingSeasonSnapshot::query()->with('season')->where('player_profile_id', $profile->id)->latest('id')->limit(6)->get();
         $activeFormats = \App\Models\RankedSeason::query()->where('status', 'active')->where('scope', 'global')->with('formats')->get()
             ->flatMap(fn ($s) => $s->formats->where('enabled', true)->pluck('format'))->unique()->values();
+        $currentSeason = \App\Models\RankedSeason::query()->where('status', 'active')->where('scope', 'global')->orderBy('starts_at')->first();
 
-        return ['ratings' => $ratings, 'history' => $history, 'snapshots' => $snapshots, 'activeFormats' => $activeFormats,
+        return ['ratings' => $ratings, 'history' => $history, 'snapshots' => $snapshots, 'activeFormats' => $activeFormats, 'currentSeason' => $currentSeason,
             'start' => (int) config('ranked.defaults.starting_rating'), 'tiers' => app(\App\Services\Ranked\RankTierResolver::class)];
     }
 

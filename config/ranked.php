@@ -4,6 +4,9 @@ return [
     // Feature flag: desliga rotas/menus do ranked sem apagar dados.
     'enabled' => env('RANKED_ENABLED', true),
 
+    // Cria sozinha a "Temporada AAAA" (ano inteiro, todos os formatos) quando nao houver temporada global ativa.
+    'auto_yearly_season' => env('RANKED_AUTO_YEARLY_SEASON', true),
+
     // Formatos 1v1 elegiveis. Commander multiplayer nao concede ELO 1v1.
     'formats' => ['Pauper', 'Standard', 'Modern', 'Pioneer', 'Legacy', 'Vintage', 'Draft'],
 

@@ -21,3 +21,4 @@
 .admin-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:4px 14px;align-items:end}.admin-form fieldset{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 18px;border:1px solid #27272a;border-radius:8px;padding:8px 12px}.admin-form fieldset label{margin:6px 0}
 @media(max-width:600px){.tx-row{grid-template-columns:48px 1fr}.tx-row time{grid-column:2}.rating-value strong{font-size:1.6rem}}
 .profile-ranked .ranked-grid{margin:0 0 8px}.profile-ranked .rating-card{margin:0}.ranked-privacy{margin-top:16px;padding-top:12px;border-top:1px solid #27272a}.profile-title .tier-badge{vertical-align:middle}
+.rank-emblem{flex:0 0 auto;display:inline-block;vertical-align:middle}.tier-badge .rank-emblem{margin-left:-3px}.rating-head{justify-content:flex-start}.rating-head .muted{margin-left:auto}.rank-empty{display:flex;align-items:center;gap:14px}.rank-empty p{margin:0}

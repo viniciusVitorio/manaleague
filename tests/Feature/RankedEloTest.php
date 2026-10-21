@@ -430,4 +430,35 @@ class RankedEloTest extends TestCase
         $this->actingAs($a)->post("/ranked/matches/{$m->id}/cancel")->assertRedirect('/dashboard');
         $this->actingAs($admin)->get('/ranked/admin')->assertOk()->assertSee('Nova temporada');
     }
+
+    public function test_yearly_season_is_created_automatically_and_profile_shows_it(): void
+    {
+        config(['ranked.auto_yearly_season' => true]);
+        Carbon::setTestNow(Carbon::create(2026, 10, 20, 12, 0, 0, 'America/Sao_Paulo'));
+        $a = $this->player('Ana'); $b = $this->player('Bia'); $this->friends($a, $b);
+        $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('Temporada 2026')->assertSee('rank-emblem-ferro', false)->assertDontSee('Nenhuma temporada');
+        $season = RankedSeason::where('slug', 'temporada-2026')->sole();
+        $this->assertSame('active', $season->status);
+        $this->assertSame(['2026-01-01 00:00', '2027-01-01 00:00'], [$season->starts_at->timezone('America/Sao_Paulo')->format('Y-m-d H:i'), $season->ends_at->timezone('America/Sao_Paulo')->format('Y-m-d H:i')]);
+        $this->assertEqualsCanonicalizing(config('ranked.formats'), $season->formats->pluck('format')->all());
+        app(SeasonService::class)->refresh();
+        $this->assertSame(1, RankedSeason::count()); // idempotente
+
+        $this->actingAs($a)->post('/challenges', ['opponent_id' => $b->playerProfile->id, 'format' => 'Pauper', 'best_of' => 3, 'expires_in' => 24, 'ranked' => 1])->assertSessionHasNoErrors();
+        Carbon::setTestNow(Carbon::create(2027, 1, 2, 12, 0, 0, 'America/Sao_Paulo'));
+        app(SeasonService::class)->refresh();
+        $this->assertSame('finished', $season->fresh()->status);
+        $this->assertSame('active', RankedSeason::where('slug', 'temporada-2027')->value('status'));
+        Carbon::setTestNow();
+    }
+
+    public function test_rank_emblems_render_for_every_tier(): void
+    {
+        $tiers = app(\App\Services\Ranked\RankTierResolver::class);
+        foreach ([600 => 'ferro', 850 => 'bronze', 1050 => 'prata', 1250 => 'ouro', 1450 => 'platina', 1650 => 'diamante', 1900 => 'mestre'] as $rating => $key) {
+            $html = view('ranked.partials.tier', ['rating' => $rating, 'tiers' => $tiers])->render();
+            $this->assertStringContainsString('rank-emblem-'.$key, $html);
+            $this->assertStringContainsString('<path', $html);
+        }
+    }
 }

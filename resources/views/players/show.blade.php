@@ -74,13 +74,13 @@
 <section class="card section-card profile-ranked" id="ranque">
     <div class="section-heading"><div><span class="eyebrow">ELO / PDL</span><h2>Ranque</h2></div>@if($isOwner && $ranked['activeFormats']->isNotEmpty())<a class="btn btn-small btn-secondary" href="{{ route('challenges.index', ['ranked' => 1]) }}">Desafio ranqueado</a>@endif</div>
     @if($ranked['ratings']->isEmpty())
-        <p class="muted">@if($isOwner){{ $ranked['activeFormats']->isEmpty() ? 'Nenhuma temporada ranqueada em andamento.' : 'Você ainda não jogou ranqueado.' }} Todos começam com <strong>{{ $ranked['start'] }} ({{ $ranked['tiers']->resolve($ranked['start'])['division'] }})</strong> em cada formato.@else Sem partidas ranqueadas nesta temporada.@endif</p>
+        <div class="rank-empty">@include('ranked.partials.emblem', ['key' => $ranked['tiers']->resolve($ranked['start'])['key'], 'size' => 44])<p class="muted">@if($isOwner)@if($ranked['currentSeason'])Você ainda não jogou ranqueado na <strong>{{ $ranked['currentSeason']->name }}</strong>. Faça um desafio ranqueado com um amigo para estrear: todos começam com <strong>{{ $ranked['start'] }} ({{ $ranked['tiers']->resolve($ranked['start'])['division'] }})</strong> em cada formato.@else O ranque abre assim que a próxima temporada começar.@endif @else Ainda sem partidas ranqueadas{{ $ranked['currentSeason'] ? ' na '.$ranked['currentSeason']->name : '' }}.@endif</p></div>
     @else
         <div class="ranked-grid">
         @foreach($ranked['ratings'] as $rating)
             @php($t = $ranked['tiers']->resolve($rating->rating))
             <article class="rating-card tier-{{ $t['key'] }}">
-                <div class="rating-head">@include('ranked.partials.tier', ['rating' => $rating->rating, 'tiers' => $ranked['tiers']])<span class="muted">{{ $rating->format }} · {{ $rating->season->name }}</span></div>
+                <div class="rating-head">@include('ranked.partials.emblem', ['key' => $t['key'], 'size' => 40])@include('ranked.partials.tier', ['rating' => $rating->rating, 'tiers' => $ranked['tiers']])<span class="muted">{{ $rating->format }} · {{ $rating->season->name }}</span></div>
                 <div class="rating-value"><strong>{{ $rating->rating }}</strong> ELO @if($rating->isProvisional())<span class="provisional" title="Primeiras partidas da temporada">Provisório</span>@endif</div>
                 @if($t['pdl_max'])<div class="pdl" role="progressbar" aria-label="Progresso na divisão" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $t['pdl'] }}"><span style="width: {{ $t['pdl'] }}%"></span></div><small>{{ $t['pdl'] }}/100 PDL</small>@else<small>{{ $t['pdl'] }} PDL acima de Mestre</small>@endif
                 <p class="muted">{{ $rating->wins }}V {{ $rating->draws }}E {{ $rating->losses }}D · pico {{ $rating->peak_rating }}</p>
