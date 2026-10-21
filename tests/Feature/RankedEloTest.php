@@ -466,16 +466,15 @@ class RankedEloTest extends TestCase
         }
     }
 
-    public function test_profile_shows_tier_progression_ladder(): void
+    public function test_profile_shows_lol_style_rank_card_without_ladder(): void
     {
         $s = $this->season(['Pauper']);
         $a = $this->player('Ana');
         $b = $this->player('Bia');
-        $this->play($this->match($s, $a, $b), $a, $b, 2, 0); // 1016 = Prata II
-        $html = $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('Progressão')->assertSee('Faltam <strong>184 pontos</strong> para Ouro', false)->getContent();
-        $this->assertMatchesRegularExpression('/rank-step is-done.*?Bronze/s', $html);
-        $this->assertMatchesRegularExpression('/rank-step is-current"[^>]*aria-current="step".*?Prata/s', $html);
-        $this->assertMatchesRegularExpression('/rank-step is-locked.*?Mestre/s', $html);
+        $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('Sem ranque')->assertSee('Começa em Ferro II');
+        $this->play($this->match($s, $a, $b), $a, $b, 2, 0); // 1016 = Prata II, 16 PDL
+        $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('rank-card tier-prata', false)->assertSee('16 PDL')
+            ->assertSee('faltam 84 para Prata I')->assertDontSee('Progressão')->assertDontSee('rank-ladder', false)->assertSee('Ver todas as patentes');
     }
 
     public function test_rivalries_count_confirmed_ranked_challenges(): void

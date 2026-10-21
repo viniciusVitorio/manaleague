@@ -47,3 +47,15 @@
 .all-tiers-table tr.is-current td{background:#18181b}
 .all-tiers-name{display:inline-flex;align-items:center;gap:8px;font-weight:500}
 .all-tiers-table td{vertical-align:middle}.all-tiers-name .rank-emblem{display:block}
+.rank-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.rank-card{display:flex;align-items:center;gap:18px;padding:18px 20px;border:1px solid #27272a;border-radius:12px;background:#0c0c0e}
+.rank-card-emblem{flex:0 0 auto;display:grid;place-items:center;width:84px;height:84px}
+.rank-card-body{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.rank-card-label{font-size:.72rem;color:#71717a;text-transform:uppercase;letter-spacing:.06em}
+.rank-card-division{font-size:1.35rem;font-weight:600;letter-spacing:-.02em;line-height:1.2}
+.rank-card-pdl{font-size:.85rem;color:#a1a1aa;font-variant-numeric:tabular-nums}
+.rank-card .pdl{margin:6px 0 2px}
+.rank-card.is-unranked .rank-emblem{filter:grayscale(1);opacity:.45}
+.rank-card.is-unranked .rank-card-division{color:#a1a1aa}
+.rank-hint{margin:10px 0 0;font-size:.84rem}
+@media(max-width:480px){.rank-card{padding:14px;gap:12px}.rank-card-emblem{width:64px;height:64px}.rank-card-emblem svg{width:64px;height:64px}}

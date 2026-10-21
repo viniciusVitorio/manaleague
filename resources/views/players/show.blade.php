@@ -73,23 +73,16 @@
 @push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/ranked.css') }}">@endpush
 <section class="card section-card profile-ranked" id="ranque">
     <div class="section-heading"><div><span class="eyebrow">ELO / PDL</span><h2>Ranque</h2></div>@if($isOwner && $ranked['activeFormats']->isNotEmpty())<a class="btn btn-small btn-secondary" href="{{ route('challenges.index', ['ranked' => 1]) }}">Desafio ranqueado</a>@endif</div>
+    <div class="rank-cards">
+    @forelse($ranked['ratings'] as $rating)
+        @include('ranked.partials.rank-card', ['rating' => $rating->rating, 'tiers' => $ranked['tiers'], 'label' => $rating->format.' · '.$rating->season->name, 'record' => $rating])
+    @empty
+        @include('ranked.partials.rank-card', ['rating' => $ranked['start'], 'tiers' => $ranked['tiers'], 'label' => $ranked['currentSeason']?->name ?? 'Sem temporada ativa', 'record' => null])
+    @endforelse
+    </div>
     @if($ranked['ratings']->isEmpty())
-        <div class="rank-empty">@include('ranked.partials.emblem', ['key' => $ranked['tiers']->resolve($ranked['start'])['key'], 'size' => 44])<p class="muted">@if($isOwner)@if($ranked['currentSeason'])Você ainda não jogou ranqueado na <strong>{{ $ranked['currentSeason']->name }}</strong>. Faça um desafio ranqueado com um amigo para estrear: todos começam com <strong>{{ $ranked['start'] }} ({{ $ranked['tiers']->resolve($ranked['start'])['division'] }})</strong> em cada formato.@else O ranque abre assim que a próxima temporada começar.@endif @else Ainda sem partidas ranqueadas{{ $ranked['currentSeason'] ? ' na '.$ranked['currentSeason']->name : '' }}.@endif</p></div>
-    @else
-        <div class="ranked-grid">
-        @foreach($ranked['ratings'] as $rating)
-            @php($t = $ranked['tiers']->resolve($rating->rating))
-            <article class="rating-card tier-{{ $t['key'] }}">
-                <div class="rating-head">@include('ranked.partials.emblem', ['key' => $t['key'], 'size' => 40])@include('ranked.partials.tier', ['rating' => $rating->rating, 'tiers' => $ranked['tiers']])<span class="muted">{{ $rating->format }} · {{ $rating->season->name }}</span></div>
-                <div class="rating-value"><strong>{{ $rating->rating }}</strong> ELO @if($rating->isProvisional())<span class="provisional" title="Primeiras partidas da temporada">Provisório</span>@endif</div>
-                @if($t['pdl_max'])<div class="pdl" role="progressbar" aria-label="Progresso na divisão" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $t['pdl'] }}"><span style="width: {{ $t['pdl'] }}%"></span></div><small>{{ $t['pdl'] }}/100 PDL</small>@else<small>{{ $t['pdl'] }} PDL acima de Mestre</small>@endif
-                <p class="muted">{{ $rating->wins }}V {{ $rating->draws }}E {{ $rating->losses }}D · pico {{ $rating->peak_rating }}</p>
-            </article>
-        @endforeach
-        </div>
+        <p class="muted rank-hint">@if($isOwner)@if($ranked['currentSeason'])Você ainda não jogou ranqueado. Faça um desafio ranqueado com um amigo para estrear; todos começam em {{ $ranked['start'] }} ELO em cada formato.@else O ranque abre assim que a próxima temporada começar.@endif @else Ainda sem partidas ranqueadas nesta temporada.@endif</p>
     @endif
-    <h3 class="achievement-category">Progressão</h3>
-    @include('ranked.partials.ladder', ['rating' => $ranked['ratings']->max('rating') ?? $ranked['start'], 'tiers' => $ranked['tiers']])
     @include('ranked.partials.all-tiers', ['rating' => $ranked['ratings']->max('rating') ?? $ranked['start'], 'tiers' => $ranked['tiers']])
     @if($ranked['history']->isNotEmpty())
         <h3 class="achievement-category">Últimas variações</h3>
