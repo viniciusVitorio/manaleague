@@ -22,6 +22,21 @@
                 <div class="profile-meta">
                     <span>🏆 {{ $unlocked->count() }}/{{ $achievements->count() }} conquistas</span>
                     @if($isOwner && $friendsCount !== null)<a href="{{ route('friends.index') }}">🤝 {{ $friendsCount }} {{ $friendsCount === 1 ? 'amigo' : 'amigos' }}</a>@endif
+                    @if(! $isOwner && ($profileFriends ?? null) !== null && $profileFriends->isNotEmpty())
+                    <details class="friends-pop" id="amigos">
+                        <summary>🤝 {{ $profileFriends->count() }} {{ $profileFriends->count() === 1 ? 'amigo' : 'amigos' }}</summary>
+                        <div class="friends-pop-panel" role="list">
+                        @foreach($profileFriends as $person)
+                            <div class="friends-pop-row" role="listitem">
+                                <span class="profile-avatar">{{ $person->avatar ?: mb_strtoupper(mb_substr($person->nickname, 0, 1)) }}</span>
+                                <span class="friends-pop-name">@if($person->friend_state === 'me'){{ $person->nickname }}<small>Você</small>@else<a href="{{ route('profiles.show', $person) }}">{{ $person->nickname }}</a><small>{{ $person->friend_state === 'friend' ? 'Amigo em comum' : ($person->friend_state === 'sent' ? 'Pedido enviado' : 'Amigo de '.$profile->nickname) }}</small>@endif</span>
+                                @if($person->friend_state === 'incoming')<form method="POST" action="{{ route('friends.accept-code', $person->friend_code) }}">@csrf @method('PATCH')<button class="ui-btn ui-btn-outline ui-btn-sm">Aceitar</button></form>
+                                @elseif($person->friend_state === 'none')<form method="POST" action="{{ route('friends.store', $person->friend_code) }}">@csrf<button class="ui-btn ui-btn-ghost ui-btn-sm" aria-label="Adicionar {{ $person->nickname }}"><x-icon name="user-plus" /></button></form>@endif
+                            </div>
+                        @endforeach
+                        </div>
+                    </details>
+                    @endif
                     @if($isOwner)<span>Código: <b>{{ $profile->formattedFriendCode() }}</b></span>@endif
                 </div>
             </div>
@@ -107,30 +122,6 @@
         <div class="binder-info"><strong title="{{ $item->name }}">{{ $item->name }}</strong><small>{{ $item->set_code }} · {{ $item->condition }}@if($item->price_usd) · US$ {{ number_format((float) $item->price_usd, 2, ',', '.') }}@endif</small></div></article>
     @endforeach
     </div>
-</section>
-@endif
-@if(($profileFriends ?? null) !== null)
-<section class="card section-card" id="amigos">
-    <div class="section-heading"><div><span class="eyebrow">Playgroup</span><h2>Amigos de {{ $profile->nickname }} <span class="count">{{ $profileFriends->count() }}</span></h2></div></div>
-    @if($profileFriends->isEmpty())
-        <p class="muted">Nenhum amigo para mostrar ainda.</p>
-    @else
-        <div class="people-grid">
-        @foreach($profileFriends as $person)
-            <div class="person-row">
-                <span class="profile-avatar">{{ $person->avatar ?: mb_strtoupper(mb_substr($person->nickname, 0, 1)) }}</span>
-                <div class="person-info">
-                    @if($person->friend_state === 'me')<strong>{{ $person->nickname }}</strong><small>Você</small>
-                    @else<a href="{{ route('profiles.show', $person) }}"><strong>{{ $person->nickname }}</strong></a><small>{{ $person->friend_state === 'friend' ? 'Amigo em comum' : ($person->preferred_deck_name ?: 'Deck principal não informado') }}</small>@endif
-                </div>
-                @if($person->friend_state === 'friend')<span class="pill pill-ok">Amigos</span>
-                @elseif($person->friend_state === 'sent')<span class="pill">Pedido enviado</span>
-                @elseif($person->friend_state === 'incoming')<form method="POST" action="{{ route('friends.accept-code', $person->friend_code) }}">@csrf @method('PATCH')<button class="btn btn-small btn-primary">Aceitar</button></form>
-                @elseif($person->friend_state === 'none')<form method="POST" action="{{ route('friends.store', $person->friend_code) }}">@csrf<button class="btn btn-small btn-secondary">Adicionar</button></form>@endif
-            </div>
-        @endforeach
-        </div>
-    @endif
 </section>
 @endif
 <section class="card section-card">

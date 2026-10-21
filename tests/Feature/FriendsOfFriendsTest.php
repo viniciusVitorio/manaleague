@@ -33,13 +33,13 @@ class FriendsOfFriendsTest extends TestCase
         $this->befriend($bia, $priv);
         $this->befriend($ana, $duda);
 
-        $page = $this->actingAs($ana)->get('/players/'.$bia->playerProfile->id)->assertOk()->assertSee('Amigos de Bia');
+        $page = $this->actingAs($ana)->get('/players/'.$bia->playerProfile->id)->assertOk()->assertSee('3 amigos')->assertSee('friends-pop', false)->assertDontSee('Amigos de Bia');
         $page->assertSee('Caio')->assertSee('Amigo em comum')->assertSee(route('friends.store', $caio->playerProfile->friend_code), false)
             ->assertDontSee('Privado');
         $this->assertStringContainsString('Você', $page->getContent());
 
         // amigo de amigo abre o perfil, mas sem a lista de amigos dele e sem decks
-        $this->actingAs($ana)->get('/players/'.$caio->playerProfile->id)->assertOk()->assertSee('Caio')->assertDontSee('Amigos de Caio');
+        $this->actingAs($ana)->get('/players/'.$caio->playerProfile->id)->assertOk()->assertSee('Caio')->assertDontSee('friends-pop', false);
         // perfil "so por codigo" continua fechado, e estranhos tambem
         $this->actingAs($ana)->get('/players/'.$priv->playerProfile->id)->assertForbidden();
         $stranger = $this->user('Zeca');

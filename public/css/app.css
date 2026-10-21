@@ -193,3 +193,16 @@ details>summary::-webkit-details-marker{display:none}
 .topbar{z-index:50}
 
 .people-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));column-gap:24px}
+
+.friends-pop{position:relative;display:inline-block}
+.friends-pop summary{list-style:none;cursor:pointer;color:inherit}
+.friends-pop summary::-webkit-details-marker{display:none}
+.friends-pop summary:hover{color:#fafafa;text-decoration:underline}
+.friends-pop-panel{position:absolute;top:calc(100% + 8px);left:0;z-index:40;width:300px;max-height:340px;overflow:auto;padding:6px;border:1px solid #27272a;border-radius:10px;background:#0c0c0e;box-shadow:0 12px 32px rgba(0,0,0,.5)}
+.friends-pop-row{display:flex;align-items:center;gap:10px;padding:6px;border-radius:8px}
+.friends-pop-row:hover{background:#18181b}
+.friends-pop-row .profile-avatar{width:28px;height:28px;font-size:.8rem;flex:0 0 auto}
+.friends-pop-row form{margin:0}
+.friends-pop-name{flex:1;display:flex;flex-direction:column;min-width:0;font-size:.85rem}
+.friends-pop-name small{color:#71717a;font-size:.72rem}
+@media(max-width:480px){.friends-pop-panel{width:calc(100vw - 48px)}}
