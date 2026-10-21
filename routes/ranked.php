@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\PlayerProfileController;
 use App\Http\Controllers\Ranked\RankedAdminController;
 use App\Http\Controllers\Ranked\RankedMatchController;
 use Illuminate\Support\Facades\Route;
@@ -11,7 +10,6 @@ if (! config('ranked.enabled')) {
 
 // Sem secao propria: o ranque aparece no perfil; partidas ranqueadas nascem de desafios.
 Route::middleware('auth')->group(function (): void {
-    Route::patch('/me/profile/ranked-privacy', [PlayerProfileController::class, 'rankedPrivacy'])->name('ranked.privacy');
 
     Route::get('/ranked/matches/{match}', [RankedMatchController::class, 'show'])->name('ranked.matches.show');
     Route::post('/ranked/matches/{match}/results', [RankedMatchController::class, 'results'])->middleware('throttle:20,1')->name('ranked.matches.results');

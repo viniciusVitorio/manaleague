@@ -32,3 +32,18 @@
 .rank-next{margin:4px 0 0;font-size:.82rem}
 @media(max-width:780px){.rank-ladder{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:420px){.rank-ladder{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.all-tiers{margin:12px 0 4px;border:1px solid #27272a;border-radius:10px;background:#0c0c0e}
+.all-tiers summary{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;font-size:.86rem;font-weight:500;list-style:none}
+.all-tiers summary::-webkit-details-marker{display:none}
+.all-tiers summary::after{content:"";margin-left:auto;width:7px;height:7px;border-right:1.5px solid #a1a1aa;border-bottom:1.5px solid #a1a1aa;transform:rotate(45deg);transition:transform .15s}
+.all-tiers[open] summary::after{transform:rotate(-135deg)}
+.all-tiers summary:hover{background:#18181b;border-radius:10px}
+.all-tiers>p{margin:0;padding:0 14px 10px;font-size:.8rem}
+.all-tiers-table{width:100%;border-collapse:collapse;font-size:.84rem}
+.all-tiers-table th{padding:8px 14px;text-align:left;font-size:.72rem;font-weight:500;color:#71717a;border-top:1px solid #27272a}
+.all-tiers-table td{padding:7px 14px;border-top:1px solid #1f1f23}
+.all-tiers-table td.num{font-variant-numeric:tabular-nums;color:#a1a1aa;text-align:right}
+.all-tiers-table th:last-child{text-align:right}
+.all-tiers-table tr.is-current td{background:#18181b}
+.all-tiers-name{display:inline-flex;align-items:center;gap:8px;font-weight:500}
+.all-tiers-table td{vertical-align:middle}.all-tiers-name .rank-emblem{display:block}

@@ -90,6 +90,7 @@
     @endif
     <h3 class="achievement-category">Progressão</h3>
     @include('ranked.partials.ladder', ['rating' => $ranked['ratings']->max('rating') ?? $ranked['start'], 'tiers' => $ranked['tiers']])
+    @include('ranked.partials.all-tiers', ['rating' => $ranked['ratings']->max('rating') ?? $ranked['start'], 'tiers' => $ranked['tiers']])
     @if($ranked['history']->isNotEmpty())
         <h3 class="achievement-category">Últimas variações</h3>
         @foreach($ranked['history'] as $tx)
@@ -99,10 +100,6 @@
     @if($ranked['snapshots']->isNotEmpty())
         <h3 class="achievement-category">Temporadas encerradas</h3>
         @foreach($ranked['snapshots'] as $snap)<p class="muted"><strong>{{ $snap->season->name }}</strong> · {{ $snap->format }}: {{ $snap->tier }} ({{ $snap->final_rating }})@if($snap->rank) · {{ $snap->rank }}º lugar @endif</p>@endforeach
-    @endif
-    @if($isOwner)
-        <form method="POST" action="{{ route('ranked.privacy') }}" class="ranked-privacy">@csrf @method('PATCH')<input type="hidden" name="ranked_public" value="0"><label class="check-row"><input type="checkbox" name="ranked_public" value="1" @checked($profile->ranked_public) data-autosubmit> Mostrar meu ranque para amigos e organizadores que veem meu perfil</label><noscript><button class="btn btn-small">Salvar</button></noscript></form>
-        <script src="{{ \App\Support\VersionedAsset::url('js/ranked-queue.js') }}" defer></script>
     @endif
 </section>
 @endif

@@ -408,11 +408,10 @@ class RankedEloTest extends TestCase
         $this->play($this->match($s, $a, $b), $a, $b, 2, 0);
 
         $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('Ranque')->assertSee('1016')->assertSee('Prata II')
-            ->assertSee('Últimas variações')->assertSee('Mostrar meu ranque');
-        $this->actingAs($b)->get('/players/'.$a->playerProfile->id)->assertOk()->assertSee('1016')->assertDontSee('Mostrar meu ranque');
-        $this->actingAs($a)->patch('/me/profile/ranked-privacy', ['ranked_public' => 0])->assertRedirect();
-        $this->actingAs($b)->get('/players/'.$a->playerProfile->id)->assertOk()->assertDontSee('1016');
-        $this->actingAs($a)->get('/me/profile')->assertSee('1016');
+            ->assertSee('Últimas variações')->assertDontSee('Mostrar meu ranque')->assertSee('Ver todas as patentes')->assertSee('Diamante I')->assertSee('1800+');
+        $this->actingAs($b)->get('/players/'.$a->playerProfile->id)->assertOk()->assertSee('1016');
+        $a->playerProfile->update(['ranked_public' => false]); // opcao antiga nao esconde mais
+        $this->actingAs($b)->get('/players/'.$a->playerProfile->id)->assertSee('1016');
 
         foreach (['/ranked', '/ranked/regulamento', '/ranked/leaderboard', '/players/'.$a->playerProfile->id.'/ranked'] as $gone) {
             $this->actingAs($a)->get($gone)->assertNotFound();

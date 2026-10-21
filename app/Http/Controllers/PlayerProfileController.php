@@ -3,10 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\PlayerProfile;
+use App\Models\PlayerRating;
+use App\Models\RankedSeason;
+use App\Models\RatingSeasonSnapshot;
+use App\Models\RatingTransaction;
 use App\Models\User;
 use App\Services\AchievementService;
 use App\Services\FriendshipService;
 use App\Services\PlayerStatsService;
+use App\Services\Ranked\RankTierResolver;
+use App\Services\Ranked\SeasonService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -67,45 +73,39 @@ class PlayerProfileController extends Controller
         return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck', 'ranked'));
     }
 
-    /** Patente por formato (temporadas em andamento) + historico. Outros so veem se o dono permitir. */
+    /** Patente por formato (temporadas em andamento) + historico. Visivel para quem pode ver o perfil. */
     private function ranked(PlayerProfile $profile, bool $isOwner): ?array
     {
-        if (! config('ranked.enabled') || ! $profile->account_user_id || (! $isOwner && ! $profile->ranked_public)) {
+        if (! config('ranked.enabled') || ! $profile->account_user_id) {
             return null;
         }
-        app(\App\Services\Ranked\SeasonService::class)->refresh();
-        $ratings = \App\Models\PlayerRating::query()->with('season')->where('player_profile_id', $profile->id)
+        app(SeasonService::class)->refresh();
+        $ratings = PlayerRating::query()->with('season')->where('player_profile_id', $profile->id)
             ->whereHas('season', fn ($q) => $q->whereIn('status', ['active', 'closing']))->orderByDesc('rating')->get();
-        $history = \App\Models\RatingTransaction::query()->with(['rankedMatch.playerOne', 'rankedMatch.playerTwo'])
+        $history = RatingTransaction::query()->with(['rankedMatch.playerOne', 'rankedMatch.playerTwo'])
             ->where('player_profile_id', $profile->id)->latest('effective_at')->latest('id')->limit(8)->get();
-        $snapshots = \App\Models\RatingSeasonSnapshot::query()->with('season')->where('player_profile_id', $profile->id)->latest('id')->limit(6)->get();
-        $activeFormats = \App\Models\RankedSeason::query()->where('status', 'active')->where('scope', 'global')->with('formats')->get()
+        $snapshots = RatingSeasonSnapshot::query()->with('season')->where('player_profile_id', $profile->id)->latest('id')->limit(6)->get();
+        $activeFormats = RankedSeason::query()->where('status', 'active')->where('scope', 'global')->with('formats')->get()
             ->flatMap(fn ($s) => $s->formats->where('enabled', true)->pluck('format'))->unique()->values();
-        $currentSeason = \App\Models\RankedSeason::query()->where('status', 'active')->where('scope', 'global')->orderBy('starts_at')->first();
+        $currentSeason = RankedSeason::query()->where('status', 'active')->where('scope', 'global')->orderBy('starts_at')->first();
 
         return ['ratings' => $ratings, 'history' => $history, 'snapshots' => $snapshots, 'activeFormats' => $activeFormats, 'currentSeason' => $currentSeason,
-            'start' => (int) config('ranked.defaults.starting_rating'), 'tiers' => app(\App\Services\Ranked\RankTierResolver::class)];
-    }
-
-    public function rankedPrivacy(Request $request): RedirectResponse
-    {
-        $data = $request->validate(['ranked_public' => ['required', 'boolean']]);
-        $this->ownProfile($request)->update(['ranked_public' => (bool) $data['ranked_public']]);
-
-        return back()->with('status', $data['ranked_public'] ? 'Seu ranque aparece no seu perfil para quem pode vê-lo.' : 'Seu ranque agora só aparece para você.');
+            'start' => (int) config('ranked.defaults.starting_rating'), 'tiers' => app(RankTierResolver::class)];
     }
 
     public function edit(Request $request): View
     {
         $profile = $this->ownProfile($request)->load(['decks' => fn ($query) => $query->withSum('cards', 'quantity')]);
+
         return view('players.edit', compact('profile'));
     }
 
     public function update(Request $request): RedirectResponse
     {
         $profile = $this->ownProfile($request);
-        $validated = $request->validate(['nickname' => ['required','string','max:80'], 'avatar' => ['nullable','string','max:20']]);
+        $validated = $request->validate(['nickname' => ['required', 'string', 'max:80'], 'avatar' => ['nullable', 'string', 'max:20']]);
         $profile->update($validated);
+
         return redirect()->route('profiles.index')->with('status', 'Perfil atualizado.');
     }
 
@@ -118,6 +118,7 @@ class PlayerProfileController extends Controller
         $status = $this->friendships->status($user, $profile);
         if ($status) {
             $this->friendships->remove($user, $profile);
+
             return back()->with('status', $status === FriendshipService::ACCEPTED ? 'Amizade removida.' : 'Solicitação cancelada.');
         }
 
@@ -132,7 +133,10 @@ class PlayerProfileController extends Controller
         };
     }
 
-    private function ownProfile(Request $request): PlayerProfile { return $request->user()->ensurePlayerProfile(); }
+    private function ownProfile(Request $request): PlayerProfile
+    {
+        return $request->user()->ensurePlayerProfile();
+    }
 
     private function organizedTournamentWith(User $user, PlayerProfile $profile): bool
     {
