@@ -125,7 +125,25 @@
         });
     }
 
-    function boot() { init(); initToggles(); initMenus(); initMuteSwitches(); }
+    // <form data-confirm="..."> pede confirmacao; [data-copy="#id"] copia o valor/texto do alvo.
+    function initConfirmAndCopy() {
+        document.addEventListener('submit', function (event) {
+            var form = event.target;
+            if (form.dataset && form.dataset.confirm && !window.confirm(form.dataset.confirm)) event.preventDefault();
+        }, true);
+        document.querySelectorAll('[data-copy]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var target = document.querySelector(button.dataset.copy);
+                if (!target) return;
+                var text = 'value' in target ? target.value : target.textContent.trim();
+                var done = function () { var old = button.textContent; button.textContent = 'Copiado!'; setTimeout(function () { button.textContent = old; }, 1500); };
+                if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () { target.select && target.select(); });
+                else if (target.select) { target.select(); document.execCommand('copy'); done(); }
+            });
+        });
+    }
+
+    function boot() { init(); initToggles(); initMenus(); initMuteSwitches(); initConfirmAndCopy(); }
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', boot);

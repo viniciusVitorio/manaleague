@@ -24,17 +24,23 @@ class ScryfallClient
     public function search(string $query, int $limit = 12): array
     {
         $query = trim($query);
-        if (mb_strlen($query) < 2) return [];
+        if (mb_strlen($query) < 2) {
+            return [];
+        }
 
         $key = 'scryfall:search:'.sha1(mb_strtolower($query));
-        if (is_array($cached = Cache::get($key))) return $cached;
+        if (is_array($cached = Cache::get($key))) {
+            return $cached;
+        }
 
         $response = $this->send(fn (PendingRequest $http) => $http->get(self::BASE.'/cards/search', [
             'q' => $query.' game:paper', 'unique' => 'cards', 'order' => 'name', 'include_multilingual' => 'true',
         ]));
 
         // Falha de rede nao e cacheada: a proxima busca tenta de novo.
-        if (! $response) return [];
+        if (! $response) {
+            return [];
+        }
 
         $needle = mb_strtolower($query);
         $cards = collect($response['data'] ?? [])->map(fn (array $card) => $this->normalize($card))
@@ -53,13 +59,19 @@ class ScryfallClient
     /** @return array<string, mixed>|null */
     public function card(string $id): ?array
     {
-        if (! preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id)) return null;
+        if (! preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id)) {
+            return null;
+        }
 
         $key = 'scryfall:card:'.strtolower($id);
-        if (is_array($cached = Cache::get($key))) return $cached;
+        if (is_array($cached = Cache::get($key))) {
+            return $cached;
+        }
 
         $response = $this->send(fn (PendingRequest $http) => $http->get(self::BASE.'/cards/'.strtolower($id)));
-        if (! $response || ! isset($response['id'])) return null;
+        if (! $response || ! isset($response['id'])) {
+            return null;
+        }
 
         $card = $this->normalize($response);
         Cache::put($key, $card, now()->addDays(7));
@@ -85,6 +97,7 @@ class ScryfallClient
 
             if (! $response) {
                 array_push($missing, ...$chunk);
+
                 continue;
             }
 
@@ -122,6 +135,8 @@ class ScryfallClient
             'image_url' => $this->safeImage($images['normal'] ?? null),
             'art_url' => $this->safeImage($images['art_crop'] ?? null),
             'legal_commander' => ($card['legalities']['commander'] ?? null) === 'legal',
+            'price_usd' => isset($card['prices']['usd']) && is_numeric($card['prices']['usd']) ? (float) $card['prices']['usd'] : null,
+            'price_usd_foil' => isset($card['prices']['usd_foil']) && is_numeric($card['prices']['usd_foil']) ? (float) $card['prices']['usd_foil'] : null,
         ];
     }
 
@@ -138,15 +153,19 @@ class ScryfallClient
                 ->timeout(8)->retry(2, 300, throw: false);
             $response = $request($http);
 
-            if ($response->status() === 404) return Arr::wrap($response->json()) + ['data' => []];
+            if ($response->status() === 404) {
+                return Arr::wrap($response->json()) + ['data' => []];
+            }
             if ($response->failed()) {
                 Log::warning('scryfall.request_failed', ['status' => $response->status()]);
+
                 return null;
             }
 
             return $response->json();
         } catch (Throwable $exception) {
             Log::warning('scryfall.unreachable', ['error' => $exception->getMessage()]);
+
             return null;
         }
     }

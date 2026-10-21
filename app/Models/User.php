@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\ResetPasswordNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,6 +15,7 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $fillable = ['name', 'email', 'password'];
+
     protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
@@ -22,26 +24,52 @@ class User extends Authenticatable
     }
 
     /** is_admin nao e fillable: so via `php artisan ml:admin`. */
-    public function isAdmin(): bool { return (bool) $this->is_admin; }
+    public function isAdmin(): bool
+    {
+        return (bool) $this->is_admin;
+    }
 
-    public function tournaments(): HasMany { return $this->hasMany(Tournament::class); }
-    public function playerProfiles(): HasMany { return $this->hasMany(PlayerProfile::class); }
-    public function playerProfile(): HasOne { return $this->hasOne(PlayerProfile::class, 'account_user_id'); }
-    public function friendProfiles(): BelongsToMany { return $this->belongsToMany(PlayerProfile::class)->withPivot('status')->withTimestamps(); }
+    public function tournaments(): HasMany
+    {
+        return $this->hasMany(Tournament::class);
+    }
+
+    public function playerProfiles(): HasMany
+    {
+        return $this->hasMany(PlayerProfile::class);
+    }
+
+    public function playerProfile(): HasOne
+    {
+        return $this->hasOne(PlayerProfile::class, 'account_user_id');
+    }
+
+    public function clubs(): BelongsToMany
+    {
+        return $this->belongsToMany(Club::class)->withPivot('role')->withTimestamps();
+    }
+
+    public function friendProfiles(): BelongsToMany
+    {
+        return $this->belongsToMany(PlayerProfile::class)->withPivot('status')->withTimestamps();
+    }
 
     public function sendPasswordResetNotification($token): void
     {
-        $this->notify(new \App\Notifications\ResetPasswordNotification($token));
+        $this->notify(new ResetPasswordNotification($token));
     }
 
     public function ensurePlayerProfile(): PlayerProfile
     {
         $profile = $this->playerProfile()->first();
-        if ($profile) return $profile;
+        if ($profile) {
+            return $profile;
+        }
 
         $profile = $this->playerProfiles()->whereNull('account_user_id')->where('nickname', $this->name)->first();
         if ($profile) {
             $profile->update(['account_user_id' => $this->id]);
+
             return $profile;
         }
 

@@ -9,6 +9,7 @@ use App\Models\RatingSeasonSnapshot;
 use App\Models\RatingTransaction;
 use App\Models\User;
 use App\Services\AchievementService;
+use App\Services\Decks\CollectionService;
 use App\Services\FriendshipService;
 use App\Services\PlayerStatsService;
 use App\Services\Ranked\RankTierResolver;
@@ -73,8 +74,10 @@ class PlayerProfileController extends Controller
         $ranked = $this->ranked($profile, $profile->account_user_id === $request->user()->id);
         // Lista de amigos: o dono e os amigos aceitos veem; amigo de amigo nao (evita navegar a rede inteira).
         $profileFriends = ($isOwner || $friendshipStatus === FriendshipService::ACCEPTED) ? $this->friendships->friendsOf($user, $profile) : null;
+        // Fichario de trocas: so amigos aceitos (e o dono) veem.
+        $tradeBinder = ($isOwner || $friendshipStatus === FriendshipService::ACCEPTED) ? app(CollectionService::class)->tradeBinder($profile->account_user_id) : null;
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck', 'ranked', 'profileFriends'));
+        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck', 'ranked', 'profileFriends', 'tradeBinder'));
     }
 
     /** Patente por formato (temporadas em andamento) + historico. Visivel para quem pode ver o perfil. */

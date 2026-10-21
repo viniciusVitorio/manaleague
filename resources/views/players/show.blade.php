@@ -96,6 +96,19 @@
     @endif
 </section>
 @endif
+@if(($tradeBinder ?? null) !== null && $tradeBinder->isNotEmpty())
+@push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/hub.css') }}">@endpush
+<section class="card section-card" id="trocas">
+    <div class="section-heading"><div><span class="eyebrow">Fichário</span><h2>Para troca <span class="count">{{ $tradeBinder->sum('for_trade') }}</span></h2></div></div>
+    <p class="muted small">Cartas que {{ $profile->nickname }} topa trocar. Combine pelo desafio, no clube ou na mesa.</p>
+    <div class="binder">
+    @foreach($tradeBinder as $item)
+        <article class="binder-card"><div class="binder-img">@if($item->image_url)<img src="{{ $item->image_url }}" alt="" loading="lazy" width="146" height="204">@else<span>{{ $item->name }}</span>@endif @if($item->foil)<span class="binder-flag">Foil</span>@endif<span class="binder-flag is-trade">{{ $item->for_trade }}×</span></div>
+        <div class="binder-info"><strong title="{{ $item->name }}">{{ $item->name }}</strong><small>{{ $item->set_code }} · {{ $item->condition }}@if($item->price_usd) · US$ {{ number_format((float) $item->price_usd, 2, ',', '.') }}@endif</small></div></article>
+    @endforeach
+    </div>
+</section>
+@endif
 @if(($profileFriends ?? null) !== null)
 <section class="card section-card" id="amigos">
     <div class="section-heading"><div><span class="eyebrow">Playgroup</span><h2>Amigos de {{ $profile->nickname }} <span class="count">{{ $profileFriends->count() }}</span></h2></div></div>

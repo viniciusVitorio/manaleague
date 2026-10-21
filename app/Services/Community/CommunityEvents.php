@@ -9,8 +9,7 @@ use App\Models\Player;
 use App\Models\PlayerProfile;
 use App\Models\Tournament;
 use App\Models\User;
-use App\Services\StandingsService;
-use App\Services\TournamentRecapService;
+use App\Services\TournamentChampionService;
 use Illuminate\Support\Collection;
 
 /**
@@ -29,15 +28,20 @@ class CommunityEvents
     public function tournamentProgress(Tournament $tournament): void
     {
         $t = Tournament::query()->with('user')->find($tournament->id);
-        if (! $t || $t->status === Tournament::STATUS_SETUP) return;
+        if (! $t || $t->status === Tournament::STATUS_SETUP) {
+            return;
+        }
 
         if ($t->status === 'finished') {
             $this->tournamentFinished($t);
+
             return;
         }
 
         $round = (int) $t->matches()->max('round');
-        if ($round < 1) return;
+        if ($round < 1) {
+            return;
+        }
 
         if ($t->user) {
             $this->activities->record($t->user, 'tournament.started', "Torneio {$t->name} começou", $t, "tournament:{$t->id}:started");
@@ -67,9 +71,13 @@ class CommunityEvents
     public function resultSubmitted(MatchResultSubmission $submission): void
     {
         $match = $submission->gameMatch()->with(['tournament', 'playerOne.profile', 'playerTwo.profile'])->first();
-        if (! $match) return;
+        if (! $match) {
+            return;
+        }
         foreach ($this->accountsFor($match) as $user) {
-            if ($user->id === $submission->submitted_by) continue;
+            if ($user->id === $submission->submitted_by) {
+                continue;
+            }
             $this->notifications->send($user, 'match.submitted', "Confirme o placar {$submission->player_one_games}×{$submission->player_two_games} · {$match->tournament->name}", '/me/matches', "submission:{$submission->id}:submitted:user:{$user->id}", ['tournament_id' => $match->tournament_id]);
         }
     }
@@ -77,7 +85,9 @@ class CommunityEvents
     public function resultReviewed(MatchResultSubmission $submission, User $actor, string $action): void
     {
         $match = $submission->gameMatch()->with(['tournament.user', 'playerOne.profile', 'playerTwo.profile'])->first();
-        if (! $match) return;
+        if (! $match) {
+            return;
+        }
         $t = $match->tournament;
 
         if ($action === 'dispute') {
@@ -88,12 +98,15 @@ class CommunityEvents
             if ($submitter) {
                 $this->notifications->send($submitter, 'match.disputed', "Seu placar foi contestado · {$t->name}", '/me/matches', "submission:{$submission->id}:disputed:user:{$submitter->id}", ['tournament_id' => $t->id]);
             }
+
             return;
         }
 
         $score = "{$match->playerOne?->name} {$submission->player_one_games}×{$submission->player_two_games} {$match->playerTwo?->name}";
         foreach ($this->accountsFor($match) as $user) {
-            if ($user->id === $actor->id) continue;
+            if ($user->id === $actor->id) {
+                continue;
+            }
             $verb = $action === 'resolve' ? 'Organizador definiu' : 'Placar confirmado';
             $this->notifications->send($user, 'match.confirmed', "{$verb}: {$score}", '/me/matches', "submission:{$submission->id}:{$action}:user:{$user->id}", ['tournament_id' => $t->id]);
         }
@@ -116,7 +129,9 @@ class CommunityEvents
         [$to, $who] = $action === 'cancel'
             ? [$this->account($challenge->opponent), $challenge->challenger->nickname]
             : [$this->account($challenge->challenger), $challenge->opponent->nickname];
-        $text = match ($action) { 'accept' => 'aceitou seu desafio', 'decline' => 'recusou seu desafio', 'cancel' => 'cancelou o desafio', default => null };
+        $text = match ($action) {
+            'accept' => 'aceitou seu desafio', 'decline' => 'recusou seu desafio', 'cancel' => 'cancelou o desafio', default => null
+        };
         if ($to && $text) {
             $this->notifications->send($to, 'challenge.update', "{$who} {$text}", "/challenges/{$challenge->id}", "challenge:{$challenge->id}:{$action}", ['challenge_id' => $challenge->id]);
         }
@@ -152,22 +167,14 @@ class CommunityEvents
 
     private function championName(Tournament $t): ?string
     {
-        if (in_array($t->system, ['swiss', 'commander_pods'], true)) {
-            return app(StandingsService::class)->for($t)->first()['player']->name ?? null;
-        }
-        if ($t->system === 'round_robin') {
-            return app(TournamentRecapService::class)->for($t)['champion']->name ?? null;
-        }
-        $final = $t->matches()->where('status', 'finished')->orderByDesc('round')->orderByDesc('id')->first();
-        if (! $final) return null;
-        $winner = $final->player_one_games > $final->player_two_games ? $final->playerOne : $final->playerTwo;
-        return $winner?->name;
+        return app(TournamentChampionService::class)->for($t)?->name;
     }
 
     /** @return Collection<int,User> */
     private function accountsFor(GameMatch $match): Collection
     {
         $ids = $match->pod_player_ids ?: array_filter([$match->player_one_id, $match->player_two_id]);
+
         return $this->usersForPlayers(Player::query()->whereIn('id', $ids)->with('profile')->get());
     }
 
@@ -180,6 +187,7 @@ class CommunityEvents
     private function usersForPlayers(Collection $players): Collection
     {
         $ids = $players->map(fn (Player $p) => $p->profile?->account_user_id)->filter()->unique();
+
         return $ids->isEmpty() ? collect() : User::query()->whereIn('id', $ids)->get();
     }
 
