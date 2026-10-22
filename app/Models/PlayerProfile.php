@@ -23,6 +23,18 @@ class PlayerProfile extends Model
         });
     }
 
+    /** Emoji escolhido no perfil ou, sem ele, a inicial do apelido (para os circulos de avatar). */
+    public function mark(): string
+    {
+        return $this->avatar ?: mb_strtoupper(mb_substr($this->nickname ?: '?', 0, 1));
+    }
+
+    /** Apelido com o emoji do perfil na frente, quando houver. */
+    public function displayName(): string
+    {
+        return ($this->avatar ? $this->avatar.' ' : '').$this->nickname;
+    }
+
     public function rankedSuspended(): bool
     {
         return $this->ranked_suspended_until !== null && $this->ranked_suspended_until->isFuture();

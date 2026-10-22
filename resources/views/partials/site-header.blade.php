@@ -15,7 +15,7 @@
     ];
     $is = fn (string $patterns) => request()->routeIs(...explode('|', $patterns));
     $moreActive = collect($more)->contains(fn ($l) => $is($l[3]));
-    $initial = mb_strtoupper(mb_substr($user->playerProfile?->nickname ?: $user->name, 0, 1));
+    $initial = $user->avatarMark();
 @endphp
 <header class="site-header">
     <div class="container site-header-inner">

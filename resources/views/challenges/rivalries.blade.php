@@ -23,7 +23,7 @@
     @forelse($rivals as $rival)
         @php($pct = $rival['played'] ? round($rival['wins'] / $rival['played'] * 100) : 0)
         <div class="ui-row rival-row">
-            <span class="ui-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($rival['profile']->nickname, 0, 1)) }}</span>
+            <span class="ui-avatar" aria-hidden="true">{{ $rival['profile']->mark() }}</span>
             <span class="ui-row-main"><span class="ui-row-title">{{ $rival['profile']->nickname }}</span><span class="ui-row-sub">{{ $rival['played'] }} {{ $rival['played'] === 1 ? 'série' : 'séries' }}@if($rival['ranked']) · {{ $rival['ranked'] }} ranqueada{{ $rival['ranked'] > 1 ? 's' : '' }}@endif · {{ $pct }}% de vitórias</span></span>
             <span class="rival-bar" aria-hidden="true"><span style="width: {{ $pct }}%"></span></span>
             <span class="rival-record" aria-label="{{ $rival['wins'] }} vitórias, {{ $rival['losses'] }} derrotas{{ $rival['draws'] ? ' e '.$rival['draws'].' empates' : '' }}"><strong>{{ $rival['wins'] }}</strong>–{{ $rival['losses'] }}@if($rival['draws'])–{{ $rival['draws'] }}@endif</span>

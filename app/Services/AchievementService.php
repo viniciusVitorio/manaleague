@@ -17,7 +17,10 @@ use Illuminate\Support\Facades\DB;
  */
 class AchievementService
 {
-    public const CATEGORIES = ['matches' => 'Partidas', 'tournaments' => 'Torneios', 'social' => 'Social', 'collection' => 'Coleção'];
+    public const CATEGORIES = ['matches' => 'Partidas', 'tournaments' => 'Torneios', 'social' => 'Social', 'collection' => 'Coleção', 'special' => 'Especial'];
+
+    /** Conquistas concedidas a mao por um admin (nao ha metrica de jogo que as libere). */
+    public const GRANTED = ['builder'];
 
     public function __construct(private readonly PlayerStatsService $stats) {}
 
@@ -56,6 +59,8 @@ class AchievementService
             'arsenal' => ['🗃️', 'Arsenal', 'Tenha 5 decks cadastrados', 'collection', 5, 'decks'],
             'commander_ready' => ['🐉', 'Commander Ready', 'Monte um deck Commander completo: 100 cartas com comandante', 'collection', 1, 'commander_complete'],
             'rainbow' => ['🌈', 'Arco-íris', 'Monte um deck com as cinco cores', 'collection', 1, 'five_color'],
+            // Especial (concedida por admin)
+            'builder' => ['🛠️', 'Construtor da Liga', 'Concedida a quem ajuda a construir o ManaLeague', 'special', 1, 'granted'],
         ];
     }
 
@@ -158,6 +163,7 @@ class AchievementService
             $record = $owned->get($key);
             $secret = str_starts_with($key, 'secret_');
             $current = min($target, (int) ($metrics[$metric] ?? 0));
+            $granted = in_array($key, self::GRANTED, true);
             if ($secret && ! $record) {
                 $icon = '🔒'; $name = 'Conquista secreta'; $description = 'Continue jogando e explorando para descobrir.';
                 $current = 0; $target = 1;
@@ -167,12 +173,32 @@ class AchievementService
                 'key' => $key, 'icon' => $icon, 'name' => $name, 'description' => $description,
                 'category' => $category, 'target' => $target, 'current' => $record ? $target : $current,
                 'percent' => $record ? 100 : (int) floor($current / $target * 100),
-                'unlocked' => (bool) $record, 'secret' => $secret,
+                'unlocked' => (bool) $record, 'secret' => $secret, 'granted' => $granted,
                 'unlocked_at' => $record?->unlocked_at,
                 'is_new' => $record && $record->seen_at === null,
                 'rarity' => min(100, (int) round(((int) ($holders[$key] ?? 0)) / $players * 100)),
             ];
         })->values();
+    }
+
+    /** Concede uma conquista especial e avisa o dono da conta. @return bool true se foi concedida agora */
+    public function grant(PlayerProfile $profile, string $key): bool
+    {
+        abort_unless(in_array($key, self::GRANTED, true), 422, 'Esta conquista não pode ser concedida manualmente.');
+        $record = $profile->achievements()->firstOrCreate(['achievement' => $key], ['unlocked_at' => now()]);
+        if ($record->wasRecentlyCreated && $profile->account) {
+            [$icon, $name] = self::definitions()[$key];
+            app(Community\NotificationService::class)->send($profile->account, 'achievement', "Conquista desbloqueada: {$icon} {$name}", '/me/profile', "achievement:{$key}:{$profile->id}");
+        }
+
+        return $record->wasRecentlyCreated;
+    }
+
+    public function revoke(PlayerProfile $profile, string $key): bool
+    {
+        abort_unless(in_array($key, self::GRANTED, true), 422, 'Esta conquista não pode ser removida manualmente.');
+
+        return $profile->achievements()->where('achievement', $key)->delete() > 0;
     }
 
     public function markSeen(PlayerProfile $profile): void

@@ -117,6 +117,21 @@ class PlayerProfileController extends Controller
     }
 
     /** Botao de amizade da pagina de perfil (perfis conhecidos via torneio ou relacao existente). */
+    /** Admin concede/remove a conquista Construtor da Liga pelo perfil do jogador. */
+    public function builder(Request $request, PlayerProfile $profile): RedirectResponse
+    {
+        abort_unless($request->user()->isAdmin(), 403);
+        abort_if($profile->account_user_id === null, 422, 'Só jogadores com conta recebem conquistas.');
+        if ($request->boolean('revoke')) {
+            $this->achievements->revoke($profile, 'builder');
+
+            return back()->with('status', 'Conquista Construtor da Liga removida.');
+        }
+        $this->achievements->grant($profile, 'builder');
+
+        return back()->with('status', '🛠️ '.$profile->nickname.' agora é Construtor da Liga.');
+    }
+
     public function toggleFriend(Request $request, PlayerProfile $profile): RedirectResponse
     {
         $user = $request->user();

@@ -11,7 +11,7 @@ return [
     'formats' => ['Pauper', 'Standard', 'Modern', 'Pioneer', 'Legacy', 'Vintage', 'Draft'],
 
     'defaults' => [
-        'starting_rating' => 600,       // Ferro II, 0/100 PDL
+        'starting_rating' => 600,       // Ferro II, 0/25 PDL
         'k_factor' => 32,
         'pair_limit_24h' => 3,          // confrontos ranqueados validos por par/formato em 24h
         'provisional_games' => 5,       // selo "Provisório" nas primeiras partidas

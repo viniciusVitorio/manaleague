@@ -407,8 +407,8 @@ class RankedEloTest extends TestCase
         $this->friends($a, $b);
         $this->play($this->match($s, $a, $b), $a, $b, 2, 0);
 
-        $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('Ranque')->assertSee('1016')->assertSee('Prata II')
-            ->assertSee('Últimas variações')->assertDontSee('Mostrar meu ranque')->assertSee('Ver todas as patentes')->assertSee('Diamante I')->assertSee('1800+');
+        $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('Ranque')->assertSee('1016')->assertSee('Mestre')
+            ->assertSee('Últimas variações')->assertDontSee('Mostrar meu ranque')->assertSee('Ver todas as patentes')->assertSee('Diamante I')->assertSee('875 – 899')->assertSee('900+')->assertSee('divisões de 25 pontos');
         $this->actingAs($b)->get('/players/'.$a->playerProfile->id)->assertOk()->assertSee('1016');
         $a->playerProfile->update(['ranked_public' => false]); // opcao antiga nao esconde mais
         $this->actingAs($b)->get('/players/'.$a->playerProfile->id)->assertSee('1016');
@@ -459,7 +459,7 @@ class RankedEloTest extends TestCase
     public function test_rank_emblems_render_for_every_tier(): void
     {
         $tiers = app(RankTierResolver::class);
-        foreach ([600 => 'ferro', 850 => 'bronze', 1050 => 'prata', 1250 => 'ouro', 1450 => 'platina', 1650 => 'diamante', 1900 => 'mestre'] as $rating => $key) {
+        foreach ([600 => 'ferro', 660 => 'bronze', 710 => 'prata', 760 => 'ouro', 810 => 'platina', 860 => 'diamante', 950 => 'mestre'] as $rating => $key) {
             $html = view('ranked.partials.tier', ['rating' => $rating, 'tiers' => $tiers])->render();
             $this->assertStringContainsString('rank-emblem-'.$key, $html);
             $this->assertStringContainsString('<path', $html);
@@ -469,12 +469,13 @@ class RankedEloTest extends TestCase
     public function test_profile_shows_lol_style_rank_card_without_ladder(): void
     {
         $s = $this->season(['Pauper']);
+        $s->formats()->update(['starting_rating' => 600]);
         $a = $this->player('Ana');
         $b = $this->player('Bia');
         $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('Sem ranque')->assertSee('Começa em Ferro II');
-        $this->play($this->match($s, $a, $b), $a, $b, 2, 0); // 1016 = Prata II, 16 PDL
-        $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('rank-card tier-prata', false)->assertSee('16 PDL')
-            ->assertSee('faltam 84 para Prata I')->assertDontSee('Progressão')->assertDontSee('rank-ladder', false)->assertSee('Ver todas as patentes');
+        $this->play($this->match($s, $a, $b), $a, $b, 2, 0); // 616 = Ferro II, 16/25 PDL
+        $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('rank-card tier-ferro', false)->assertSee('16/25 PDL')
+            ->assertSee('faltam 9 para Ferro I')->assertDontSee('Progressão')->assertDontSee('rank-ladder', false)->assertSee('Ver todas as patentes');
     }
 
     public function test_rivalries_count_confirmed_ranked_challenges(): void

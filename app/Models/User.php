@@ -39,6 +39,18 @@ class User extends Authenticatable
         return $this->hasMany(PlayerProfile::class);
     }
 
+    /** Emoji do perfil ou inicial do nome, para o circulo de avatar. */
+    public function avatarMark(): string
+    {
+        return $this->playerProfile?->mark() ?? mb_strtoupper(mb_substr($this->name ?: '?', 0, 1));
+    }
+
+    /** Apelido do perfil (com emoji) ou nome da conta. */
+    public function displayName(): string
+    {
+        return $this->playerProfile?->displayName() ?? $this->name;
+    }
+
     public function playerProfile(): HasOne
     {
         return $this->hasOne(PlayerProfile::class, 'account_user_id');

@@ -9,12 +9,12 @@ class LiveDisplayService
         return [
             'name'=>$t->name, 'format'=>$t->format, 'status'=>$t->status,
             'standings'=>app(StandingsService::class)->for($t)->map(fn($r)=>[
-                'rank'=>$r['rank'],'name'=>$r['player']->name,'points'=>$r['points'],
+                'rank'=>$r['rank'],'name'=>$r['player']->displayName(),'points'=>$r['points'],
                 'played'=>$r['played'],'wins'=>$r['wins'],'draws'=>$r['draws'],'losses'=>$r['losses'],
             ])->all(),
-            'matches'=>$t->matches()->with(['playerOne','playerTwo'])->orderBy('round')->orderBy('id')->get()->map(fn($m)=>[
+            'matches'=>$t->matches()->with(['playerOne.profile','playerTwo.profile'])->orderBy('round')->orderBy('id')->get()->map(fn($m)=>[
                 'id'=>$m->id,'round'=>$m->round,'stage'=>$m->stage,'status'=>$m->status,
-                'one'=>$m->playerOne?->name ?? 'A definir','two'=>$m->playerTwo?->name ?? 'BYE',
+                'one'=>$m->playerOne?->displayName() ?? 'A definir','two'=>$m->playerTwo?->displayName() ?? 'BYE',
                 'one_score'=>in_array($m->status,['finished','bye']) ? $m->player_one_games : null,
                 'two_score'=>in_array($m->status,['finished','bye']) ? $m->player_two_games : null,
             ])->all(),

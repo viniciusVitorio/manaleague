@@ -37,7 +37,7 @@ class CommunityHubTest extends TestCase
         }
 
         $page = $this->actingAs($ana)->get('/feed')->assertOk()->assertSee('Comunidade')->assertSee('Bia entrou no clube Liga')
-            ->assertSee('Ranking entre amigos')->assertSee('Ouro II')->assertSee('1210')->assertDontSee('Zeca')->assertSee('Copa da Liga');
+            ->assertSee('Ranking entre amigos')->assertSee('Mestre')->assertSee('1210')->assertDontSee('Zeca')->assertSee('Copa da Liga');
         $html = $page->getContent();
         $this->assertLessThan(strpos($html, '640'), strpos($html, '1210')); // ordenado por ELO
         $this->get('/feed?tipo=tournament')->assertOk()->assertDontSee('Bia entrou no clube Liga');

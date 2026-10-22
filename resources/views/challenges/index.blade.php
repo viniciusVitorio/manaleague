@@ -12,6 +12,6 @@
 <label>Validade do convite<select name="expires_in"><option value="24">24 horas</option><option value="48">48 horas</option><option value="168">7 dias</option></select></label><button class="btn btn-primary">Enviar desafio</button></form>
 @endif</section>
 <section class="card section-card"><h2>Meus desafios</h2>
-@forelse($challenges as $challenge)<a class="history-row" href="{{ route('challenges.show', $challenge) }}"><div><strong>{{ $challenge->challenger->nickname }} × {{ $challenge->opponent->nickname }}</strong><small>@if($challenge->is_ranked)<b>Ranqueada</b> · @endif{{ $challenge->format }} · MD{{ $challenge->best_of }} · {{ $challenge->statusLabel() }}</small></div><span>Ver →</span></a>@empty<p>Nenhum desafio ainda. Convide um amigo para a primeira série.</p>@endforelse
+@forelse($challenges as $challenge)<a class="history-row" href="{{ route('challenges.show', $challenge) }}"><div><strong>{{ $challenge->challenger->displayName() }} × {{ $challenge->opponent->displayName() }}</strong><small>@if($challenge->is_ranked)<b>Ranqueada</b> · @endif{{ $challenge->format }} · MD{{ $challenge->best_of }} · {{ $challenge->statusLabel() }}</small></div><span>Ver →</span></a>@empty<p>Nenhum desafio ainda. Convide um amigo para a primeira série.</p>@endforelse
 {{ $challenges->links() }}</section>
 @endsection

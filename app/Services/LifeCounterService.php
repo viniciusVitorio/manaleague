@@ -60,7 +60,7 @@ class LifeCounterService
                 'subtitle' => 'Mesa Commander · Rodada '.$match->round,
                 'format' => $tournament->format,
                 'startingLife' => $life,
-                'players' => $seats->map(fn ($p) => ['id' => $p->id, 'name' => $p->name])->all(),
+                'players' => $seats->map(fn ($p) => ['id' => $p->id, 'name' => $p->displayName()])->all(),
                 'meIndex' => $mine === false ? 0 : $mine,
                 'submit' => $organizer ? ['kind' => 'pod', 'method' => 'PUT', 'url' => route('matches.update', [$tournament, $match])] : null,
                 'resultUrl' => $organizer ? route('tournaments.show', $tournament) : route('matches.mine'),
@@ -88,8 +88,8 @@ class LifeCounterService
             // Liga aceita 1x1 / 1x0 por tempo; o servidor valida o placar final.
             'earlyEnd' => true,
             'players' => [
-                ['id' => $match->player_one_id, 'name' => $match->playerOne?->name],
-                ['id' => $match->player_two_id, 'name' => $match->playerTwo?->name],
+                ['id' => $match->player_one_id, 'name' => $match->playerOne?->displayName()],
+                ['id' => $match->player_two_id, 'name' => $match->playerTwo?->displayName()],
             ],
             'meIndex' => $meIndex,
             'submit' => $participant
@@ -118,8 +118,8 @@ class LifeCounterService
             'winsNeeded' => $match->winsNeeded(),
             'earlyEnd' => $allowDraws,
             'players' => [
-                ['id' => $match->player_one_profile_id, 'name' => $match->playerOne?->nickname],
-                ['id' => $match->player_two_profile_id, 'name' => $match->playerTwo?->nickname],
+                ['id' => $match->player_one_profile_id, 'name' => $match->playerOne?->displayName()],
+                ['id' => $match->player_two_profile_id, 'name' => $match->playerTwo?->displayName()],
             ],
             'meIndex' => $match->playerTwo?->account_user_id === $user->id ? 1 : 0,
             'submit' => ['kind' => 'ranked', 'method' => 'POST', 'url' => route('ranked.matches.results', $match)],
@@ -146,8 +146,8 @@ class LifeCounterService
             'winsNeeded' => intdiv((int) $challenge->best_of, 2) + 1,
             'earlyEnd' => false,
             'players' => [
-                ['id' => $challenge->challenger_id, 'name' => $challenge->challenger?->nickname],
-                ['id' => $challenge->opponent_id, 'name' => $challenge->opponent?->nickname],
+                ['id' => $challenge->challenger_id, 'name' => $challenge->challenger?->displayName()],
+                ['id' => $challenge->opponent_id, 'name' => $challenge->opponent?->displayName()],
             ],
             'meIndex' => $challenge->opponent?->account_user_id === $user->id ? 1 : 0,
             'submit' => ['kind' => 'challenge', 'method' => 'POST', 'url' => route('challenges.report', $challenge)],

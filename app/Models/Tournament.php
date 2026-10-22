@@ -44,4 +44,9 @@ class Tournament extends Model
     {
         return $this->hasMany(GameMatch::class);
     }
+
+    public function club(): BelongsTo
+    {
+        return $this->belongsTo(Club::class);
+    }
 }

@@ -25,4 +25,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('/clubs/{club}/members/{user}', [ClubController::class, 'role'])->name('clubs.members.role');
     Route::delete('/clubs/{club}/members/{user}', [ClubController::class, 'remove'])->name('clubs.members.remove');
     Route::post('/clubs/{club}/tournaments', [ClubController::class, 'tournament'])->name('clubs.tournaments.store');
+    Route::post('/clubs/{club}/tournaments/link', [ClubController::class, 'linkTournament'])->name('clubs.tournaments.link');
+    Route::delete('/clubs/{club}/tournaments/{tournament}', [ClubController::class, 'unlinkTournament'])->name('clubs.tournaments.unlink');
 });

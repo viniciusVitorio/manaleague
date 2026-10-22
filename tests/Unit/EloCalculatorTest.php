@@ -70,18 +70,25 @@ class EloCalculatorTest extends TestCase
 
     public function test_tiers_and_pdl_derive_from_rating(): void
     {
+        // Escala curta: divisoes de 25 ELO, Mestre a partir de 900.
         $t = new RankTierResolver;
-        $this->assertSame(['Prata II', 0], [$t->resolve(1000)['division'], $t->resolve(1000)['pdl']]);
-        $this->assertSame(['Prata I', 28], [$t->resolve(1128)['division'], $t->resolve(1128)['pdl']]);
-        $this->assertSame('Bronze I', $t->resolve(999)['division']);
-        $this->assertSame('Bronze II', $t->resolve(800)['division']);
-        $this->assertSame('Ferro I', $t->resolve(799)['division']);
+        $this->assertSame(['Ferro II', 0, 25], [$t->resolve(600)['division'], $t->resolve(600)['pdl'], $t->resolve(600)['pdl_max']]);
+        $this->assertSame(['Ferro II', 24], [$t->resolve(624)['division'], $t->resolve(624)['pdl']]);
+        $this->assertSame(['Ferro I', 0], [$t->resolve(625)['division'], $t->resolve(625)['pdl']]);
+        $this->assertSame(['Prata II', 0], [$t->resolve(700)['division'], $t->resolve(700)['pdl']]);
+        $this->assertSame(['Prata I', 3], [$t->resolve(728)['division'], $t->resolve(728)['pdl']]);
+        $this->assertSame('Bronze I', $t->resolve(699)['division']);
+        $this->assertSame('Bronze II', $t->resolve(650)['division']);
+        $this->assertSame('Ferro I', $t->resolve(649)['division']);
         $this->assertSame('Ferro II', $t->resolve(120)['division']);
         $this->assertSame(0, $t->resolve(120)['pdl']);
-        $this->assertSame('Ouro II', $t->resolve(1200)['division']);
-        $this->assertSame('Platina I', $t->resolve(1599)['division']);
-        $this->assertSame('Diamante II', $t->resolve(1600)['division']);
-        $m = $t->resolve(1875);
+        $this->assertSame('Ouro II', $t->resolve(750)['division']);
+        $this->assertSame('Ouro I', $t->resolve(799)['division']);
+        $this->assertSame('Platina II', $t->resolve(800)['division']);
+        $this->assertSame('Platina I', $t->resolve(849)['division']);
+        $this->assertSame('Diamante II', $t->resolve(850)['division']);
+        $this->assertSame('Diamante I', $t->resolve(899)['division']);
+        $m = $t->resolve(975);
         $this->assertSame(['Mestre', 75, null], [$m['division'], $m['pdl'], $m['pdl_max']]);
     }
 }

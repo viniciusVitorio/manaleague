@@ -29,7 +29,7 @@
         @endif
         @forelse($posts as $post)
             <article @class(['post', 'is-pinned' => $post->pinned])>
-                <span class="ui-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($post->author->playerProfile?->nickname ?? $post->author->name, 0, 1)) }}</span>
+                <span class="ui-avatar" aria-hidden="true">{{ $post->author->avatarMark() }}</span>
                 <div class="post-body">
                     <p class="post-head"><strong>{{ $post->author->playerProfile?->nickname ?? $post->author->name }}</strong> <time datetime="{{ $post->created_at->toIso8601String() }}">{{ $post->created_at->diffForHumans() }}</time>@if($post->pinned) <x-ui.badge tone="info"><x-icon name="pin" size="11" />Fixado</x-ui.badge>@endif</p>
                     <p class="post-text">{{ $post->body }}</p>
@@ -49,7 +49,7 @@
                 <thead><tr><th scope="col">#</th><th scope="col">Jogador</th><th scope="col" class="num">Pts</th><th scope="col" class="num">V-E-D</th><th scope="col" class="num">Torneios</th><th scope="col" class="num">Títulos</th></tr></thead>
                 <tbody>
                 @foreach($ranking->take(20) as $i => $r)
-                    <tr><td class="num">{{ $i + 1 }}</td><td>{{ $r['name'] }}</td><td class="num"><strong>{{ $r['points'] }}</strong></td><td class="num">{{ $r['wins'] }}-{{ $r['draws'] }}-{{ $r['losses'] }}</td><td class="num">{{ $r['events'] }}</td><td class="num">@if($r['titles'])<x-icon name="trophy" size="13" /> {{ $r['titles'] }}@else — @endif</td></tr>
+                    <tr><td class="num">{{ $i + 1 }}</td><td>@if($r['avatar'] ?? null){{ $r['avatar'] }} @endif{{ $r['name'] }}</td><td class="num"><strong>{{ $r['points'] }}</strong></td><td class="num">{{ $r['wins'] }}-{{ $r['draws'] }}-{{ $r['losses'] }}</td><td class="num">{{ $r['events'] }}</td><td class="num">@if($r['titles'])<x-icon name="trophy" size="13" /> {{ $r['titles'] }}@else — @endif</td></tr>
                 @endforeach
                 </tbody>
             </table></div>
@@ -59,7 +59,7 @@
 
     <x-ui.card title="Torneios" icon="trophy">
         @if($upcoming->isEmpty() && $finished->isEmpty())
-            <x-ui.empty icon="trophy" title="Nenhum torneio do clube ainda." :text="$manage ? 'Crie o primeiro abaixo; todos os membros são avisados.' : 'Quando os organizadores criarem um, aparece aqui.'" />
+            <x-ui.empty icon="trophy" title="Nenhum torneio do clube ainda." :text="$manage ? 'Crie um novo ou vincule um torneio que você já tem, logo abaixo. Todos os membros são avisados.' : 'Quando os organizadores criarem um, aparece aqui.'" />
         @endif
         @foreach($upcoming as $t)
             <a class="ui-row" href="{{ route('tournaments.show', $t) }}"><span class="ui-row-icon"><x-icon name="calendar" /></span><span class="ui-row-main"><span class="ui-row-title">{{ $t->name }}</span><span class="ui-row-sub">{{ $t->format }} · {{ $t->tournament_date?->format('d/m/Y') }} · {{ $t->status === 'setup' ? 'inscrições abertas' : 'em andamento' }}</span></span><x-ui.badge :tone="$t->status === 'setup' ? 'neutral' : 'info'">{{ $t->status === 'setup' ? 'Em breve' : 'Rolando' }}</x-ui.badge></a>
@@ -80,6 +80,16 @@
                     <button class="ui-btn ui-btn-primary">Criar e avisar os membros</button>
                 </form>
             </details>
+            @if($linkable->isNotEmpty())
+            <details class="club-new" id="vincular-torneio">
+                <summary><x-icon name="link" />Vincular torneio existente</summary>
+                <form method="POST" action="{{ route('clubs.tournaments.link', $club) }}" class="stack-form" data-confirm="Vincular ao clube? Os membros passam a ver o torneio e os organizadores do clube podem gerenciá-lo.">@csrf
+                    <label>Seus torneios fora de clubes<select name="tournament_id" required>@foreach($linkable as $lt)<option value="{{ $lt->id }}">{{ $lt->name }} · {{ $lt->format }} · {{ $lt->tournament_date?->format('d/m/Y') ?? 'sem data' }} · {{ ['setup' => 'inscrições', 'finished' => 'encerrado'][$lt->status] ?? 'em andamento' }}</option>@endforeach</select></label>
+                    <p class="muted small">O torneio entra no ranking do clube (vale também para torneios já encerrados) e os membros são avisados.</p>
+                    <button class="ui-btn ui-btn-primary">Vincular ao clube</button>
+                </form>
+            </details>
+            @endif
         @endif
     </x-ui.card>
 </div>
@@ -104,7 +114,7 @@
         @foreach($members as $member)
             @php($nick = $member->playerProfile?->nickname ?? $member->name)
             <div class="member-row">
-                <span class="ui-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($nick, 0, 1)) }}</span>
+                <span class="ui-avatar" aria-hidden="true">{{ $member->avatarMark() }}</span>
                 <span class="member-name">@if($member->playerProfile && $member->id !== auth()->id())<a href="{{ route('profiles.show', $member->playerProfile) }}">{{ $nick }}</a>@else{{ $nick }}@endif<small>{{ ['owner' => 'Dono', 'organizer' => 'Organizador', 'member' => 'Membro'][$member->pivot->role] }}{{ $member->id === auth()->id() ? ' · você' : '' }}</small></span>
                 @if($member->pivot->role !== 'owner')
                     @if($role === 'owner' || ($manage && $member->pivot->role === 'member') || $member->id === auth()->id())

@@ -9,7 +9,7 @@
     <div>
         <a class="back-link" href="{{ $isOwner ? route('tournaments.index') : route('friends.index') }}">← {{ $isOwner ? 'Torneios' : 'Amigos' }}</a>
         <div class="profile-title">
-            <span class="profile-avatar large">{{ $profile->avatar ?: mb_strtoupper(mb_substr($profile->nickname, 0, 1)) }}</span>
+            <span class="profile-avatar large">{{ $profile->mark() }}</span>
             <div>
                 <span class="eyebrow">{{ $isOwner ? 'Meu perfil' : 'Perfil do jogador' }}</span>
                 <h1>{{ $profile->nickname }}</h1>
@@ -28,7 +28,7 @@
                         <div class="friends-pop-panel" role="list">
                         @foreach($profileFriends as $person)
                             <div class="friends-pop-row" role="listitem">
-                                <span class="profile-avatar">{{ $person->avatar ?: mb_strtoupper(mb_substr($person->nickname, 0, 1)) }}</span>
+                                <span class="profile-avatar">{{ $person->mark() }}</span>
                                 <span class="friends-pop-name">@if($person->friend_state === 'me'){{ $person->nickname }}<small>Você</small>@else<a href="{{ route('profiles.show', $person) }}">{{ $person->nickname }}</a><small>{{ $person->friend_state === 'friend' ? 'Amigo em comum' : ($person->friend_state === 'sent' ? 'Pedido enviado' : 'Amigo de '.$profile->nickname) }}</small>@endif</span>
                                 @if($person->friend_state === 'incoming')<form method="POST" action="{{ route('friends.accept-code', $person->friend_code) }}">@csrf @method('PATCH')<button class="ui-btn ui-btn-outline ui-btn-sm">Aceitar</button></form>
                                 @elseif($person->friend_state === 'none')<form method="POST" action="{{ route('friends.store', $person->friend_code) }}">@csrf<button class="ui-btn ui-btn-ghost ui-btn-sm" aria-label="Adicionar {{ $person->nickname }}"><x-icon name="user-plus" /></button></form>@endif
@@ -102,7 +102,7 @@
     @if($ranked['history']->isNotEmpty())
         <h3 class="achievement-category">Últimas variações</h3>
         @foreach($ranked['history'] as $tx)
-            <div class="tx-row"><span class="delta {{ $tx->delta >= 0 ? 'up' : 'down' }}">{{ $tx->delta >= 0 ? '+' : '' }}{{ $tx->delta }}</span><div>@if($tx->event_type === 'correction')<strong>Correção da moderação</strong><small>{{ $tx->note }}</small>@else<strong>@if($isOwner)<a href="{{ route('ranked.matches.show', $tx->ranked_match_id) }}">@endif{{ $tx->rankedMatch?->playerOne?->nickname }} {{ $tx->rankedMatch?->score_one }}×{{ $tx->rankedMatch?->score_two }} {{ $tx->rankedMatch?->playerTwo?->nickname }}@if($isOwner)</a>@endif</strong><small>{{ $tx->format }} · {{ $tx->rating_before }} → {{ $tx->rating_after }}</small>@endif</div><time datetime="{{ $tx->effective_at->toIso8601String() }}">{{ $tx->effective_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}</time></div>
+            <div class="tx-row"><span class="delta {{ $tx->delta >= 0 ? 'up' : 'down' }}">{{ $tx->delta >= 0 ? '+' : '' }}{{ $tx->delta }}</span><div>@if($tx->event_type === 'correction')<strong>Correção da moderação</strong><small>{{ $tx->note }}</small>@else<strong>@if($isOwner)<a href="{{ route('ranked.matches.show', $tx->ranked_match_id) }}">@endif{{ $tx->rankedMatch?->playerOne?->displayName() }} {{ $tx->rankedMatch?->score_one }}×{{ $tx->rankedMatch?->score_two }} {{ $tx->rankedMatch?->playerTwo?->displayName() }}@if($isOwner)</a>@endif</strong><small>{{ $tx->format }} · {{ $tx->rating_before }} → {{ $tx->rating_after }}</small>@endif</div><time datetime="{{ $tx->effective_at->toIso8601String() }}">{{ $tx->effective_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}</time></div>
         @endforeach
     @endif
     @if($ranked['snapshots']->isNotEmpty())
@@ -147,6 +147,14 @@
         @endforeach
         </div>
     @endforeach
+    @if(auth()->user()->isAdmin() && $profile->account_user_id)
+        @php($isBuilder = $achievements->firstWhere('key', 'builder')['unlocked'] ?? false)
+        <form method="POST" action="{{ route('profiles.builder', $profile) }}" class="admin-grant">@csrf
+            @if($isBuilder)<input type="hidden" name="revoke" value="1">@endif
+            <button class="btn btn-small {{ $isBuilder ? 'btn-ghost' : 'btn-secondary' }}">🛠️ {{ $isBuilder ? 'Remover Construtor da Liga' : 'Conceder Construtor da Liga' }}</button>
+            <small class="muted">Só admins veem isto.</small>
+        </form>
+    @endif
 </section>
 
 @if($decks->isNotEmpty() || $isOwner)

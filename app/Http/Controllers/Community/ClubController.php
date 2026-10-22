@@ -62,8 +62,12 @@ class ClubController extends Controller
             ? PlayerProfile::query()->whereIn('id', app(FriendshipService::class)->friendIds($user->id))->whereNotNull('account_user_id')->whereNotIn('account_user_id', $memberIds)->orderBy('nickname')->get()
             : collect();
         $inviteUrl = in_array($role, ['owner', 'organizer'], true) ? route('clubs.invite', $this->clubs->inviteToken($club)) : null;
+        // Torneios pessoais (sem clube) criados por quem gerencia: podem ser trazidos para o clube.
+        $linkable = in_array($role, ['owner', 'organizer'], true)
+            ? $user->tournaments()->whereNull('club_id')->orderByDesc('tournament_date')->orderByDesc('id')->get()
+            : collect();
 
-        return view('community.clubs.show', compact('club', 'role', 'members', 'upcoming', 'finished', 'posts', 'ranking', 'invitableFriends', 'inviteUrl') + ['formats' => self::FORMATS]);
+        return view('community.clubs.show', compact('club', 'role', 'members', 'upcoming', 'finished', 'posts', 'ranking', 'invitableFriends', 'inviteUrl', 'linkable') + ['formats' => self::FORMATS]);
     }
 
     public function update(Request $request, Club $club)
@@ -192,6 +196,43 @@ class ClubController extends Controller
         }
 
         return redirect()->route('tournaments.show', $tournament);
+    }
+
+    /**
+     * Vincula um torneio ja existente ao clube. So o criador do torneio, sendo dono/organizador
+     * do clube, pode fazer isso, e apenas com torneios pessoais (um torneio fica em um clube por vez).
+     * Ao vincular, membros passam a ver o torneio e organizadores do clube a gerencia-lo.
+     */
+    public function linkTournament(Request $request, Club $club)
+    {
+        $this->authorize('manage', $club);
+        $data = $request->validate(['tournament_id' => ['required', 'integer']]);
+        $user = $request->user();
+        $tournament = DB::transaction(function () use ($data, $user, $club) {
+            $t = Tournament::query()->lockForUpdate()->find($data['tournament_id']);
+            abort_unless($t && $t->user_id === $user->id, 404);
+            abort_if($t->club_id !== null, 409, $t->club_id === $club->id ? 'Este torneio já é do clube.' : 'Este torneio já pertence a outro clube. Desvincule de lá primeiro.');
+            $t->club_id = $club->id;
+            $t->save();
+
+            return $t;
+        });
+        foreach ($club->members()->where('users.id', '!=', $user->id)->get() as $member) {
+            app(NotificationService::class)->send($member, 'club.tournament', "Torneio adicionado ao {$club->name}: {$tournament->name}", '/clubs/'.$club->id, "club:{$club->id}:tournament:{$tournament->id}:{$member->id}", ['club_id' => $club->id]);
+        }
+
+        return redirect()->route('clubs.show', $club)->with('status', "“{$tournament->name}” agora faz parte do clube e entra no ranking.");
+    }
+
+    /** Devolve o torneio para o criador (sai do clube e do ranking do clube). */
+    public function unlinkTournament(Request $request, Club $club, Tournament $tournament)
+    {
+        $this->authorize('manage', $club);
+        abort_unless($tournament->club_id === $club->id, 404);
+        $tournament->club_id = null;
+        $tournament->save();
+
+        return redirect()->route('clubs.show', $club)->with('status', "“{$tournament->name}” saiu do clube e voltou a ser um torneio pessoal do criador.");
     }
 
     private function clubByToken(string $token): Club

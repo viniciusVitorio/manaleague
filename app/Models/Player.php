@@ -14,6 +14,15 @@ class Player extends Model
     protected $fillable = ['player_profile_id', 'deck_id', 'name', 'deck_name', 'deck_colors'];
 
     public function profile(): BelongsTo { return $this->belongsTo(PlayerProfile::class, 'player_profile_id'); }
+
+    /** Nome no torneio com o emoji do perfil vinculado, quando houver. */
+    public function displayName(): string
+    {
+        $avatar = $this->player_profile_id ? $this->profile?->avatar : null;
+
+        return ($avatar ? $avatar.' ' : '').$this->name;
+    }
+
     public function deck(): BelongsTo { return $this->belongsTo(Deck::class); }
     public function tournament(): BelongsTo { return $this->belongsTo(Tournament::class); }
     public function matchesAsPlayerOne(): HasMany { return $this->hasMany(GameMatch::class, 'player_one_id'); }

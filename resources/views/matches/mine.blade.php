@@ -3,7 +3,7 @@
 @section('content')
 <h1>Minhas partidas</h1>
 @forelse($matches as $match)
-<article class="card section-card mobile-result"><h2>{{ $match->tournament->name }} · Rodada {{ $match->round }}</h2><p>@if($match->pod_player_ids){{ $match->tournament->players->whereIn('id', $match->pod_player_ids)->pluck('name')->join(' · ') }}@else{{ $match->playerOne?->name }} × {{ $match->playerTwo?->name ?? 'BYE' }}@endif</p>
+<article class="card section-card mobile-result"><h2>{{ $match->tournament->name }} · Rodada {{ $match->round }}</h2><p>@if($match->pod_player_ids){{ $match->tournament->players->whereIn('id', $match->pod_player_ids)->map->displayName()->join(' · ') }}@else{{ $match->playerOne?->displayName() }} × {{ $match->playerTwo?->displayName() ?? 'BYE' }}@endif</p>
 @php($submission=$submissions->get($match->id))
 @if($submission)
 <p>{{ match($submission->status) {'pending'=>'Aguardando confirmação','disputed'=>'Contestado · aguardando organizador','confirmed'=>'Confirmado','resolved'=>'Resolvido pelo organizador',default=>$submission->status} }} · {{ $submission->player_one_games }} × {{ $submission->player_two_games }}</p>
@@ -17,8 +17,8 @@
 <p class="life-cta"><a class="btn btn-primary" href="{{ route('life.tournament',[$match->tournament,$match]) }}">❤ Abrir contador de vida</a> <small>Quando alguém zerar, o placar já vem pronto pra enviar.</small></p>
 <form method="POST" action="{{ route('matches.submissions.store',[$match->tournament,$match]) }}">@csrf
 <input type="hidden" name="idempotency_key" value="{{ (string) Illuminate\Support\Str::uuid() }}">
-<label>{{ $match->playerOne?->name }} <input type="number" name="player_one_games" min="0" max="3" required></label>
-<label>{{ $match->playerTwo?->name }} <input type="number" name="player_two_games" min="0" max="3" required></label>
+<label>{{ $match->playerOne?->displayName() }} <input type="number" name="player_one_games" min="0" max="3" required></label>
+<label>{{ $match->playerTwo?->displayName() }} <input type="number" name="player_two_games" min="0" max="3" required></label>
 <button class="btn btn-primary">Enviar resultado</button></form>
 @elseif($match->pod_player_ids)@php($mySeat = $match->tournament->players->first(fn($p) => in_array($p->id, $match->pod_player_ids, true) && $p->profile?->account_user_id === auth()->id()))
 <p>Mesa Commander · @if($match->status === 'finished' && $mySeat && isset(($match->pod_scores ?? [])[$mySeat->id]))você ficou em {{ $match->pod_scores[$mySeat->id] }}º @else o organizador lança as posições ao fim da mesa @endif</p>

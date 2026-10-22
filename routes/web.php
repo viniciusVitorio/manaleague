@@ -73,6 +73,7 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/me/decks/{deck}', [DeckController::class, 'destroy'])->name('decks.destroy');
     Route::get('/players/{profile}', [PlayerProfileController::class, 'show'])->name('profiles.show');
     Route::patch('/players/{profile}/friend', [PlayerProfileController::class, 'toggleFriend'])->name('profiles.friend');
+    Route::post('/players/{profile}/builder', [PlayerProfileController::class, 'builder'])->name('profiles.builder');
     Route::patch('/me/friend-requests/{requester}/accept', [FriendRequestController::class, 'accept'])->name('friends.accept');
     Route::delete('/me/friend-requests/{requester}', [FriendRequestController::class, 'reject'])->name('friends.reject');
 

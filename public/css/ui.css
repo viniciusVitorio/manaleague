@@ -223,3 +223,6 @@ input[type=radio]:checked::before{transform:scale(1)}
 /* Atalho para o contador de vida nas paginas de partida */
 .life-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 8px 0 14px; }
 .life-cta small { color: var(--ui-fg-muted, #a1a1aa); }
+
+/* Concessao manual de conquista especial (admin) */
+.admin-grant { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--ui-border, #27272a); }

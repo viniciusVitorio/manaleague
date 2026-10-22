@@ -11,10 +11,10 @@
         <strong class="rank-card-division">{{ $unranked ? 'Sem ranque' : $t['division'] }}</strong>
         <span class="rank-card-pdl">
             @if($unranked)Começa em {{ $t['division'] }} · {{ $rating }} ELO
-            @else{{ $t['pdl'] }} PDL · {{ $rating }} ELO @if($record->isProvisional())<span class="provisional" title="Primeiras partidas da temporada">Provisório</span>@endif
+            @else{{ $t['pdl'] }}@if($t['pdl_max'])/{{ $t['pdl_max'] }}@endif PDL · {{ $rating }} ELO @if($record->isProvisional())<span class="provisional" title="Primeiras partidas da temporada">Provisório</span>@endif
             @endif
         </span>
-        @if($t['pdl_max'])<div class="pdl" role="progressbar" aria-label="PDL na divisão" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $unranked ? 0 : $t['pdl'] }}"><span style="width: {{ $unranked ? 0 : $t['pdl'] }}%"></span></div>@endif
+        @if($t['pdl_max'])<div class="pdl" role="progressbar" aria-label="PDL na divisão" aria-valuemin="0" aria-valuemax="{{ $t['pdl_max'] }}" aria-valuenow="{{ $unranked ? 0 : $t['pdl'] }}"><span style="width: {{ $unranked ? 0 : round($t['pdl'] * 100 / $t['pdl_max']) }}%"></span></div>@endif
         @unless($unranked)
             <small class="muted">{{ $record->wins }}V {{ $record->losses }}D{{ $record->draws ? ' '.$record->draws.'E' : '' }}@if($nextDivision) · faltam {{ $nextDivision[3] - $rating }} para {{ $nextDivision[0] }}@endif</small>
         @endunless

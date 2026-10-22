@@ -72,11 +72,11 @@ class ClubService
      */
     public function ranking(Club $club): Collection
     {
-        $tournaments = $club->tournaments()->where('status', '!=', Tournament::STATUS_SETUP)->with(['players', 'matches'])->get();
+        $tournaments = $club->tournaments()->where('status', '!=', Tournament::STATUS_SETUP)->with(['players.profile', 'matches'])->get();
         $rows = [];
         $row = function ($player) use (&$rows) {
             $key = $player->player_profile_id ? 'p'.$player->player_profile_id : 'n'.mb_strtolower(trim($player->name));
-            $rows[$key] ??= ['key' => $key, 'name' => $player->name, 'profile_id' => $player->player_profile_id, 'events' => [], 'wins' => 0, 'draws' => 0, 'losses' => 0, 'points' => 0, 'titles' => 0];
+            $rows[$key] ??= ['key' => $key, 'name' => $player->name, 'profile_id' => $player->player_profile_id, 'avatar' => $player->profile?->avatar, 'events' => [], 'wins' => 0, 'draws' => 0, 'losses' => 0, 'points' => 0, 'titles' => 0];
 
             return $key;
         };

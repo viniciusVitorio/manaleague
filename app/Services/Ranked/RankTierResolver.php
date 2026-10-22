@@ -4,25 +4,26 @@ namespace App\Services\Ranked;
 
 /**
  * Patente e PDL derivam SEMPRE do rating (nada persistido em duplicidade).
- * PDL = progresso 0-99 dentro de uma divisao de 100 pontos.
+ * PDL = pontos de ELO ja feitos dentro da divisao (0 ate o tamanho dela - 1).
  */
 final class RankTierResolver
 {
-    /** Divisoes padrao: [nome da divisao, patente, chave css, minimo, maximo|null]. */
+    /** Divisoes padrao: [nome da divisao, patente, chave css, minimo, maximo|null].
+     * Escala curta (divisoes de 25) para um grupo pequeno de jogadores. */
     public const DEFAULT_DIVISIONS = [
-        ['Ferro II', 'Ferro', 'ferro', 0, 699],
-        ['Ferro I', 'Ferro', 'ferro', 700, 799],
-        ['Bronze II', 'Bronze', 'bronze', 800, 899],
-        ['Bronze I', 'Bronze', 'bronze', 900, 999],
-        ['Prata II', 'Prata', 'prata', 1000, 1099],
-        ['Prata I', 'Prata', 'prata', 1100, 1199],
-        ['Ouro II', 'Ouro', 'ouro', 1200, 1299],
-        ['Ouro I', 'Ouro', 'ouro', 1300, 1399],
-        ['Platina II', 'Platina', 'platina', 1400, 1499],
-        ['Platina I', 'Platina', 'platina', 1500, 1599],
-        ['Diamante II', 'Diamante', 'diamante', 1600, 1699],
-        ['Diamante I', 'Diamante', 'diamante', 1700, 1799],
-        ['Mestre', 'Mestre', 'mestre', 1800, null],
+        ['Ferro II', 'Ferro', 'ferro', 0, 624],
+        ['Ferro I', 'Ferro', 'ferro', 625, 649],
+        ['Bronze II', 'Bronze', 'bronze', 650, 674],
+        ['Bronze I', 'Bronze', 'bronze', 675, 699],
+        ['Prata II', 'Prata', 'prata', 700, 724],
+        ['Prata I', 'Prata', 'prata', 725, 749],
+        ['Ouro II', 'Ouro', 'ouro', 750, 774],
+        ['Ouro I', 'Ouro', 'ouro', 775, 799],
+        ['Platina II', 'Platina', 'platina', 800, 824],
+        ['Platina I', 'Platina', 'platina', 825, 849],
+        ['Diamante II', 'Diamante', 'diamante', 850, 874],
+        ['Diamante I', 'Diamante', 'diamante', 875, 899],
+        ['Mestre', 'Mestre', 'mestre', 900, null],
     ];
 
     public function __construct(private readonly array $divisions = self::DEFAULT_DIVISIONS) {}
@@ -41,9 +42,14 @@ final class RankTierResolver
         if ($max === null) {
             return ['division' => $name, 'tier' => $tier, 'key' => $key, 'pdl' => $rating - $min, 'pdl_max' => null, 'min' => $min, 'max' => null];
         }
-        // Divisoes largas (ex.: Ferro II 0-699) mostram progresso so nos ultimos 100 pontos.
-        $pdl = max(0, min(99, $rating - ($max - 99)));
+        // Tamanho da divisao; a primeira (larga, ex.: Ferro II 0-624) usa o tamanho padrao
+        // e mostra progresso so nos ultimos pontos antes de subir.
+        $size = $max - $min + 1;
+        if ($min === 0 && isset($this->divisions[1][4])) {
+            $size = min($size, $this->divisions[1][4] - $this->divisions[1][3] + 1);
+        }
+        $pdl = max(0, min($size - 1, $rating - ($max - $size + 1)));
 
-        return ['division' => $name, 'tier' => $tier, 'key' => $key, 'pdl' => $pdl, 'pdl_max' => 100, 'min' => $min, 'max' => $max];
+        return ['division' => $name, 'tier' => $tier, 'key' => $key, 'pdl' => $pdl, 'pdl_max' => $size, 'min' => $min, 'max' => $max];
     }
 }

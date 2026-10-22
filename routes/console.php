@@ -43,6 +43,22 @@ Artisan::command('ml:admin {email : E-mail da conta} {--revoke : Remove o acesso
     return 0;
 })->purpose('Concede ou remove o papel de admin (moderação do ranked)');
 
+Artisan::command('ml:construtor {email : E-mail da conta} {--revoke : Remove a conquista}', function (string $email): int {
+    $user = \App\Models\User::where('email', $email)->first();
+    if (! $user) {
+        $this->error('Conta não encontrada.');
+        return 1;
+    }
+    $service = app(\App\Services\AchievementService::class);
+    $profile = $user->ensurePlayerProfile();
+    if ($this->option('revoke')) {
+        $this->info($service->revoke($profile, 'builder') ? "Conquista removida de {$email}." : "{$email} não tinha a conquista.");
+    } else {
+        $this->info($service->grant($profile, 'builder') ? "🛠️ {$email} agora é Construtor da Liga." : "{$email} já tinha a conquista.");
+    }
+    return 0;
+})->purpose('Concede (ou remove) a conquista Construtor da Liga para quem ajudou no projeto');
+
 Artisan::command('ranked:tick', function (): int {
     app(\App\Services\Ranked\SeasonService::class)->refresh();
     $this->info('Temporadas atualizadas.');
