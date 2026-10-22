@@ -27,6 +27,7 @@
 @if($match->status === 'disputed')<div class="alert alert-danger"><strong>Em disputa.</strong> Nenhum ponto muda até a resolução. Vocês podem enviar um placar corrigido (o adversário confirma de novo) ou aguardar a moderação.@php($d = $match->submissions->where('status', 'disputed')->sortByDesc('id')->first())@if($d)<p>Motivo: {{ $d->dispute_reason }}</p>@endif</div>@endif
 @if($match->involvesUser($me))
 <h2>Informar resultado</h2>
+@if(Route::has('life.ranked'))<p class="life-cta"><a class="btn btn-primary" href="{{ route('life.ranked', $match) }}">❤ Abrir contador de vida</a> <small>Contem a vida game a game; ao fim da série o placar é enviado daqui.</small></p>@endif
 <form method="POST" action="{{ route('ranked.matches.results', $match) }}" class="score-entry">@csrf<input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
 <label>Games de {{ $match->playerOne->nickname }}<input type="number" inputmode="numeric" name="score_one" min="0" max="{{ $match->winsNeeded() }}" required></label>
 <label>Games de {{ $match->playerTwo->nickname }}<input type="number" inputmode="numeric" name="score_two" min="0" max="{{ $match->winsNeeded() }}" required></label>

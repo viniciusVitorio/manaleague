@@ -219,3 +219,7 @@ input[type=checkbox].ui-switch:checked::before{background:var(--ui-primary-fg);t
 input[type=radio]::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ui-primary-fg);transform:scale(0);transition:transform .1s}
 input[type=radio]:checked{background:var(--ui-primary);border-color:var(--ui-primary)}
 input[type=radio]:checked::before{transform:scale(1)}
+
+/* Atalho para o contador de vida nas paginas de partida */
+.life-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 8px 0 14px; }
+.life-cta small { color: var(--ui-fg-muted, #a1a1aa); }
