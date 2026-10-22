@@ -7,6 +7,7 @@
     <form method="POST" action="{{ route('login') }}">@csrf
         <label>E-mail<input type="email" name="email" value="{{ old('email') }}" required autofocus></label>
         <label>Senha<input type="password" name="password" required></label>
+        <label class="check-label"><input type="checkbox" name="remember" value="1" @checked(old('remember'))> Manter conectado</label>
         <button class="btn btn-primary btn-block">Entrar</button>
     </form>
     <p class="auth-link"><a href="{{ route('password.request') }}">Esqueci minha senha</a></p>

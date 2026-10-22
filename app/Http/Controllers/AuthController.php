@@ -40,7 +40,7 @@ class AuthController extends Controller
     public function login(Request $request): RedirectResponse
     {
         $credentials = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']]);
-        if (! Auth::attempt($credentials)) {
+        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             // Evidencia para deteccao de forca bruta; nunca registra a senha.
             Log::warning('auth.login_failed', ['email' => $credentials['email'], 'ip' => $request->ip()]);
             return back()->withErrors(['email' => 'Credenciais invalidas.'])->onlyInput('email');
