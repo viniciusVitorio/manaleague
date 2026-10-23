@@ -94,6 +94,7 @@ class TournamentController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'format' => ['required', Rule::in(self::FORMATS)],
             'system' => ['sometimes', 'required', Rule::in(array_keys(Tournament::SYSTEMS)), function ($attribute,$value,$fail) use ($request) { if ($value==='commander_pods' && $request->input('format')!=='Commander') $fail('Selecione o formato Commander para pods.'); }],
+            'ranked' => ['sometimes', 'boolean', function ($attribute, $value, $fail) use ($request) { if ($value && $request->input('system') === 'commander_pods') $fail('Torneios com pods Commander não podem ser ranqueados.'); }],
             'round_limit' => ['nullable','integer','min:1','max:20'],
             'tournament_date' => ['required', 'date'],
             'max_players' => ['nullable', 'integer', 'min:4', 'max:128'],

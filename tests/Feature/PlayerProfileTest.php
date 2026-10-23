@@ -44,6 +44,14 @@ class PlayerProfileTest extends TestCase
         $this->assertDatabaseHas('players', ['tournament_id' => $second->id, 'player_profile_id' => $profile->id]);
     }
 
+    public function test_profile_avatar_accepts_one_emoji_grapheme_but_rejects_two(): void
+    {
+        $player = User::factory()->create();
+        $this->actingAs($player)->patch(route('profiles.update'), ['nickname' => 'Vini', 'avatar' => '🧙'])->assertRedirect();
+        $this->assertSame('🧙', $player->playerProfile()->value('avatar'));
+        $this->actingAs($player)->patch(route('profiles.update'), ['nickname' => 'Vini', 'avatar' => '🧙🐉'])->assertSessionHasErrors('avatar');
+    }
+
     public function test_profile_is_private_to_unrelated_accounts(): void
     {
         $owner = User::factory()->create();

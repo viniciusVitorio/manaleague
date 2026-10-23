@@ -113,7 +113,13 @@ class PlayerProfileController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $profile = $this->ownProfile($request);
-        $validated = $request->validate(['nickname' => ['required', 'string', 'max:80'], 'avatar' => ['nullable', 'string', 'max:20']]);
+        $validated = $request->validate([
+            'nickname' => ['required', 'string', 'max:80'],
+            'avatar' => ['nullable', 'string', 'max:20', function (string $attribute, mixed $value, \Closure $fail): void {
+                if ($value !== null && (function_exists('grapheme_strlen') ? grapheme_strlen($value) : mb_strlen($value)) !== 1) { $fail('Escolha exatamente um emoji.'); return; }
+                if ($value !== null && ! preg_match('/\\p{Extended_Pictographic}/u', $value)) $fail('Escolha exatamente um emoji.');
+            }],
+        ]);
         $profile->update($validated);
 
         return redirect()->route('profiles.index')->with('status', 'Perfil atualizado.');

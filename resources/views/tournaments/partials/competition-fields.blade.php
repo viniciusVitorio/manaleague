@@ -1,3 +1,4 @@
+<label class="check-row"><input type="checkbox" name="ranked" value="1" @checked(old('ranked',$tournament->ranked??false))> Torneio ranqueado <small>Somente partidas 1v1 pontuam ELO/PDL.</small></label>
 <label>Sistema de competição<select name="system" required>@foreach(\App\Models\Tournament::SYSTEMS as $key=>$label)<option value="{{ $key }}" @selected(old('system',$tournament->system??'round_robin')===$key)>{{ $label }}</option>@endforeach</select></label>
 <label>Rodadas (Suíço / Pods)<input type="number" name="round_limit" min="1" max="20" value="{{ old('round_limit',$tournament->round_limit??'') }}" placeholder="Automático"><small>Vazio: log₂ de participantes, arredondado para cima. Eliminações avançam até restar um campeão.</small></label>
 <p class="muted">Pods exigem formato Commander: mesas equilibradas de 3–4, ou 3+2 com cinco inscritos. Posições únicas pontuam N−posição; primeiro lugar vence. Suíço: vitória 3, empate 1, derrota 0; BYE vale 3.</p>

@@ -23,11 +23,11 @@ class Tournament extends Model
 
     protected $attributes = ['system' => 'round_robin'];
 
-    protected $fillable = ['system', 'round_limit', 'name', 'format', 'tournament_date', 'max_players', 'status', 'public_token', 'public_slug', 'invite_token'];
+    protected $fillable = ['system', 'ranked', 'round_limit', 'name', 'format', 'tournament_date', 'max_players', 'status', 'public_token', 'public_slug', 'invite_token'];
 
     protected function casts(): array
     {
-        return ['tournament_date' => 'date', 'round_limit' => 'integer'];
+        return ['tournament_date' => 'date', 'round_limit' => 'integer', 'ranked' => 'boolean'];
     }
 
     public function user(): BelongsTo

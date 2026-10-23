@@ -1,7 +1,7 @@
 <?php
 namespace App\Services;
 
-use App\Models\{Tournament, GameMatch, Player};
+use App\Models\{Tournament, GameMatch, Player, RankedMatch};
 use Illuminate\Support\Facades\{DB, Log, Validator};
 use Illuminate\Validation\ValidationException;
 use LogicException;
@@ -42,6 +42,7 @@ class MatchResultService
             }
             $before = $m->only(['player_one_games', 'player_two_games', 'pod_scores', 'status']);
             $m->update([...$values, 'status' => 'finished', 'played_at' => $m->played_at ?? now()]);
+            if ($t->ranked && ! $m->pod_player_ids) $this->applyRankedTournamentResult($t, $m);
             if ($t->system === 'round_robin' && $t->status === 'finals' && ! $t->matches()->whereIn('stage', ['final', 'third_place'])->where('status', 'pending')->exists()) {
                 $t->update(['status' => 'finished']);
             }
@@ -50,6 +51,23 @@ class MatchResultService
                 if ($player->profile) app(AchievementService::class)->sync($player->profile);
             }
         });
+    }
+
+
+    private function applyRankedTournamentResult(Tournament $tournament, GameMatch $match): void
+    {
+        $one = $match->playerOne()->with('profile')->first()?->profile;
+        $two = $match->playerTwo()->with('profile')->first()?->profile;
+        if (! $one || ! $two) throw new LogicException('Torneios ranqueados exigem jogadores com perfil de conta.');
+        $season = app(\App\Services\Ranked\SeasonService::class)->activeFor($tournament->format);
+        if (! $season) throw new LogicException('Não há temporada ranqueada ativa para este formato.');
+        $format = $season->formats->firstWhere('format', $tournament->format);
+        $ranked = RankedMatch::firstOrCreate(['source_type'=>'tournament_match','source_id'=>$match->id], [
+            'season_id'=>$season->id,'format'=>$tournament->format,'player_one_profile_id'=>$one->id,'player_two_profile_id'=>$two->id,
+            'status'=>'confirmed','best_of'=>3,'is_ranked'=>true,'k_factor'=>$format->k_factor,'rules_version'=>$season->rules_version,
+            'score_one'=>$match->player_one_games,'score_two'=>$match->player_two_games,'played_at'=>$match->played_at,'confirmed_at'=>now(),
+        ]);
+        app(\App\Services\Ranked\RatingLedgerService::class)->applyMatch($ranked);
     }
 
     public function editable(Tournament $t, GameMatch $m): bool
