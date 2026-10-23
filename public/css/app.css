@@ -206,3 +206,17 @@ details>summary::-webkit-details-marker{display:none}
 .friends-pop-name{flex:1;display:flex;flex-direction:column;min-width:0;font-size:.85rem}
 .friends-pop-name small{color:#71717a;font-size:.72rem}
 @media(max-width:480px){.friends-pop-panel{width:calc(100vw - 48px)}}
+/* Deck de coleção única: todas as cartas do mesmo set */
+.single-set-badge{display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:3px 8px;border-radius:999px;border:1px solid #5b4929;background:#2a2317;color:#f5d58e;font-size:.7rem;font-weight:800;letter-spacing:.03em;white-space:nowrap}
+/* Arrastar cartas entre deck e sideboard */
+.card-line[draggable=true]{cursor:grab}
+.card-line[draggable=true]:active{cursor:grabbing}
+.card-line.is-dragging,.card-line.is-moving{opacity:.4}
+.drop-zone{border-radius:8px;transition:background .15s,outline-color .15s}
+.is-dragging-card .drop-zone[data-drop-board]{outline:1px dashed transparent;outline-offset:4px}
+.drop-zone.is-drop-target{outline:2px dashed #d7aa50;outline-offset:4px;background:rgba(215,170,80,.06)}
+.drag-hint{margin:-4px 0 12px}
+.sideboard-empty{margin:0;padding:14px;border:1px dashed #3f3f46;border-radius:8px;color:#71717a;font-size:.8rem;text-align:center}
+.move-chooser{position:fixed;z-index:60;display:flex;flex-wrap:wrap;align-items:center;gap:6px;max-width:calc(100vw - 16px);padding:8px 10px;border:1px solid #3f3f46;border-radius:10px;background:#0c0c0e;box-shadow:0 12px 32px rgba(0,0,0,.5);font-size:.8rem;color:#d4d4d8}
+.move-chooser .qty-btn.wide{color:#fafafa}
+@media(hover:none){.drag-hint{display:none}}

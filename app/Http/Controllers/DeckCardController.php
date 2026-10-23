@@ -50,7 +50,7 @@ class DeckCardController extends Controller
         return back()->with('status', "{$card['name']} adicionada.");
     }
 
-    public function update(Request $request, Deck $deck, DeckCard $card): RedirectResponse
+    public function update(Request $request, Deck $deck, DeckCard $card): RedirectResponse|JsonResponse
     {
         $this->ensureOwner($request, $deck);
         abort_unless($card->deck_id === $deck->id, 404);
@@ -59,7 +59,17 @@ class DeckCardController extends Controller
             'quantity' => ['nullable', 'integer', 'min:0', 'max:'.DeckBuilderService::MAX_COPIES],
             'delta' => ['nullable', 'integer', 'in:-1,1'],
             'board' => ['nullable', Rule::in([DeckCard::BOARD_MAIN, DeckCard::BOARD_SIDE])],
+            'move' => ['nullable', 'integer', 'min:1', 'max:'.DeckBuilderService::MAX_COPIES],
         ]);
+
+        // Mover N cópias entre deck e sideboard (botões e arrastar). Sem "move", segue o fluxo antigo abaixo.
+        if (isset($validated['move'], $validated['board'])) {
+            $moved = $this->builder->move($deck, $card, $validated['board'], $validated['move']);
+            $where = $validated['board'] === DeckCard::BOARD_SIDE ? 'o sideboard' : 'o deck';
+            $message = $moved === 0 ? null : "{$moved}× {$card->name} movida para {$where}.";
+
+            return $request->expectsJson() ? response()->json(['moved' => $moved]) : back()->with('status', $message);
+        }
 
         $quantity = $validated['quantity'] ?? ($card->quantity + (int) ($validated['delta'] ?? 0));
         if ($quantity <= 0) {

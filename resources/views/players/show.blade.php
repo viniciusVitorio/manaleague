@@ -163,7 +163,7 @@
     <div class="deck-grid">
     @forelse($decks as $deck)
         <a class="deck-tile" href="{{ route('decks.show', $deck) }}">
-            <div><strong>{{ $deck->is_primary ? '★ ' : '' }}{{ $deck->name }}</strong><small>{{ $deck->format ?: 'Formato livre' }} · {{ (int) $deck->cards_sum_quantity }} cartas</small></div>
+            <div><strong>{{ $deck->is_primary ? '★ ' : '' }}{{ $deck->name }}</strong><small>{{ $deck->format ?: 'Formato livre' }} · {{ (int) $deck->cards_sum_quantity }} cartas</small>@include('decks.partials.single-set-badge')</div>
             @include('partials.color-pips', ['colors' => $deck->colors])
 
 

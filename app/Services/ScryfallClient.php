@@ -80,40 +80,84 @@ class ScryfallClient
     }
 
     /**
-     * Resolve uma lista de nomes (importacao de decklist) em lotes de 75 (limite da API).
+     * Resolve uma lista de cartas (importacao de decklist) em lotes de 75 (limite da API).
+     * Cada item e um nome ou ['name' => ..., 'set' => 'LTR']; com set, busca aquela edicao.
+     * Se o set informado nao existir para a carta, tenta de novo so pelo nome.
+     * Use ScryfallClient::pick() para ler o resultado.
      *
-     * @param  list<string>  $names
+     * @param  list<string|array{name:string, set?:?string}>  $cards
      * @return array{found: array<string, array<string, mixed>>, missing: list<string>}
      */
-    public function collection(array $names): array
+    public function collection(array $cards): array
     {
-        $found = [];
-        $missing = [];
+        $identifiers = collect($cards)
+            ->map(fn ($card) => is_array($card)
+                ? array_filter(['name' => (string) $card['name'], 'set' => isset($card['set']) ? strtolower((string) $card['set']) : null])
+                : ['name' => (string) $card])
+            ->unique(fn (array $identifier) => self::key($identifier['name'], $identifier['set'] ?? null))
+            ->values()->all();
 
-        foreach (array_chunk(array_values(array_unique($names)), 75) as $chunk) {
-            $response = $this->send(fn (PendingRequest $http) => $http->post(self::BASE.'/cards/collection', [
-                'identifiers' => array_map(fn (string $name) => ['name' => $name], $chunk),
-            ]));
+        $found = [];
+        $notFound = $this->fetchCollection($identifiers, $found);
+
+        // Set errado ou inexistente para a carta: busca qualquer edicao pelo nome.
+        $retry = collect($notFound)->filter(fn (array $identifier) => isset($identifier['set']))
+            ->map(fn (array $identifier) => ['name' => $identifier['name']])
+            ->unique('name')->reject(fn (array $identifier) => isset($found[self::key($identifier['name'])]))->values()->all();
+        $missing = collect($notFound)->reject(fn (array $identifier) => isset($identifier['set']))
+            ->concat($retry ? $this->fetchCollection($retry, $found) : [])
+            ->pluck('name')->filter()->values()->all();
+
+        return ['found' => $found, 'missing' => $missing];
+    }
+
+    /** Carta encontrada por collection(): a edicao pedida, ou qualquer edicao com aquele nome. */
+    public static function pick(array $found, string $name, ?string $set = null): ?array
+    {
+        return ($set ? $found[self::key($name, $set)] ?? null : null) ?? $found[self::key($name)] ?? null;
+    }
+
+    private static function key(string $name, ?string $set = null): string
+    {
+        return mb_strtolower(trim($name)).($set ? '|'.strtoupper($set) : '');
+    }
+
+    /**
+     * @param  list<array{name:string, set?:string}>  $identifiers
+     * @param  array<string, array<string, mixed>>  $found  preenchido por referencia
+     * @return list<array{name:string, set?:string}> identificadores nao encontrados
+     */
+    private function fetchCollection(array $identifiers, array &$found): array
+    {
+        $notFound = [];
+
+        foreach (array_chunk($identifiers, 75) as $chunk) {
+            $response = $this->send(fn (PendingRequest $http) => $http->post(self::BASE.'/cards/collection', ['identifiers' => $chunk]));
 
             if (! $response) {
-                array_push($missing, ...$chunk);
+                array_push($notFound, ...$chunk);
 
                 continue;
             }
 
             foreach ($response['data'] ?? [] as $card) {
                 $normalized = $this->normalize($card);
-                // Indexa pelo nome completo e pela primeira face ("Fable of the Mirror-Breaker // Reflection...").
-                $found[mb_strtolower($normalized['name'])] = $normalized;
-                $found[mb_strtolower(trim(explode('//', $normalized['name'])[0]))] = $normalized;
+                // Indexa pelo nome completo e pela primeira face ("Fable of the Mirror-Breaker // Reflection..."),
+                // com e sem o set, para atender pedidos com e sem edicao.
+                foreach ([$normalized['name'], trim(explode('//', $normalized['name'])[0])] as $name) {
+                    $found[self::key($name)] ??= $normalized;
+                    if ($normalized['set_code']) $found[self::key($name, $normalized['set_code'])] = $normalized;
+                }
             }
 
             foreach ($response['not_found'] ?? [] as $identifier) {
-                $missing[] = (string) ($identifier['name'] ?? '');
+                if (isset($identifier['name'])) {
+                    $notFound[] = array_filter(['name' => (string) $identifier['name'], 'set' => $identifier['set'] ?? null]);
+                }
             }
         }
 
-        return ['found' => $found, 'missing' => array_values(array_filter($missing))];
+        return $notFound;
     }
 
     /** @return array<string, mixed> */

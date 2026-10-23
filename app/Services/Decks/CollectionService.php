@@ -49,11 +49,11 @@ class CollectionService
         if ($parsed === []) {
             return ['added' => 0, 'lines' => 0, 'missing' => []];
         }
-        $lookup = $this->scryfall->collection(array_column($parsed, 'name'));
+        $lookup = $this->scryfall->collection($parsed);
         $added = 0;
         $missing = [];
         foreach ($parsed as $line) {
-            $card = $lookup['found'][mb_strtolower($line['name'])] ?? null;
+            $card = ScryfallClient::pick($lookup['found'], $line['name'], $line['set'] ?? null);
             if (! $card) {
                 $missing[] = $line['name'];
 

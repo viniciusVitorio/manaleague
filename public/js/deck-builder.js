@@ -101,5 +101,124 @@
         });
     }
 
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+    // Arrastar cartas entre deck e sideboard. Com mais de uma cópia, um mini menu pergunta quantas mover.
+    // Os botões "↓ side" / "↑ deck" continuam como alternativa (teclado e celular, onde arrastar não funciona).
+    function initBoardDrag() {
+        var zones = document.querySelectorAll('[data-drop-board]');
+        if (!zones.length) return;
+
+        var token = document.querySelector('meta[name="csrf-token"]');
+        var dragged = null;
+        var chooser = null;
+
+        function closeChooser() {
+            if (chooser) { chooser.remove(); chooser = null; }
+        }
+
+        function move(line, board, copies) {
+            closeChooser();
+            line.classList.add('is-moving');
+            var body = new URLSearchParams({ _method: 'PATCH', board: board, move: String(copies) });
+            fetch(line.dataset.moveUrl, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': token ? token.content : '' },
+                credentials: 'same-origin',
+                body: body
+            }).then(function (response) {
+                if (!response.ok) throw new Error();
+                window.location.reload();
+            }).catch(function () {
+                line.classList.remove('is-moving');
+                window.alert('Não foi possível mover a carta. Recarregue a página e tente de novo.');
+            });
+        }
+
+        function choose(line, board, x, y) {
+            closeChooser();
+            var qty = parseInt(line.dataset.qty, 10) || 1;
+            chooser = document.createElement('div');
+            chooser.className = 'move-chooser';
+            chooser.setAttribute('role', 'dialog');
+            chooser.setAttribute('aria-label', 'Quantas cópias mover');
+
+            var label = document.createElement('span');
+            label.textContent = 'Mover quantas?';
+            chooser.appendChild(label);
+
+            var options = [];
+            for (var n = 1; n < qty && n <= 4; n++) options.push(n);
+            options.push(qty);
+            options.forEach(function (copies) {
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'qty-btn' + (copies === qty ? ' wide' : '');
+                b.textContent = copies === qty ? 'Todas (' + qty + ')' : String(copies);
+                b.addEventListener('click', function () { move(line, board, copies); });
+                chooser.appendChild(b);
+            });
+
+            var cancel = document.createElement('button');
+            cancel.type = 'button';
+            cancel.className = 'qty-btn';
+            cancel.textContent = '✕';
+            cancel.setAttribute('aria-label', 'Cancelar');
+            cancel.addEventListener('click', closeChooser);
+            chooser.appendChild(cancel);
+
+            document.body.appendChild(chooser);
+            // Posiciona perto de onde a carta foi solta, sem sair da tela.
+            var rect = chooser.getBoundingClientRect();
+            chooser.style.left = Math.max(8, Math.min(x - rect.width / 2, window.innerWidth - rect.width - 8)) + 'px';
+            chooser.style.top = Math.max(8, Math.min(y + 12, window.innerHeight - rect.height - 8)) + 'px';
+            chooser.querySelector('button').focus();
+        }
+
+        document.addEventListener('keydown', function (event) { if (event.key === 'Escape') closeChooser(); });
+        document.addEventListener('mousedown', function (event) { if (chooser && !chooser.contains(event.target)) closeChooser(); });
+        window.addEventListener('scroll', closeChooser, { passive: true });
+
+        document.querySelectorAll('[data-move-url]').forEach(function (line) {
+            line.addEventListener('dragstart', function (event) {
+                closeChooser();
+                dragged = line;
+                line.classList.add('is-dragging');
+                document.body.classList.add('is-dragging-card');
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', line.dataset.name || '');
+            });
+            line.addEventListener('dragend', function () {
+                line.classList.remove('is-dragging');
+                document.body.classList.remove('is-dragging-card');
+                zones.forEach(function (zone) { zone.classList.remove('is-drop-target'); });
+                dragged = null;
+            });
+        });
+
+        zones.forEach(function (zone) {
+            function accepts() { return dragged && dragged.dataset.board !== zone.dataset.dropBoard; }
+
+            zone.addEventListener('dragover', function (event) {
+                if (!accepts()) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                zone.classList.add('is-drop-target');
+            });
+            zone.addEventListener('dragleave', function (event) {
+                if (!zone.contains(event.relatedTarget)) zone.classList.remove('is-drop-target');
+            });
+            zone.addEventListener('drop', function (event) {
+                if (!accepts()) return;
+                event.preventDefault();
+                zone.classList.remove('is-drop-target');
+                var line = dragged;
+                var board = zone.dataset.dropBoard;
+                if ((parseInt(line.dataset.qty, 10) || 1) > 1) choose(line, board, event.clientX, event.clientY);
+                else move(line, board, 1);
+            });
+        });
+    }
+
+    function boot() { init(); initBoardDrag(); }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
