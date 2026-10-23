@@ -22,6 +22,37 @@ class Deck extends Model
 
     public function isCommander(): bool { return $this->format === 'Commander'; }
 
+    /** Mínimo de cartas para um deck contar como "coleção única" (deixa de fora decks de Limited de 40). */
+    public const SINGLE_SET_MIN_CARDS = 60;
+
+    /**
+     * Coleção única: devolve o código do set (ex.: "LTR") quando todas as cartas que não são terreno
+     * do deck principal (incluindo o comandante; o sideboard não conta) são da mesma coleção.
+     * O deck precisa ter pelo menos 60 cartas no total, com os terrenos contando para esse mínimo.
+     * Aceita modelos DeckCard ou arrays (cartas salvas na foto do deck de um torneio).
+     */
+    public static function singleSetOf(iterable $cards): ?string
+    {
+        $sets = [];
+        $total = 0;
+        foreach ($cards as $card) {
+            if (! in_array(data_get($card, 'board'), [DeckCard::BOARD_MAIN, DeckCard::BOARD_COMMANDER], true)) continue;
+            $total += (int) data_get($card, 'quantity');
+            // Terrenos (básicos ou não) ficam de fora. Em cartas de duas faces vale a face da frente.
+            if (str_contains(explode(' // ', (string) data_get($card, 'type_line'))[0], 'Land')) continue;
+            $sets[strtoupper((string) data_get($card, 'set_code'))] = true;
+        }
+
+        $set = count($sets) === 1 ? (string) array_key_first($sets) : '';
+
+        return $total >= self::SINGLE_SET_MIN_CARDS && $set !== '' ? $set : null;
+    }
+
+    public function singleSet(): ?string
+    {
+        return self::singleSetOf($this->relationLoaded('cards') ? $this->cards : $this->cards()->get(['board', 'set_code', 'quantity', 'type_line']));
+    }
+
     /** Cor do deck derivada da identidade de cor das cartas, na ordem WUBRG. */
     public function computedColors(): ?string
     {

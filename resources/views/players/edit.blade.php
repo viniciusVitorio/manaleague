@@ -31,7 +31,7 @@
 
     @forelse($profile->decks as $deck)
         <div class="history-row">
-            <div><a href="{{ route('decks.show', $deck) }}"><strong>{{ $deck->is_primary ? '★ ' : '' }}{{ $deck->name }}</strong></a><small>{{ $deck->format ?: 'Formato livre' }} · {{ (int) $deck->cards_sum_quantity }} cartas @if($deck->colors) · @include('partials.color-pips', ['colors' => $deck->colors]) @endif · {{ $deck->is_visible_to_friends ? 'Visível para amigos' : '🔒 Privado' }}</small></div>
+            <div><a href="{{ route('decks.show', $deck) }}"><strong>{{ $deck->is_primary ? '★ ' : '' }}{{ $deck->name }}</strong></a><small>{{ $deck->format ?: 'Formato livre' }} · {{ (int) $deck->cards_sum_quantity }} cartas @if($deck->colors) · @include('partials.color-pips', ['colors' => $deck->colors]) @endif · {{ $deck->is_visible_to_friends ? 'Visível para amigos' : '🔒 Privado' }}</small>@include('decks.partials.single-set-badge')</div>
 
             <div class="deck-actions">
                 <a class="btn btn-small btn-secondary" href="{{ route('decks.show', $deck) }}">Cartas</a>

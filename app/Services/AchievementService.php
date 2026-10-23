@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Deck;
 use App\Models\DeckCard;
+use App\Models\DeckUse;
+use App\Models\GameMatch;
 use App\Models\PlayerProfile;
 use App\Models\ProfileAchievement;
 use App\Models\Tournament;
@@ -29,7 +31,7 @@ class AchievementService
     {
         return [
             'secret_comeback' => ['↗', 'De virada', 'Vença uma série casual confirmada após perder o primeiro game, com ordem registrada.', 'matches', 1, 'casual_comeback'],
-            'secret_tribal' => ['✦', 'Uma só tribo', 'Cadastre 20 criaturas do mesmo subtipo no deck principal (sem sideboard).', 'collection', 20, 'tribal_count'],
+            'secret_tribal' => ['✦', 'Uma só tribo', 'Vença uma partida de torneio com um deck que tenha 20 criaturas do mesmo subtipo no deck principal (sem sideboard).', 'collection', 20, 'tribal_count'],
             // Partidas
             'first_win' => ['🗡️', 'First Blood', 'Vença sua primeira partida', 'matches', 1, 'wins'],
             'clean_sweep' => ['🧹', 'Clean Sweep', 'Vença uma partida por 2–0', 'matches', 1, 'clean_sweeps'],
@@ -81,18 +83,8 @@ class AchievementService
         $fiveColor = Deck::query()->whereIn('id', $deckIds)->get()
             ->contains(fn (Deck $deck) => $deck->computedColors() === 'WUBRG');
 
-        // Only actual mainboard creature subtypes count; names and lands never do.
-        $tribes = [];
-        foreach (DeckCard::query()->whereIn('deck_id', $deckIds)->where('board', DeckCard::BOARD_MAIN)->get() as $card) {
-            foreach (explode(' // ', $card->type_line ?? '') as $face) {
-                if (! preg_match('/\bCreature\b[^—]*—\s*(.+)$/u', $face, $parts)) continue;
-                foreach (array_unique(preg_split('/\s+/u', trim($parts[1]))) as $type) {
-                    $tribes[$card->deck_id][$type] = ($tribes[$card->deck_id][$type] ?? 0) + $card->quantity;
-                }
-                break; // A double-faced card is still one physical card.
-            }
-        }
-        $tribalCount = collect($tribes)->flatMap(fn ($types) => array_values($types))->max() ?? 0;
+        // Tribal: só conta deck com que o jogador venceu uma partida de torneio.
+        $tribalCount = $this->winningDeckSnapshots($profile)->map(fn (array $cards) => self::tribalCount($cards))->max() ?? 0;
         $comeback = \App\Models\CasualMatch::query()->with('challenge')->where('status', 'confirmed')
             ->whereHas('challenge', fn ($q) => $q->where(fn ($q) => $q->where('challenger_id', $profile->id)->orWhere('opponent_id', $profile->id)))
             ->get()->contains(function ($match) use ($profile) {
@@ -125,6 +117,45 @@ class AchievementService
             'commander_complete' => (int) $commanderComplete,
             'five_color' => (int) $fiveColor,
         ];
+    }
+
+    /**
+     * Cartas dos decks com que o jogador venceu ao menos uma partida de torneio. Usa a foto do deck
+     * tirada na inscrição (DeckUse), então mudar o deck depois não conta para aquele torneio. BYE não conta.
+     *
+     * @return Collection<int, array> lista de cartas de cada deck vencedor
+     */
+    private function winningDeckSnapshots(PlayerProfile $profile): Collection
+    {
+        $uses = DeckUse::query()->whereIn('player_id', $profile->entries()->pluck('id'))->with('version')->get();
+        if ($uses->isEmpty()) return collect();
+
+        $matches = GameMatch::query()->whereIn('tournament_id', $uses->pluck('tournament_id'))
+            ->where('status', GameMatch::STATUS_FINISHED)->get();
+
+        return $uses->filter(fn (DeckUse $use) => $matches->contains(fn (GameMatch $match) => $match->pod_scores
+                ? (int) ($match->pod_scores[$use->player_id] ?? 0) === 1
+                : ($match->player_one_id === $use->player_id && $match->player_one_games > $match->player_two_games)
+                    || ($match->player_two_id === $use->player_id && $match->player_two_games > $match->player_one_games)))
+            ->map(fn (DeckUse $use) => $use->version?->payload['cards'] ?? [])->values();
+    }
+
+    /** Maior número de criaturas de um mesmo subtipo no deck principal. Nomes e terrenos nunca contam. */
+    public static function tribalCount(iterable $cards): int
+    {
+        $tribes = [];
+        foreach ($cards as $card) {
+            if (data_get($card, 'board') !== DeckCard::BOARD_MAIN) continue;
+            foreach (explode(' // ', (string) data_get($card, 'type_line')) as $face) {
+                if (! preg_match('/\bCreature\b[^—]*—\s*(.+)$/u', $face, $parts)) continue;
+                foreach (array_unique(preg_split('/\s+/u', trim($parts[1]))) as $type) {
+                    $tribes[$type] = ($tribes[$type] ?? 0) + (int) data_get($card, 'quantity');
+                }
+                break; // Uma carta de duas faces continua sendo uma carta física.
+            }
+        }
+
+        return $tribes === [] ? 0 : max($tribes);
     }
 
     /**

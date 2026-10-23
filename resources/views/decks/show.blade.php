@@ -7,7 +7,7 @@
 <header class="deck-hero card" @if($summary['cover']) style="--cover: url('{{ $summary['cover'] }}')" @endif>
     <div class="deck-hero-inner">
         <a class="back-link" href="{{ $isOwner ? route('profiles.edit') : route('profiles.show', $deck->profile) }}">← {{ $isOwner ? 'Meus decks' : $deck->profile->nickname }}</a>
-        <div class="title-line"><span class="format-badge">{{ $deck->format ?: 'Formato livre' }}</span>@if($deck->is_primary)<span class="status status-finished">★ Principal</span>@endif</div>
+        <div class="title-line"><span class="format-badge">{{ $deck->format ?: 'Formato livre' }}</span>@if($deck->is_primary)<span class="status status-finished">★ Principal</span>@endif @include('decks.partials.single-set-badge')</div>
         <h1>{{ $deck->name }}</h1>
         <div class="deck-hero-meta">
             @include('partials.color-pips', ['colors' => $deck->colors])
@@ -69,6 +69,8 @@
 
     <section class="card section-card">
         <div class="section-heading"><div><span class="eyebrow">Lista</span><h2>Cartas</h2></div><span class="muted">{{ $summary['main'] }} no deck</span></div>
+        @if($isOwner && ($summary['main'] || $summary['side']))<p class="muted small-note drag-hint">Arraste as cartas entre o deck e o sideboard, ou use os botões ↓ side / ↑ deck.</p>@endif
+        <div class="drop-zone" @if($isOwner) data-drop-board="main" data-drop-label="Deck" @endif>
         @forelse($summary['groups'] as $group => $cards)
             <div class="card-group">
                 <h3>{{ $group }} <span>{{ $cards->sum('quantity') }}</span></h3>
@@ -79,13 +81,16 @@
         @empty
             <div class="empty-inline"><p>Nenhuma carta ainda.</p>@if($isOwner)<p class="muted">Use a busca ao lado ou cole uma lista exportada do Moxfield, Arena ou LigaMagic.</p>@endif</div>
         @endforelse
+        </div>
 
-        @if($summary['sideboard']->isNotEmpty())
-            <div class="card-group sideboard">
+        @if($summary['sideboard']->isNotEmpty() || ($isOwner && $summary['main']))
+            <div class="card-group sideboard drop-zone" @if($isOwner) data-drop-board="side" data-drop-label="Sideboard" @endif>
                 <h3>Sideboard <span>{{ $summary['side'] }}</span></h3>
-                @foreach($summary['sideboard'] as $card)
+                @forelse($summary['sideboard'] as $card)
                     @include('decks.partials.card-line', ['card' => $card])
-                @endforeach
+                @empty
+                    <p class="sideboard-empty">Arraste cartas para cá, ou use “↓ side” em cada carta.</p>
+                @endforelse
             </div>
         @endif
     </section>
@@ -97,7 +102,7 @@
         <span class="eyebrow">Adicionar cartas</span><h2>Buscar no Scryfall</h2>
         <input type="search" id="card-search" placeholder="Nome da carta, ex.: Lightning Bolt" autocomplete="off" maxlength="100"
                data-endpoint="{{ route('cards.search') }}" data-commander="{{ $deck->isCommander() ? '1' : '0' }}" aria-label="Buscar carta">
-        <p class="muted small-note" id="card-search-status">Digite ao menos 2 letras. Aceita nomes em português.</p>
+        <p class="muted small-note" id="card-search-status">Digite ao menos 2 letras. Aceita nomes em português. Para uma edição específica, use <code>e:</code> com o código da coleção, ex.: <code>Forest e:ltr</code>.</p>
         <div id="card-results" class="card-results" role="list"></div>
         <form method="POST" action="{{ route('decks.cards.store', $deck) }}" id="add-card-form" hidden>@csrf
             <input type="hidden" name="scryfall_id"><input type="hidden" name="board" value="main"><input type="hidden" name="quantity" value="1">
@@ -111,7 +116,7 @@
                 <textarea name="list" rows="9" maxlength="20000" required placeholder="4 Lightning Bolt&#10;4 Monastery Swiftspear&#10;20 Mountain&#10;&#10;Sideboard&#10;2 Smash to Smithereens"></textarea>
                 <label class="check-label"><input type="checkbox" name="replace" value="1"> Substituir a lista atual</label>
                 <button class="btn btn-secondary btn-block">Importar</button>
-                <p class="muted small-note">Formatos aceitos: Arena, MTGO, Moxfield e LigaMagic (quantidade + nome, um por linha).</p>
+                <p class="muted small-note">Formatos aceitos: Arena, MTGO, Moxfield e LigaMagic (quantidade + nome, um por linha). Para escolher a edição, coloque o código da coleção entre parênteses: <code>20 Forest (LTR)</code>.</p>
             </form>
         </details>
     </section>

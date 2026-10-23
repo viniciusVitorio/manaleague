@@ -40,6 +40,39 @@ class DeckBuilderService
     }
 
     /**
+     * Move cópias de uma carta entre deck e sideboard. Se a carta já existe no destino, soma; se sobrar
+     * cópia na origem, ela continua lá. O comandante não se move por aqui.
+     *
+     * @return int quantas cópias foram movidas
+     */
+    public function move(Deck $deck, DeckCard $card, string $board, int $copies): int
+    {
+        if ($card->board === $board || $card->board === DeckCard::BOARD_COMMANDER) return 0;
+
+        return DB::transaction(function () use ($deck, $card, $board, $copies): int {
+            $card = DeckCard::query()->lockForUpdate()->findOrFail($card->id);
+            $copies = min($copies, $card->quantity);
+            $target = $deck->cards()->where('scryfall_id', $card->scryfall_id)->where('board', $board)->lockForUpdate()->first();
+
+            if ($target) {
+                $target->update(['quantity' => min(self::MAX_COPIES, $target->quantity + $copies)]);
+            } elseif ($copies < $card->quantity) {
+                $card->replicate()->fill(['board' => $board, 'quantity' => $copies])->save();
+            }
+
+            if ($target && $copies >= $card->quantity) {
+                $card->delete();
+            } elseif (! $target && $copies >= $card->quantity) {
+                $card->update(['board' => $board]); // Moveu tudo: a mesma linha só troca de lado.
+            } else {
+                $card->decrement('quantity', $copies);
+            }
+
+            return $copies;
+        });
+    }
+
+    /**
      * Importa uma decklist no formato usado por Arena/Moxfield/MTGO:
      *   4 Lightning Bolt
      *   1x Sol Ring (CMM) 395
@@ -52,7 +85,7 @@ class DeckBuilderService
         $parsed = $this->parse($list, blankLineStartsSideboard: ! $deck->isCommander());
         if ($parsed === []) return ['added' => 0, 'missing' => []];
 
-        $lookup = $this->scryfall->collection(array_column($parsed, 'name'));
+        $lookup = $this->scryfall->collection($parsed);
         $missing = [];
         $added = 0;
 
@@ -60,7 +93,7 @@ class DeckBuilderService
             if ($replace) $deck->cards()->delete();
 
             foreach ($parsed as $line) {
-                $card = $lookup['found'][mb_strtolower($line['name'])] ?? null;
+                $card = ScryfallClient::pick($lookup['found'], $line['name'], $line['set'] ?? null);
                 if (! $card) {
                     $missing[] = $line['name'];
                     continue;
@@ -104,7 +137,8 @@ class DeckBuilderService
 
             if ($board === 'skip') continue;
 
-            // Remove "(SET) 123", "*F*" e marcadores de foil.
+            // Separa "(SET) 123" do nome e remove "*F*" e marcadores de foil. O set indicado é respeitado na importação.
+            $set = preg_match('/\s+\(([A-Z0-9]{2,6})\)(\s+[\w-]+)?(\s+\*[A-Z]+\*)?$/i', $match[3], $setMatch) ? strtoupper($setMatch[1]) : null;
             $name = trim(preg_replace('/\s+\([A-Z0-9]{2,6}\)(\s+[\w-]+)?(\s+\*[A-Z]+\*)?$/i', '', $match[3]));
             $name = trim(preg_replace('/\s+\*[A-Z]+\*$/i', '', $name));
             if ($name === '' || mb_strlen($name) > 150) continue;
@@ -113,6 +147,7 @@ class DeckBuilderService
                 'quantity' => max(1, min(self::MAX_COPIES, (int) $match[2])),
                 'name' => $name,
                 'board' => $match[1] ? DeckCard::BOARD_SIDE : $board,
+                ...($set ? ['set' => $set] : []),
             ];
 
             if (count($lines) >= self::MAX_IMPORT_LINES) break;

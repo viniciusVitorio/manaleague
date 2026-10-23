@@ -20,6 +20,9 @@ use Illuminate\View\View;
 
 class PlayerProfileController extends Controller
 {
+    /** Só as colunas que a tag "Coleção única" precisa (evita uma consulta por deck na lista). */
+    private const SINGLE_SET_CARDS = 'cards:id,deck_id,board,set_code,quantity,type_line';
+
     public function __construct(
         private readonly PlayerStatsService $stats,
         private readonly AchievementService $achievements,
@@ -38,7 +41,7 @@ class PlayerProfileController extends Controller
         $friendRequests = $profile->friendedBy()->wherePivot('status', FriendshipService::PENDING)->with('playerProfile')->get();
         $friendshipStatus = null;
 
-        $decks = $profile->decks()->withSum('cards', 'quantity')->orderByDesc('is_primary')->orderBy('name')->get();
+        $decks = $profile->decks()->withSum('cards', 'quantity')->with(self::SINGLE_SET_CARDS)->orderByDesc('is_primary')->orderBy('name')->get();
         $friendsCount = $this->friendships->friends($request->user())->count();
         $showPreferredDeck = true;
 
@@ -62,9 +65,9 @@ class PlayerProfileController extends Controller
 
         $friendshipStatus = $this->friendships->status($user, $profile);
         if ($isOwner) {
-            $decks = $profile->decks()->withSum('cards', 'quantity')->orderByDesc('is_primary')->orderBy('name')->get();
+            $decks = $profile->decks()->withSum('cards', 'quantity')->with(self::SINGLE_SET_CARDS)->orderByDesc('is_primary')->orderBy('name')->get();
         } elseif ($friendshipStatus === FriendshipService::ACCEPTED) {
-            $decks = $profile->decks()->where('is_visible_to_friends', true)->withSum('cards', 'quantity')->orderByDesc('is_primary')->orderBy('name')->get();
+            $decks = $profile->decks()->where('is_visible_to_friends', true)->withSum('cards', 'quantity')->with(self::SINGLE_SET_CARDS)->orderByDesc('is_primary')->orderBy('name')->get();
         } else {
             $decks = collect();
         }
@@ -102,7 +105,7 @@ class PlayerProfileController extends Controller
 
     public function edit(Request $request): View
     {
-        $profile = $this->ownProfile($request)->load(['decks' => fn ($query) => $query->withSum('cards', 'quantity')]);
+        $profile = $this->ownProfile($request)->load(['decks' => fn ($query) => $query->withSum('cards', 'quantity')->with(self::SINGLE_SET_CARDS)]);
 
         return view('players.edit', compact('profile'));
     }
