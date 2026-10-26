@@ -5,6 +5,24 @@
 
 <div class="profile-columns">
 <div>
+    <section class="card section-card" id="foto"><h2>Foto de perfil</h2>
+        @error('photo')<div class="alert alert-danger" role="alert">{{ $message }}</div>@enderror
+        <div class="avatar-upload">
+            <x-avatar :of="$profile" class="profile-avatar large" />
+            <div class="avatar-upload-actions">
+                <form method="POST" action="{{ route('profiles.photo.update') }}" enctype="multipart/form-data">@csrf
+                    <label>Escolher foto <small>JPG, PNG ou WebP até {{ intdiv((int) config('avatars.max_kilobytes'), 1024) }} MB. Recortamos no centro em {{ config('avatars.size') }}×{{ config('avatars.size') }} e removemos os metadados (como localização).</small>
+                        <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required></label>
+                    <button class="btn btn-primary">Enviar foto</button>
+                </form>
+                @if($profile->avatar_path)
+                    <form method="POST" action="{{ route('profiles.photo.destroy') }}">@csrf @method('DELETE')<button class="btn btn-ghost">Remover foto</button></form>
+                @endif
+            </div>
+        </div>
+        <p class="muted small-note">Sem foto, usamos o emoji abaixo (ou a inicial do apelido).</p>
+    </section>
+
     <section class="card section-card"><h2>Dados pessoais</h2>
         <form method="POST" action="{{ route('profiles.update') }}">@csrf @method('PATCH')
             <label>Apelido<input name="nickname" value="{{ old('nickname', $profile->nickname) }}" maxlength="80" required></label>

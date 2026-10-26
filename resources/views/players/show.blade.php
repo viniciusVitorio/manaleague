@@ -9,7 +9,7 @@
     <div>
         <a class="back-link" href="{{ $isOwner ? route('tournaments.index') : route('friends.index') }}">← {{ $isOwner ? 'Torneios' : 'Amigos' }}</a>
         <div class="profile-title">
-            <span class="profile-avatar large">{{ $profile->mark() }}</span>
+            <x-avatar :of="$profile" class="profile-avatar large" />
             <div>
                 <span class="eyebrow">{{ $isOwner ? 'Meu perfil' : 'Perfil do jogador' }}</span>
                 <h1>{{ $profile->nickname }}</h1>
@@ -28,7 +28,7 @@
                         <div class="friends-pop-panel" role="list">
                         @foreach($profileFriends as $person)
                             <div class="friends-pop-row" role="listitem">
-                                <span class="profile-avatar">{{ $person->mark() }}</span>
+                                <x-avatar :of="$person" class="profile-avatar" />
                                 <span class="friends-pop-name">@if($person->friend_state === 'me'){{ $person->nickname }}<small>Você</small>@else<a href="{{ route('profiles.show', $person) }}">{{ $person->nickname }}</a><small>{{ $person->friend_state === 'friend' ? 'Amigo em comum' : ($person->friend_state === 'sent' ? 'Pedido enviado' : 'Amigo de '.$profile->nickname) }}</small>@endif</span>
                                 @if($person->friend_state === 'incoming')<form method="POST" action="{{ route('friends.accept-code', $person->friend_code) }}">@csrf @method('PATCH')<button class="ui-btn ui-btn-outline ui-btn-sm">Aceitar</button></form>
                                 @elseif($person->friend_state === 'none')<form method="POST" action="{{ route('friends.store', $person->friend_code) }}">@csrf<button class="ui-btn ui-btn-ghost ui-btn-sm" aria-label="Adicionar {{ $person->nickname }}"><x-icon name="user-plus" /></button></form>@endif

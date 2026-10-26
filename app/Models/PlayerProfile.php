@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\AvatarService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -27,6 +28,12 @@ class PlayerProfile extends Model
     public function mark(): string
     {
         return $this->avatar ?: mb_strtoupper(mb_substr($this->nickname ?: '?', 0, 1));
+    }
+
+    /** URL da foto de perfil (assinada no S3) ou null quando nao ha foto. */
+    public function avatarUrl(): ?string
+    {
+        return app(AvatarService::class)->url($this->avatar_path);
     }
 
     /** Apelido com o emoji do perfil na frente, quando houver. */
