@@ -245,3 +245,8 @@ input[type=radio]:checked::before{transform:scale(1)}
 .profile-hero.card + .stat-grid, .profile-hero.card + .unlock-banner { margin-top: 0; }
 @media (max-width: 780px) { .profile-hero.card { align-items: stretch; padding: 16px; } .profile-hero.card .profile-title { gap: 14px; } }
 @media (max-width: 780px) { .profile-hero.card .profile-title { align-items: flex-start; } .profile-hero.card .deck-actions { justify-content: flex-start; } }
+/* Acao unica do card de perfil: canto superior direito, nunca centralizada ao lado do conteudo */
+.profile-hero.card { position: relative; }
+.profile-hero-action { align-self: flex-start; flex: 0 0 auto; }
+.profile-hero-action form { margin: 0; }
+@media (max-width: 780px) { .profile-hero-action { position: absolute; top: 12px; right: 12px; } }
