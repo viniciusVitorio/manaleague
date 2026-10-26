@@ -5,9 +5,9 @@
     $unlocked = $achievements->where('unlocked', true);
     $fresh = $achievements->where('is_new', true);
 @endphp
-<header class="profile-hero">
+<a class="back-link" href="{{ $isOwner ? route('tournaments.index') : route('friends.index') }}">← {{ $isOwner ? 'Torneios' : 'Amigos' }}</a>
+<header class="profile-hero card">
     <div>
-        <a class="back-link" href="{{ $isOwner ? route('tournaments.index') : route('friends.index') }}">← {{ $isOwner ? 'Torneios' : 'Amigos' }}</a>
         <div class="profile-title">
             <x-avatar :of="$profile" class="profile-avatar large" />
             <div>

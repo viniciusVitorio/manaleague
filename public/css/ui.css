@@ -238,3 +238,10 @@ input[type=radio]:checked::before{transform:scale(1)}
 .profile-avatar.large.has-photo { width: 104px; height: 104px; border-radius: 16px; }
 .ui-avatar-btn .ui-avatar.has-photo { width: 34px; height: 34px; }
 @media (max-width: 480px) { .profile-avatar.large.has-photo { width: 80px; height: 80px; border-radius: 14px; } }
+
+/* Cabecalho do perfil como card: foto, nome e acoes ficam dentro do mesmo grid dos cards de baixo */
+.profile-hero.card { align-items: center; padding: 20px; margin-bottom: 12px; }
+.profile-hero.card .profile-title { align-items: center; gap: 20px; }
+.profile-hero.card + .stat-grid, .profile-hero.card + .unlock-banner { margin-top: 0; }
+@media (max-width: 780px) { .profile-hero.card { align-items: stretch; padding: 16px; } .profile-hero.card .profile-title { gap: 14px; } }
+@media (max-width: 780px) { .profile-hero.card .profile-title { align-items: flex-start; } .profile-hero.card .deck-actions { justify-content: flex-start; } }
