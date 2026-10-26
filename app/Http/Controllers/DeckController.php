@@ -119,6 +119,8 @@ class DeckController extends Controller
         DB::transaction(function () use ($deck, $validated): void {
             if ($validated['is_primary'] ?? false) $deck->profile->decks()->whereKeyNot($deck->id)->update(['is_primary' => false]);
             $deck->update($validated);
+            // Deck que ficou privado sai da vitrine do perfil (lá só entram decks que os amigos podem ver).
+            if (! $deck->is_visible_to_friends && $deck->showcase_position) $deck->forceFill(['showcase_position' => null])->save();
             // Com cartas cadastradas, as cores vem da identidade de cor delas.
             $this->builder->syncColors($deck);
             if ($deck->is_primary) $this->syncPrimary($deck->fresh());

@@ -21,7 +21,8 @@ use Illuminate\View\View;
 class PlayerProfileController extends Controller
 {
     /** Só as colunas que a tag "Coleção única" precisa (evita uma consulta por deck na lista). */
-    private const SINGLE_SET_CARDS = 'cards:id,deck_id,board,set_code,quantity,type_line';
+    // Colunas das cartas usadas no perfil: selo de coleção única e capa do deck.
+    private const SINGLE_SET_CARDS = 'cards:id,deck_id,board,set_code,quantity,type_line,art_url,cmc';
 
     public function __construct(
         private readonly PlayerStatsService $stats,
@@ -47,7 +48,9 @@ class PlayerProfileController extends Controller
 
         $ranked = $this->ranked($profile, $profile->account_user_id === $request->user()->id);
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck', 'ranked'));
+        $showcase = $this->showcase($decks, $summary, true);
+
+        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked'));
     }
 
     public function show(Request $request, PlayerProfile $profile): View
@@ -80,7 +83,9 @@ class PlayerProfileController extends Controller
         // Fichario de trocas: so amigos aceitos (e o dono) veem.
         $tradeBinder = ($isOwner || $friendshipStatus === FriendshipService::ACCEPTED) ? app(CollectionService::class)->tradeBinder($profile->account_user_id) : null;
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'friendsCount', 'showPreferredDeck', 'ranked', 'profileFriends', 'tradeBinder'));
+        $showcase = $this->showcase($decks, $summary, $isOwner);
+
+        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked', 'profileFriends', 'tradeBinder'));
     }
 
     /** Patente por formato (temporadas em andamento) + historico. Visivel para quem pode ver o perfil. */
@@ -101,6 +106,44 @@ class PlayerProfileController extends Controller
 
         return ['ratings' => $ratings, 'history' => $history, 'snapshots' => $snapshots, 'activeFormats' => $activeFormats, 'currentSeason' => $currentSeason,
             'start' => (int) config('ranked.defaults.starting_rating'), 'tiers' => app(RankTierResolver::class)];
+    }
+
+    /**
+     * Vitrine do perfil: até 3 decks escolhidos pelo jogador (só decks visíveis para amigos).
+     * Enquanto ele não escolhe nenhum, quem visita vê o principal e os próximos visíveis ("auto").
+     * O dono sempre vê os 3 espaços reais (vazios com "+") e a lista de decks para escolher.
+     *
+     * @return array{slots: array<int, ?array>, auto: bool, others: \Illuminate\Support\Collection, pickable: \Illuminate\Support\Collection, total: int}
+     */
+    private function showcase($decks, array $summary, bool $isOwner): array
+    {
+        $builder = app(\App\Services\DeckBuilderService::class);
+        $card = fn (\App\Models\Deck $deck) => [
+            'deck' => $deck, 'cards' => (int) $deck->cards_sum_quantity, 'cover' => $builder->coverOf($deck),
+            'single_set' => $deck->singleSet(), 'record' => $summary['deck_records'][$deck->id] ?? null,
+        ];
+        $decks = collect($decks);
+        $visible = $decks->where('is_visible_to_friends', true);
+        $chosen = $visible->filter(fn ($d) => $d->showcase_position >= 1 && $d->showcase_position <= \App\Models\Deck::SHOWCASE_SLOTS)->keyBy('showcase_position');
+
+        $auto = $chosen->isEmpty() && ! $isOwner;
+        $slots = [];
+        $autoDecks = $auto ? $visible->take(\App\Models\Deck::SHOWCASE_SLOTS)->values() : collect(); // já vem com o principal primeiro
+        foreach (range(1, \App\Models\Deck::SHOWCASE_SLOTS) as $i) {
+            $deck = $auto ? $autoDecks->get($i - 1) : $chosen->get($i);
+            $slots[$i] = $deck ? $card($deck) : null;
+        }
+        $shown = collect($slots)->filter()->map(fn ($d) => $d['deck']->id);
+
+        return [
+            'slots' => $slots,
+            'auto' => $auto,
+            'total' => $decks->count(),
+            // Visitante: os outros decks visíveis ficam num "ver mais".
+            'others' => $isOwner ? collect() : $visible->reject(fn ($d) => $shown->contains($d->id))->map($card)->values(),
+            // Dono: decks para o seletor (privados aparecem desabilitados).
+            'pickable' => $isOwner ? $decks->map($card)->values() : collect(),
+        ];
     }
 
     public function edit(Request $request): View

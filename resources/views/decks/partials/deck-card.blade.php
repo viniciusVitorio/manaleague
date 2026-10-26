@@ -14,6 +14,7 @@
         <span class="deck-card-tags">
             @if($deck->is_primary)<span class="deck-tag is-primary">★ Principal</span>@endif
             @if($manage && ! $deck->is_visible_to_friends)<span class="deck-tag"><x-icon name="lock" :size="11" />Privado</span>@endif
+            @if($manage && $deck->showcase_position)<span class="deck-tag" title="Aparece na vitrine do seu perfil">Na vitrine</span>@endif
         </span>
     </a>
     <div class="deck-card-body">

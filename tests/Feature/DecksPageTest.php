@@ -81,6 +81,84 @@ class DecksPageTest extends TestCase
         $this->delete(route('decks.destroy', $extra))->assertRedirect(route('decks.index'));
     }
 
+    public function test_profile_shows_decks_and_history_before_achievements(): void
+    {
+        $user = $this->user();
+        $user->playerProfile->decks()->create(['name' => 'Burn', 'format' => 'Pauper']);
+
+        $this->actingAs($user)->get(route('profiles.index'))->assertOk()
+            ->assertSeeInOrder(['<h2>Vitrine de decks', 'Decks nos torneios', 'Campeonatos', 'Conquistas'], false);
+    }
+
+    /** @return array{0: User, 1: User, 2: \App\Models\Deck, 3: \App\Models\Deck, 4: \App\Models\Deck} */
+    private function friendsWithDecks(): array
+    {
+        [$ana, $bia] = [$this->user(), User::factory()->create()];
+        $bia->ensurePlayerProfile();
+        $ana->friendProfiles()->attach($bia->playerProfile, ['status' => 'accepted']);
+        $bia->friendProfiles()->attach($ana->playerProfile, ['status' => 'accepted']);
+        $burn = $ana->playerProfile->decks()->create(['name' => 'Burn', 'format' => 'Pauper', 'is_primary' => true, 'is_visible_to_friends' => true]);
+        $burn->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Fireblast', 'quantity' => 4, 'board' => 'main', 'type_line' => 'Instant', 'cmc' => 6,
+            'art_url' => 'https://cards.scryfall.io/art_crop/front/a/0/fireblast.jpg']);
+        $elves = $ana->playerProfile->decks()->create(['name' => 'Elfos', 'format' => 'Pauper', 'is_visible_to_friends' => true]);
+        $secret = $ana->playerProfile->decks()->create(['name' => 'Rascunho Secreto', 'is_visible_to_friends' => false]);
+
+        return [$ana->fresh(), $bia->fresh(), $burn, $elves, $secret];
+    }
+
+    public function test_empty_showcase_shows_dashed_slots_to_owner_and_auto_fills_for_friends(): void
+    {
+        [$ana, $bia] = $this->friendsWithDecks();
+        CollectionItem::create(['user_id' => $ana->id, 'scryfall_id' => (string) Str::uuid(), 'name' => 'Fireblast', 'quantity' => 4, 'condition' => 'NM']);
+
+        $owner = $this->actingAs($ana)->get(route('profiles.index'))->assertOk()->assertSee('Vitrine de decks')
+            ->assertSee('Enquanto a vitrine estiver vazia')->assertSee('Escolher deck para a vitrine')->assertSee('Gerenciar decks');
+        $this->assertSame(3, substr_count($owner->getContent(), 'class="showcase-empty"'));
+
+        // amigo: principal + próximos visíveis, sem privados, sem botões e sem a % da coleção
+        $friend = $this->actingAs($bia)->get(route('profiles.show', $ana->playerProfile))->assertOk()
+            ->assertSee('fireblast.jpg', false)->assertSeeInOrder(['Burn', 'Elfos'])->assertDontSee('Rascunho Secreto')
+            ->assertDontSee('showcase-empty', false)->assertDontSee('Gerenciar decks')->assertDontSee('Na coleção')->assertDontSee('showcase-picker', false);
+    }
+
+    public function test_owner_picks_moves_and_removes_showcase_decks(): void
+    {
+        [$ana, $bia, $burn, $elves, $secret] = $this->friendsWithDecks();
+        $this->actingAs($ana);
+
+        $this->put(route('showcase.update', 1), ['deck_id' => $elves->id])->assertRedirect(route('profiles.index').'#vitrine')->assertSessionHas('status');
+        $this->assertSame(1, $elves->fresh()->showcase_position);
+
+        // escolhido: o amigo vê só o que está na vitrine; os outros ficam em "Ver mais"
+        $this->actingAs($bia)->get(route('profiles.show', $ana->playerProfile))->assertSeeInOrder(['Elfos', 'Ver mais 1 deck', 'Burn']);
+
+        // outro deck no mesmo espaço substitui; o mesmo deck em outro espaço muda de lugar
+        $this->actingAs($ana)->put(route('showcase.update', 1), ['deck_id' => $burn->id]);
+        $this->assertSame([1, null], [$burn->fresh()->showcase_position, $elves->fresh()->showcase_position]);
+        $this->put(route('showcase.update', 3), ['deck_id' => $burn->id]);
+        $this->assertSame(3, $burn->fresh()->showcase_position);
+
+        $this->delete(route('showcase.destroy', 3))->assertRedirect();
+        $this->assertNull($burn->fresh()->showcase_position);
+        $this->put(route('showcase.update', 4), ['deck_id' => $burn->id])->assertNotFound(); // só existem 3 espaços
+    }
+
+    public function test_private_and_foreign_decks_cannot_enter_the_showcase(): void
+    {
+        [$ana, $bia, $burn, $elves, $secret] = $this->friendsWithDecks();
+        $biaDeck = $bia->playerProfile->decks()->create(['name' => 'Deck da Bia', 'is_visible_to_friends' => true]);
+
+        $this->actingAs($ana)->put(route('showcase.update', 1), ['deck_id' => $secret->id])->assertSessionHasErrors('deck_id');
+        $this->put(route('showcase.update', 1), ['deck_id' => $biaDeck->id])->assertSessionHasErrors('deck_id');
+        $this->assertNull($secret->fresh()->showcase_position);
+        $this->assertNull($biaDeck->fresh()->showcase_position);
+
+        // deck na vitrine que fica privado sai dela
+        $this->put(route('showcase.update', 2), ['deck_id' => $elves->id]);
+        $this->patch(route('decks.update', $elves), ['name' => 'Elfos', 'format' => 'Pauper', 'is_visible_to_friends' => 0])->assertRedirect();
+        $this->assertNull($elves->fresh()->showcase_position);
+    }
+
     public function test_decks_page_requires_login(): void
     {
         $this->get('/me/decks')->assertRedirect('/login');
