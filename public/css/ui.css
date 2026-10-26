@@ -234,3 +234,7 @@ input[type=radio]:checked::before{transform:scale(1)}
 .avatar-upload-actions { display: grid; gap: 8px; flex: 1; min-width: 0; }
 .avatar-upload-actions input[type=file] { margin-top: 6px; max-width: 100%; }
 @media (max-width: 480px) { .avatar-upload { flex-direction: column; } }
+/* Com foto o avatar grande (perfil/edicao) cresce para a imagem aparecer; o do cabecalho preenche o botao */
+.profile-avatar.large.has-photo { width: 104px; height: 104px; border-radius: 16px; }
+.ui-avatar-btn .ui-avatar.has-photo { width: 34px; height: 34px; }
+@media (max-width: 480px) { .profile-avatar.large.has-photo { width: 80px; height: 80px; border-radius: 14px; } }
