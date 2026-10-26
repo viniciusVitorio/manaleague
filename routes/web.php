@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\DeckCardController;
 use App\Http\Controllers\DeckController;
 use App\Http\Controllers\FriendController;
@@ -29,6 +30,10 @@ foreach (['competition', 'live', 'deck-tools', 'community', 'challenges', 'ranke
 
 Route::view('/', 'welcome')->name('home');
 Route::get('/t/{slug}', PublicArenaController::class)->middleware('throttle:60,1')->name('arena.public');
+// Foto de perfil no disco local (dev/testes); com S3 redireciona para a URL assinada.
+Route::get('/avatars/{file}', [AvatarController::class, 'show'])
+    ->where('file', '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webp')
+    ->name('avatars.show');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -51,6 +56,8 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/me/profile', [PlayerProfileController::class, 'index'])->name('profiles.index');
     Route::get('/me/profile/edit', [PlayerProfileController::class, 'edit'])->name('profiles.edit');
     Route::patch('/me/profile', [PlayerProfileController::class, 'update'])->name('profiles.update');
+    Route::post('/me/profile/photo', [AvatarController::class, 'update'])->middleware('throttle:10,1')->name('profiles.photo.update');
+    Route::delete('/me/profile/photo', [AvatarController::class, 'destroy'])->middleware('throttle:10,1')->name('profiles.photo.destroy');
     Route::put('/me/password', [PasswordController::class, 'update'])->middleware('throttle:5,1')->name('password.change');
     Route::patch('/me/preferences', [\App\Http\Controllers\PreferencesController::class, 'update'])->name('preferences.update');
     Route::patch('/me/preferences/theme', [\App\Http\Controllers\PreferencesController::class, 'toggleTheme'])->name('preferences.theme');

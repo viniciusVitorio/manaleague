@@ -29,7 +29,7 @@
         @endif
         @forelse($posts as $post)
             <article @class(['post', 'is-pinned' => $post->pinned])>
-                <span class="ui-avatar" aria-hidden="true">{{ $post->author->avatarMark() }}</span>
+                <x-avatar :of="$post->author" class="ui-avatar" aria-hidden="true" />
                 <div class="post-body">
                     <p class="post-head"><strong>{{ $post->author->playerProfile?->nickname ?? $post->author->name }}</strong> <time datetime="{{ $post->created_at->toIso8601String() }}">{{ $post->created_at->diffForHumans() }}</time>@if($post->pinned) <x-ui.badge tone="info"><x-icon name="pin" size="11" />Fixado</x-ui.badge>@endif</p>
                     <p class="post-text">{{ $post->body }}</p>
@@ -114,7 +114,7 @@
         @foreach($members as $member)
             @php($nick = $member->playerProfile?->nickname ?? $member->name)
             <div class="member-row">
-                <span class="ui-avatar" aria-hidden="true">{{ $member->avatarMark() }}</span>
+                <x-avatar :of="$member" class="ui-avatar" aria-hidden="true" />
                 <span class="member-name">@if($member->playerProfile && $member->id !== auth()->id())<a href="{{ route('profiles.show', $member->playerProfile) }}">{{ $nick }}</a>@else{{ $nick }}@endif<small>{{ ['owner' => 'Dono', 'organizer' => 'Organizador', 'member' => 'Membro'][$member->pivot->role] }}{{ $member->id === auth()->id() ? ' · você' : '' }}</small></span>
                 @if($member->pivot->role !== 'owner')
                     @if($role === 'owner' || ($manage && $member->pivot->role === 'member') || $member->id === auth()->id())

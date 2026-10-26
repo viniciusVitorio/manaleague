@@ -45,6 +45,12 @@ class User extends Authenticatable
         return $this->playerProfile?->mark() ?? mb_strtoupper(mb_substr($this->name ?: '?', 0, 1));
     }
 
+    /** URL da foto do perfil (null sem foto). */
+    public function avatarUrl(): ?string
+    {
+        return $this->playerProfile?->avatarUrl();
+    }
+
     /** Apelido do perfil (com emoji) ou nome da conta. */
     public function displayName(): string
     {

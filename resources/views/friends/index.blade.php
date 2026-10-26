@@ -15,7 +15,7 @@
             @forelse($results as $person)
                 @php($state = $statusById[$person->id] ?? null)
                 <div class="person-row">
-                    <span class="profile-avatar">{{ $person->mark() }}</span>
+                    <x-avatar :of="$person" class="profile-avatar" />
                     <div class="person-info"><strong>{{ $person->nickname }}</strong><small>{{ $person->preferred_deck_name ?: 'Deck principal não informado' }}</small></div>
                     @if($state === 'friend')<span class="pill pill-ok">Amigos</span>
                     @elseif($state === 'sent')<span class="pill">Pedido enviado</span>
@@ -35,7 +35,7 @@
         <div class="people-list">
         @foreach($incoming as $person)
             <div class="person-row">
-                <span class="profile-avatar">{{ $person->mark() }}</span>
+                <x-avatar :of="$person" class="profile-avatar" />
                 <div class="person-info"><strong>{{ $person->nickname }}</strong><small>quer ser seu amigo</small></div>
                 <div class="deck-actions">
                     <form method="POST" action="{{ route('friends.accept-code', $person->friend_code) }}">@csrf @method('PATCH')<button class="btn btn-small btn-primary">Aceitar</button></form>
@@ -53,7 +53,7 @@
         <div class="people-list">
         @foreach($suggestions as $s)
             <div class="person-row">
-                <span class="profile-avatar">{{ $s['profile']->mark() }}</span>
+                <x-avatar :of="$s['profile']" class="profile-avatar" />
                 <div class="person-info"><a href="{{ route('profiles.show', $s['profile']) }}"><strong>{{ $s['profile']->nickname }}</strong></a><small>{{ $s['mutual']->count() === 1 ? 'Amigo de '.$s['mutual'][0]->nickname : $s['mutual']->count().' amigos em comum: '.$s['mutual']->take(2)->pluck('nickname')->join(', ').($s['mutual']->count() > 2 ? '…' : '') }}</small></div>
                 <form method="POST" action="{{ route('friends.store', $s['profile']->friend_code) }}">@csrf<button class="btn btn-small btn-secondary">Adicionar</button></form>
             </div>
@@ -67,7 +67,7 @@
         <div class="people-list">
         @forelse($friends as $friend)
             <div class="person-row">
-                <span class="profile-avatar">{{ $friend->mark() }}</span>
+                <x-avatar :of="$friend" class="profile-avatar" />
                 <div class="person-info"><a href="{{ route('profiles.show', $friend) }}"><strong>{{ $friend->nickname }}</strong></a><small>{{ $friend->preferred_deck_name ?: 'Deck principal não informado' }}@if($friend->preferred_deck_colors) · @include('partials.color-pips', ['colors' => $friend->preferred_deck_colors])@endif</small></div>
                 <div class="deck-actions">
                     <a class="btn btn-small btn-ghost" href="{{ route('profiles.show', $friend) }}">Ver perfil</a>

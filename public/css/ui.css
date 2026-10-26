@@ -245,24 +245,4 @@ input[type=radio]:checked::before{transform:scale(1)}
 .life-cta small { color: var(--ui-fg-muted, var(--ui-fg-muted)); }
 
 /* Concessao manual de conquista especial (admin) */
-.admin-grant { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--ui-border, var(--ui-border)); }
-
-/* ---------- Mostrar/ocultar senha ---------- */
-.pw-field{position:relative;display:block;margin-top:6px}
-.pw-field input{margin-top:0!important;padding-right:44px!important}
-.pw-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:inline-grid;place-items:center;width:34px;height:32px;padding:0;border:0;border-radius:var(--ui-radius-sm);background:transparent;color:var(--ui-fg-subtle);cursor:pointer}
-.pw-toggle:hover{color:var(--ui-fg);background:var(--ui-muted)}
-.pw-toggle:focus-visible{outline:2px solid var(--ui-ring);outline-offset:0}
-input::-ms-reveal{display:none}
-
-/* ---------- Preferências: escolha do tema ---------- */
-.pref-group{border:0;padding:0;margin:0 0 16px}
-.pref-group legend{padding:0;margin-bottom:8px;font-weight:600;font-size:.88rem}
-.theme-options{display:flex;flex-wrap:wrap;gap:10px}
-.theme-option{display:flex!important;align-items:center;gap:10px;margin:0;padding:10px 12px;border:1px solid var(--ui-border);border-radius:var(--ui-radius);cursor:pointer;font-size:.88rem}
-.theme-option:has(input:checked){border-color:var(--ui-fg-subtle);background:var(--ui-muted)}
-.theme-swatch{display:inline-flex;width:34px;height:22px;border-radius:5px;overflow:hidden;border:1px solid var(--ui-border-strong)}
-.theme-swatch span{flex:1}
-.theme-option-dark .theme-swatch span:first-child{background:#09090b}.theme-option-dark .theme-swatch span:last-child{background:#27272a}
-.theme-option-light .theme-swatch span:first-child{background:#fafafa}.theme-option-light .theme-swatch span:last-child{background:#e4e4e7}
-.theme-toggle{margin:0;display:inline-flex}
+.admin-grant { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--ui-border, #27272a); }
