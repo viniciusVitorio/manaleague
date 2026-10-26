@@ -47,6 +47,11 @@ class PreferencesTest extends TestCase
         $this->withCookie('ml_theme', 'qualquer')->get('/login')->assertSee('data-theme="dark"', false);
     }
 
+    public function test_password_fields_load_the_reveal_script(): void
+    {
+        $this->get('/login')->assertSee('js/password-toggle.js', false)->assertSee('type="password"', false);
+    }
+
     public function test_preferences_require_login(): void
     {
         $this->patch('/me/preferences', ['theme' => 'light'])->assertRedirect('/login');

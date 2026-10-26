@@ -15,6 +15,7 @@
     <link rel="manifest" href="{{ asset('site.webmanifest') }}">
     <meta name="theme-color" content="{{ $theme === 'light' ? '#fafafa' : '#09090b' }}">
     <script src="{{ \App\Support\VersionedAsset::url('js/nav.js') }}" defer></script>
+    <script src="{{ \App\Support\VersionedAsset::url('js/password-toggle.js') }}" defer></script>
     <script src="{{ \App\Support\VersionedAsset::url('js/release-notice.js') }}" defer></script>
     @stack('head')
 </head>
