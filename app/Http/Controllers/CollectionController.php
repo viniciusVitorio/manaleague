@@ -126,6 +126,15 @@ class CollectionController extends Controller
         return redirect()->to(($sameSite ? $previous : route('collection.index')).($item ? '#item-'.$item->id : ''));
     }
 
+    /** Liga/desliga o "você tem X/Y" nas cartas dos próprios decks. */
+    public function toggleDeckOwnership(Request $request)
+    {
+        $data = $request->validate(['show' => ['required', 'boolean']]);
+        $request->user()->forceFill(['show_deck_ownership' => (bool) $data['show']])->save();
+
+        return back()->with('status', $data['show'] ? 'Mostrando quantas cópias você tem na coleção.' : 'Indicador da coleção oculto nos decks.');
+    }
+
     public function addMissing(Request $request, Deck $deck, CollectionService $service)
     {
         abort_unless($deck->player_profile_id === $request->user()->ensurePlayerProfile()->id, 404);

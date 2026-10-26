@@ -31,7 +31,18 @@ class DeckController extends Controller
         $deck->load('profile');
         $summary = $this->builder->summary($deck);
 
-        return view('decks.show', compact('deck', 'summary', 'isOwner'));
+        // Dono: quantas cópias de cada carta ele tem na coleção, contra o total pedido no deck (main + side + comandante).
+        // Só para quem usa a coleção (tem algum item) e não desligou a opção.
+        $owned = collect();
+        $needed = collect();
+        $hasCollection = $isOwner && \App\Models\CollectionItem::where('user_id', $request->user()->id)->exists();
+        $showOwnership = $hasCollection && $request->user()->show_deck_ownership !== false;
+        if ($showOwnership) {
+            $owned = app(\App\Services\Decks\CollectionService::class)->ownedByName($request->user());
+            $needed = $deck->cards()->get()->groupBy(fn ($c) => mb_strtolower($c->name))->map(fn ($c) => (int) $c->sum('quantity'));
+        }
+
+        return view('decks.show', compact('deck', 'summary', 'isOwner', 'owned', 'needed', 'hasCollection', 'showOwnership'));
     }
 
 

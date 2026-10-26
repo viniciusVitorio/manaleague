@@ -229,7 +229,8 @@ class CollectionService
         return $userId ? CollectionItem::where('user_id', $userId)->where('for_trade', '>', 0)->orderBy('name')->get() : collect();
     }
 
-    private function ownedByName(User $user): Collection
+    /** Cópias na coleção por nome (minúsculo), somando impressões, acabamentos e condições. */
+    public function ownedByName(User $user): Collection
     {
         return CollectionItem::where('user_id', $user->id)->get()->groupBy(fn ($i) => mb_strtolower($i->name))->map(fn ($i) => (int) $i->sum('quantity'));
     }

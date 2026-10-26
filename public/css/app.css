@@ -156,6 +156,13 @@ details>summary::-webkit-details-marker{display:none}
 /* ===== Nome de carta longo (ex.: cartas duplas "A // B") ===== */
 .card-name{min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.3}
 .card-face,.card-back{display:block}
+/* Quantas cópias o dono tem na coleção */
+.owned-badge{display:inline-block;margin-left:6px;padding:0 5px;border-radius:999px;border:1px solid var(--ui-border-strong);font-size:.68rem;font-weight:600;line-height:1.5;vertical-align:1px;font-variant-numeric:tabular-nums;color:var(--ui-fg-muted)}
+.owned-badge.is-ok{color:#86efac;border-color:rgba(134,239,172,.35)}
+.owned-badge.is-some{color:#fbbf24;border-color:rgba(251,191,36,.35)}
+.owned-badge.is-none{color:var(--ui-fg-subtle);border-color:var(--ui-border)}
+.section-heading-side{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.ownership-toggle{margin:0}
 .card-back{color:#71717a;font-size:.78rem}
 .card-cost{flex-direction:column;align-items:flex-end;gap:3px}
 .cost-group{display:inline-flex;align-items:center}

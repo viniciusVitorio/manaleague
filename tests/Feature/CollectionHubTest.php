@@ -136,6 +136,40 @@ class CollectionHubTest extends TestCase
         $this->post(route('collection.missing.add', $deck), ['condition' => 'NM'])->assertNotFound();
     }
 
+    public function test_deck_page_shows_owned_copies_to_owner_only(): void
+    {
+        [$ana, $bia] = [$this->user('Ana'), $this->user('Bia')];
+        $ana->friendProfiles()->attach($bia->playerProfile, ['status' => 'accepted']);
+        $bia->friendProfiles()->attach($ana->playerProfile, ['status' => 'accepted']);
+        $deck = $ana->playerProfile->decks()->create(['name' => 'Burn', 'format' => 'Pauper', 'is_visible_to_friends' => true]);
+        $deck->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Lightning Bolt', 'quantity' => 3, 'board' => 'main']);
+        $deck->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Lightning Bolt', 'quantity' => 1, 'board' => 'side']);
+        $deck->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Sol Ring', 'quantity' => 1, 'board' => 'main']);
+        $this->item($ana, 'Lightning Bolt', ['quantity' => 2]);
+        $this->item($ana, 'Sol Ring', ['quantity' => 1, 'foil' => true]);
+
+        $this->actingAs($ana)->get(route('decks.show', $deck))->assertOk()
+            ->assertSee('owned-badge is-some', false)->assertSee('2/4')->assertSee('owned-badge is-ok', false)->assertSee('1/1');
+        $this->actingAs($bia)->get(route('decks.show', $deck))->assertOk()->assertDontSee('owned-badge', false);
+
+        // dono pode ocultar (e voltar a mostrar); a escolha fica salva na conta
+        $this->actingAs($ana)->patch(route('preferences.deck-ownership'), ['show' => 0])->assertRedirect();
+        $this->assertFalse($ana->fresh()->show_deck_ownership);
+        $this->actingAs($ana->fresh())->get(route('decks.show', $deck))->assertOk()->assertDontSee('owned-badge', false)->assertSee('Mostrar o que tenho');
+        $this->patch(route('preferences.deck-ownership'), ['show' => 1]);
+        $this->actingAs($ana->fresh())->get(route('decks.show', $deck))->assertSee('owned-badge', false)->assertSee('Ocultar minha coleção');
+    }
+
+    public function test_deck_owner_without_collection_sees_no_indicator_or_toggle(): void
+    {
+        $zeca = $this->user('Zeca');
+        $deck = $zeca->playerProfile->decks()->create(['name' => 'Elfos', 'format' => 'Pauper']);
+        $deck->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Llanowar Elves', 'quantity' => 4, 'board' => 'main']);
+
+        $this->actingAs($zeca)->get(route('decks.show', $deck))->assertOk()
+            ->assertDontSee('owned-badge', false)->assertDontSee('Ocultar minha coleção')->assertDontSee('Mostrar o que tenho');
+    }
+
     public function test_refresh_command_fills_missing_colors_from_scryfall(): void
     {
         $u = $this->user('Ana');
