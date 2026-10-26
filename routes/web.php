@@ -52,6 +52,8 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/me/profile/edit', [PlayerProfileController::class, 'edit'])->name('profiles.edit');
     Route::patch('/me/profile', [PlayerProfileController::class, 'update'])->name('profiles.update');
     Route::put('/me/password', [PasswordController::class, 'update'])->middleware('throttle:5,1')->name('password.change');
+    Route::patch('/me/preferences', [\App\Http\Controllers\PreferencesController::class, 'update'])->name('preferences.update');
+    Route::patch('/me/preferences/theme', [\App\Http\Controllers\PreferencesController::class, 'toggleTheme'])->name('preferences.theme');
 
     Route::get('/me/friends', [FriendController::class, 'index'])->middleware('throttle:60,1')->name('friends.index');
     Route::patch('/me/friends/privacy', [FriendController::class, 'privacy'])->name('friends.privacy');

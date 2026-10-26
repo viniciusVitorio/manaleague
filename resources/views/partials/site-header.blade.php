@@ -39,6 +39,10 @@
             <a class="ui-icon-btn" href="{{ route('notifications.index') }}" @if(request()->routeIs('notifications.*')) aria-current="page" @endif aria-label="Notificações{{ $unreadNotifications ? ', '.$unreadNotifications.' não lidas' : '' }}">
                 <x-icon name="bell" />@if($unreadNotifications)<span class="ui-count" aria-hidden="true">{{ $unreadNotifications > 99 ? '99+' : $unreadNotifications }}</span>@endif
             </a>
+            @php($isLight = \App\Support\Theme::current() === 'light')
+            <form method="POST" action="{{ route('preferences.theme') }}" class="theme-toggle">@csrf @method('PATCH')
+                <button class="ui-icon-btn" aria-label="{{ $isLight ? 'Mudar para o tema escuro' : 'Mudar para o tema claro' }}" title="{{ $isLight ? 'Tema escuro' : 'Tema claro' }}"><x-icon :name="$isLight ? 'moon' : 'sun'" /></button>
+            </form>
             <div class="ui-dropdown site-account">
                 <button type="button" class="ui-avatar-btn" data-menu-button aria-expanded="false" aria-controls="menu-account" aria-label="Conta de {{ $user->name }}">
                     <span class="ui-avatar">{{ $initial }}</span>@if($pendingFriends)<span class="ui-dot-alert" aria-hidden="true"></span>@endif
@@ -48,6 +52,7 @@
                     <a class="ui-menu-item" href="{{ route('profiles.index') }}"><x-icon name="user" />Meu perfil</a>
                     <a class="ui-menu-item" href="{{ route('friends.index') }}"><x-icon name="users" />Amigos @if($pendingFriends)<span class="ui-count ui-count-inline" aria-label="{{ $pendingFriends }} {{ $pendingFriends === 1 ? 'pedido de amizade pendente' : 'pedidos de amizade pendentes' }}">{{ $pendingFriends }}</span>@endif</a>
                     @if(config('ranked.enabled') && $user->isAdmin())<a class="ui-menu-item" href="{{ route('ranked.admin') }}"><x-icon name="flag" />Moderação</a>@endif
+                    <a class="ui-menu-item" href="{{ route('profiles.edit') }}#preferencias"><x-icon name="settings" />Preferências</a>
                     <div class="ui-menu-sep" role="separator"></div>
                     <form method="POST" action="{{ route('logout') }}">@csrf<button class="ui-menu-item"><x-icon name="log-out" />Sair</button></form>
                 </div>

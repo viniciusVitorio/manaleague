@@ -23,6 +23,28 @@
             <p class="muted small-note">Você receberá um e-mail de confirmação e as outras sessões serão encerradas.</p>
         </form>
     </section>
+
+    @php($me = auth()->user())
+    <section class="card section-card" id="preferencias"><h2>Preferências</h2>
+        <form method="POST" action="{{ route('preferences.update') }}">@csrf @method('PATCH')
+            <fieldset class="pref-group">
+                <legend>Tema</legend>
+                <div class="theme-options">
+                    @foreach(['dark' => 'Escuro', 'light' => 'Claro'] as $value => $label)
+                        <label class="theme-option theme-option-{{ $value }}">
+                            <input type="radio" name="theme" value="{{ $value }}" @checked(\App\Support\Theme::current() === $value)>
+                            <span class="theme-swatch" aria-hidden="true"><span></span><span></span></span>
+                            <span>{{ $label }}{{ $value === 'dark' ? ' (padrão)' : '' }}</span>
+                        </label>
+                    @endforeach
+                </div>
+            </fieldset>
+            <input type="hidden" name="show_deck_ownership" value="0">
+            <label class="check-label"><input type="checkbox" name="show_deck_ownership" value="1" @checked($me->show_deck_ownership !== false)> Mostrar nos meus decks quantas cópias tenho na coleção</label>
+            <p class="muted small-note">O contador “2/4” ao lado de cada carta. Só aparece se você tiver cartas cadastradas na coleção.</p>
+            <button class="btn btn-secondary">Salvar preferências</button>
+        </form>
+    </section>
 </div>
 
 <section class="card section-card"><span class="eyebrow">Seu arsenal</span><h2>Meus decks</h2>
