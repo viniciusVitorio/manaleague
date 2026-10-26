@@ -45,3 +45,8 @@ output "ses_next_steps" {
     3. Teste na EC2: sudo docker compose -p manaleague exec app php artisan mail:test seu@email.com
   EOT
 }
+
+output "avatar_bucket" {
+  description = "Bucket privado das fotos de perfil (use na variavel AVATAR_BUCKET do GitHub, com AVATAR_DISK=s3)."
+  value       = aws_s3_bucket.avatars.bucket
+}
