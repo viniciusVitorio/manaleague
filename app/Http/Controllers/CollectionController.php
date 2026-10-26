@@ -126,6 +126,15 @@ class CollectionController extends Controller
         return redirect()->to(($sameSite ? $previous : route('collection.index')).($item ? '#item-'.$item->id : ''));
     }
 
+    public function addMissing(Request $request, Deck $deck, CollectionService $service)
+    {
+        abort_unless($deck->player_profile_id === $request->user()->ensurePlayerProfile()->id, 404);
+        $data = $request->validate(['foil' => ['nullable', 'boolean'], 'condition' => ['required', Rule::in(CollectionItem::CONDITIONS)]]);
+        $added = $service->addMissing($request->user(), $deck, (bool) ($data['foil'] ?? false), $data['condition']);
+
+        return redirect()->route('collection.missing', $deck)->with('status', $added ? "{$added} cartas adicionadas à coleção. O deck está completo." : 'Nada faltando: o deck já está completo.');
+    }
+
     public function destroy(Request $request, CollectionItem $item)
     {
         abort_unless($item->user_id === $request->user()->id, 404);
@@ -149,7 +158,11 @@ class CollectionController extends Controller
         $request->validate(['exact' => ['nullable', 'boolean']]);
         $exact = $request->boolean('exact');
         $rows = $service->missing($request->user(), $deck, $exact);
+        $isOwner = $deck->player_profile_id === $request->user()->ensurePlayerProfile()->id;
+        // Lista pronta para colar em loja/LigaMagic: "4 Lightning Bolt" (com a edição no modo impressão exata).
+        $shoppingList = collect($rows)->where('missing', '>', 0)
+            ->map(fn ($r) => $r['missing'].' '.$r['name'].($exact && $r['printing'] ? ' ('.$r['printing'].')' : ''))->join("\n");
 
-        return view('decks.missing', compact('deck', 'rows', 'exact'));
+        return view('decks.missing', compact('deck', 'rows', 'exact', 'isOwner', 'shoppingList'));
     }
 }

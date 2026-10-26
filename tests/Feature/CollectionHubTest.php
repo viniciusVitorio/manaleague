@@ -110,6 +110,32 @@ class CollectionHubTest extends TestCase
         $this->assertNull($item->fresh());
     }
 
+    public function test_missing_page_shopping_list_and_add_missing_to_collection(): void
+    {
+        [$ana, $bia] = [$this->user('Ana'), $this->user('Bia')];
+        $ana->friendProfiles()->attach($bia->playerProfile, ['status' => 'accepted']);
+        $bia->friendProfiles()->attach($ana->playerProfile, ['status' => 'accepted']);
+        $deck = $ana->playerProfile->decks()->create(['name' => 'Burn', 'format' => 'Pauper', 'is_visible_to_friends' => true]);
+        $deck->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Lightning Bolt', 'quantity' => 4, 'board' => 'main', 'set_code' => 'M11', 'color_identity' => 'R', 'type_line' => 'Instant', 'rarity' => 'common']);
+        $deck->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Sol Ring', 'quantity' => 1, 'board' => 'main']);
+        $this->item($ana, 'Lightning Bolt', ['quantity' => 1]);
+
+        $this->actingAs($ana)->get(route('collection.missing', $deck))->assertOk()
+            ->assertSee("3 Lightning Bolt\n1 Sol Ring", false)->assertSee('Adicionar faltantes à coleção');
+        $this->post(route('collection.missing.add', $deck), ['condition' => 'LP', 'foil' => 1])
+            ->assertRedirect(route('collection.missing', $deck))->assertSessionHas('status', '4 cartas adicionadas à coleção. O deck está completo.');
+        $this->assertSame(4, (int) CollectionItem::where('user_id', $ana->id)->where('name', 'Lightning Bolt')->sum('quantity'));
+        $new = CollectionItem::where('user_id', $ana->id)->where('name', 'Lightning Bolt')->where('condition', 'LP')->first();
+        $this->assertTrue($new->foil);
+        $this->assertSame('R', $new->color_identity);
+        $this->assertSame('C', CollectionItem::where('name', 'Sol Ring')->first()->color_identity);
+        $this->post(route('collection.missing.add', $deck), ['condition' => 'NM'])->assertSessionHas('status', 'Nada faltando: o deck já está completo.');
+
+        // amigo vê os faltantes, mas não pode jogar cartas na própria coleção a partir do deck alheio
+        $this->actingAs($bia)->get(route('collection.missing', $deck))->assertOk()->assertDontSee('Adicionar faltantes à coleção');
+        $this->post(route('collection.missing.add', $deck), ['condition' => 'NM'])->assertNotFound();
+    }
+
     public function test_refresh_command_fills_missing_colors_from_scryfall(): void
     {
         $u = $this->user('Ana');

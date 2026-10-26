@@ -46,6 +46,33 @@ class CollectionService
     }
 
     /**
+     * Adiciona à coleção as cópias que faltam para montar o deck (ex.: depois de comprar).
+     *
+     * @return int cópias adicionadas
+     */
+    public function addMissing(User $user, Deck $deck, bool $foil, string $condition): int
+    {
+        $missing = collect($this->missing($user, $deck, exact: false))->where('missing', '>', 0)->keyBy(fn ($row) => mb_strtolower($row['name']));
+        if ($missing->isEmpty()) {
+            return 0;
+        }
+        $added = 0;
+        foreach ($deck->cards()->orderBy('id')->get()->unique(fn ($c) => mb_strtolower($c->name)) as $card) {
+            $row = $missing->get(mb_strtolower($card->name));
+            if (! $row) {
+                continue;
+            }
+            $this->add($user, [
+                'scryfall_id' => $card->scryfall_id, 'name' => $card->name, 'set_code' => $card->set_code, 'image_url' => $card->image_url,
+                'type_line' => $card->type_line, 'rarity' => $card->rarity, 'color_identity' => $card->color_identity,
+            ], ['quantity' => $row['missing'], 'foil' => $foil, 'condition' => $condition]);
+            $added += $row['missing'];
+        }
+
+        return $added;
+    }
+
+    /**
      * Preenche cor/tipo/raridade/imagem de itens antigos que ficaram sem essa informação.
      *
      * @return int itens atualizados

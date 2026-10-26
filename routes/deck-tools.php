@@ -17,4 +17,5 @@ Route::middleware('auth')->group(function () {
     Route::patch('/me/collection/{item}', [CollectionController::class, 'update'])->name('collection.update');
     Route::delete('/me/collection/{item}', [CollectionController::class, 'destroy'])->name('collection.destroy');
     Route::get('/me/collection/missing/{deck}', [CollectionController::class, 'missing'])->name('collection.missing');
+    Route::post('/me/collection/missing/{deck}', [CollectionController::class, 'addMissing'])->middleware('throttle:10,1,collection-missing')->name('collection.missing.add');
 });
