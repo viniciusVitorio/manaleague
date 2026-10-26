@@ -207,6 +207,12 @@ class DeckBuilderService
      * Banner do deck: carta escolhida pelo dono; senao o comandante; senao a nao-terreno de maior CMC.
      * Se a carta escolhida saiu do deck, cai para a escolha automatica.
      */
+    /** Arte da capa do deck (usa as cartas já carregadas, se houver). */
+    public function coverOf(Deck $deck): ?string
+    {
+        return $this->coverFor($deck, $deck->relationLoaded('cards') ? $deck->cards : $deck->cards()->get());
+    }
+
     private function coverFor(Deck $deck, $cards): ?string
     {
         return ($deck->cover_card_id ? $cards->firstWhere('id', $deck->cover_card_id)?->art_url : null)

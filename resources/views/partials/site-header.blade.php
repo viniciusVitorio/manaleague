@@ -8,8 +8,9 @@
         ['matches.mine', 'Partidas', 'target', 'matches.mine'],
     ];
     $primary[] = ['challenges.index', 'Desafios', 'swords', 'challenges.*|achievements.*|ranked.matches.*'];
+    $primary[] = ['decks.index', 'Decks', 'layers', 'decks.*|collection.missing'];
     $more = [
-        ['collection.index', 'Coleção', 'library', 'collection.*|decks.history|decks.versions.*|decks.compare'],
+        ['collection.index', 'Coleção', 'library', 'collection.index'],
         ['clubs.index', 'Clubes', 'shield', 'clubs.*'],
         ['feed.index', 'Comunidade', 'activity', 'feed.index'],
     ];

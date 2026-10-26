@@ -43,7 +43,7 @@
         </div>
     </div>
     @if($isOwner)
-        <div class="deck-actions"><a class="btn btn-secondary" href="{{ route('challenges.index') }}">Desafios 1v1</a><a class="btn btn-secondary" href="{{ route('challenges.rivalries') }}">Rivalidades</a><a class="btn btn-primary" href="{{ route('profiles.edit') }}">Editar perfil e decks</a></div>
+        <div class="deck-actions"><a class="btn btn-secondary" href="{{ route('challenges.index') }}">Desafios 1v1</a><a class="btn btn-secondary" href="{{ route('challenges.rivalries') }}">Rivalidades</a><a class="btn btn-secondary" href="{{ route('decks.index') }}">Meus decks</a><a class="btn btn-primary" href="{{ route('profiles.edit') }}">Editar perfil</a></div>
     @else
         <form method="POST" action="{{ route('profiles.friend', $profile) }}">@csrf @method('PATCH')<button class="btn btn-secondary">{{ match($friendshipStatus) { 'pending' => 'Cancelar solicitação', 'accepted' => 'Remover amizade', default => 'Solicitar amizade' } }}</button></form>
     @endif
@@ -159,7 +159,7 @@
 
 @if($decks->isNotEmpty() || $isOwner)
 <section class="card section-card">
-    <div class="section-heading"><div><span class="eyebrow">Arsenal</span><h2>Decks</h2></div>@if($isOwner)<a class="btn btn-small btn-secondary" href="{{ route('profiles.edit') }}#novo-deck">Novo deck</a>@endif</div>
+    <div class="section-heading"><div><span class="eyebrow">Arsenal</span><h2>Decks</h2></div>@if($isOwner)<a class="btn btn-small btn-secondary" href="{{ route('decks.index') }}">Gerenciar decks</a>@endif</div>
     <div class="deck-grid">
     @forelse($decks as $deck)
         <a class="deck-tile" href="{{ route('decks.show', $deck) }}">

@@ -6,7 +6,7 @@
 @endphp
 <header class="deck-hero card" @if($summary['cover']) style="--cover: url('{{ $summary['cover'] }}')" @endif>
     <div class="deck-hero-inner">
-        <a class="back-link" href="{{ $isOwner ? route('profiles.edit') : route('profiles.show', $deck->profile) }}">← {{ $isOwner ? 'Meus decks' : $deck->profile->nickname }}</a>
+        <a class="back-link" href="{{ $isOwner ? route('decks.index') : route('profiles.show', $deck->profile) }}">← {{ $isOwner ? 'Meus decks' : $deck->profile->nickname }}</a>
         <div class="title-line"><span class="format-badge">{{ $deck->format ?: 'Formato livre' }}</span>@if($deck->is_primary)<span class="status status-finished">★ Principal</span>@endif @include('decks.partials.single-set-badge')</div>
         <h1>{{ $deck->name }}</h1>
         <div class="deck-hero-meta">

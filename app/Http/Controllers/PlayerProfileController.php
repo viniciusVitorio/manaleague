@@ -105,7 +105,7 @@ class PlayerProfileController extends Controller
 
     public function edit(Request $request): View
     {
-        $profile = $this->ownProfile($request)->load(['decks' => fn ($query) => $query->withSum('cards', 'quantity')->with(self::SINGLE_SET_CARDS)]);
+        $profile = $this->ownProfile($request);
 
         return view('players.edit', compact('profile'));
     }

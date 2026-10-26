@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/me/friends/{code}', [FriendController::class, 'destroy'])->name('friends.destroy');
 
     Route::get('/cards/search', [DeckCardController::class, 'search'])->middleware('throttle:40,1')->name('cards.search');
+    Route::get('/me/decks', [DeckController::class, 'index'])->name('decks.index');
     Route::post('/me/decks', [DeckController::class, 'store'])->name('decks.store');
     Route::get('/decks/{deck}', [DeckController::class, 'show'])->name('decks.show');
     Route::get('/me/decks/{deck}/edit', [DeckController::class, 'edit'])->name('decks.edit');

@@ -153,6 +153,44 @@ button.ui-link:hover{color:var(--ui-fg)}
 :target.binder-card{border-color:var(--ui-ring)}
 :target td{background:var(--ui-muted)}
 
+/* ===== Decks: página "Meus decks" ===== */
+.deck-filter{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:var(--s4)}
+.deck-filter .ui-btn span{font-variant-numeric:tabular-nums;opacity:.6;font-size:.72rem}
+.deck-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:var(--s3)}
+.deck-card{display:flex;flex-direction:column;border:1px solid var(--ui-border);border-radius:var(--ui-radius);background:var(--ui-bg);overflow:hidden;transition:border-color .15s var(--ui-ease)}
+.deck-card:hover{border-color:var(--ui-border-strong)}
+.deck-card-art{position:relative;display:block;aspect-ratio:16/7;background:linear-gradient(135deg,var(--ui-muted),var(--ui-accent))}
+.deck-card-art[style]{background-image:linear-gradient(180deg,transparent 40%,rgba(9,9,11,.55)),var(--art);background-size:cover;background-position:center 25%}
+.deck-card-tags{position:absolute;left:8px;top:8px;display:flex;gap:4px;flex-wrap:wrap}
+.deck-tag{display:inline-flex;align-items:center;gap:4px;padding:1px 7px;border-radius:999px;background:rgba(9,9,11,.8);border:1px solid rgba(255,255,255,.15);color:#fafafa;font-size:.68rem;font-weight:600}
+.deck-tag.is-primary{color:#fde68a}
+.deck-card-body{display:grid;gap:6px;padding:var(--s3) var(--s3) var(--s2);flex:1;align-content:start}
+.deck-card-title{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.deck-card-title a{color:inherit;text-decoration:none;min-width:0}
+.deck-card-title strong{display:block;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deck-card-title a:hover strong{text-decoration:underline}
+.deck-card-meta{margin:0;font-size:.76rem;color:var(--ui-fg-subtle)}
+.deck-card .single-set-badge{justify-self:start;font-size:.68rem}
+.deck-card-stats{display:flex;flex-wrap:wrap;gap:4px 14px;margin:2px 0 0}
+.deck-card-stats div{display:flex;gap:5px;align-items:baseline}
+.deck-card-stats dt{font-size:.7rem;color:var(--ui-fg-subtle)}
+.deck-card-stats dd{margin:0;font-size:.78rem;font-weight:600;font-variant-numeric:tabular-nums}
+.deck-card-stats a{color:inherit}
+.deck-card-bar{height:3px;border-radius:99px;background:var(--ui-accent);overflow:hidden}
+.deck-card-bar span{display:block;height:100%;background:var(--ui-success)}
+.deck-card-actions{display:flex;align-items:center;gap:4px;padding:var(--s2) var(--s3) var(--s3)}
+.deck-card-actions form{margin:0}
+.deck-card-actions .deck-card-del{margin-left:auto}
+.deck-card-actions form:has(.deck-card-del){margin-left:auto}
+.deck-new{display:grid;gap:var(--s3)}
+.deck-new label{margin:0}
+.deck-tools-list{display:grid}
+.deck-tools-list a{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--ui-border);color:inherit;text-decoration:none}
+.deck-tools-list a:last-child{border-bottom:0}
+.deck-tools-list a:hover strong{text-decoration:underline}
+.deck-tools-list .icon{margin-top:2px;color:var(--ui-fg-subtle)}
+.deck-tools-list span{display:grid}.deck-tools-list strong{font-size:.85rem;font-weight:500}.deck-tools-list small{font-size:.74rem;color:var(--ui-fg-subtle)}
+
 /* ===== Coleção: barra de filtros ===== */
 .coll-filters{display:grid;gap:var(--s3);margin-bottom:var(--s4)}
 .coll-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2)}
@@ -194,3 +232,5 @@ button.ui-link:hover{color:var(--ui-fg)}
 .coll-chips .ui-link{margin-left:4px}
 @media(max-width:900px){.coll-panel{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.coll-panel{grid-template-columns:1fr}.coll-search{flex-basis:100%}.coll-view{margin-left:auto}.coll-sort{flex:1}.coll-sort select{flex:1}}
+
+.dash-stats.dash-stats-3{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:640px){.dash-stats.dash-stats-3{grid-template-columns:1fr}}
