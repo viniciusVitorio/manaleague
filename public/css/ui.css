@@ -21,6 +21,12 @@ body{font-family:var(--ui-font);-webkit-font-smoothing:antialiased}
 .ui-btn-ghost{background:transparent;color:var(--ui-fg-muted)}.ui-btn-ghost:hover{background:var(--ui-muted);color:var(--ui-fg)}
 .ui-btn:active{transform:translateY(.5px)}
 .ui-btn-sm{height:32px;padding:0 var(--s3);font-size:.8rem}
+
+/* ---------- Paginacao ---------- */
+.ui-pagination{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s2);margin-top:var(--s4)}
+.ui-pagination-pages{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s1)}
+.ui-pagination-gap{padding:0 var(--s2);color:var(--ui-fg-subtle)}
+.ui-pagination .is-disabled{opacity:.45;pointer-events:none}
 .ui-btn:focus-visible,.ui-icon-btn:focus-visible,.ui-avatar-btn:focus-visible,.site-nav-link:focus-visible,.ui-menu-item:focus-visible,.site-mobile-link:focus-visible,.ui-link:focus-visible,.ui-row:focus-visible,.ui-stat.is-link:focus-visible,.site-brand:focus-visible{outline:2px solid var(--ui-ring);outline-offset:2px}
 .ui-link{display:inline-flex;align-items:center;gap:2px;color:var(--ui-fg-muted);font-size:.8rem;font-weight:500;border-radius:4px}.ui-link:hover{color:var(--ui-fg)}
 

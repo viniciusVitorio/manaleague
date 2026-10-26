@@ -68,4 +68,57 @@ class CollectionHubTest extends TestCase
         $this->assertSame(6, $item->fresh()->for_trade); // nunca mais que a quantidade
         $this->actingAs($zeca)->patch('/me/collection/'.$item->id, ['quantity' => 1])->assertNotFound();
     }
+
+    private function item(User $user, string $name, array $attrs = []): CollectionItem
+    {
+        return CollectionItem::create($attrs + ['user_id' => $user->id, 'scryfall_id' => (string) Str::uuid(), 'name' => $name, 'quantity' => 1, 'condition' => 'NM']);
+    }
+
+    public function test_filters_by_color_type_rarity_and_price_and_list_view(): void
+    {
+        $u = $this->user('Ana');
+        $this->item($u, 'Lightning Bolt', ['color_identity' => 'R', 'type_line' => 'Instant', 'rarity' => 'common', 'price_usd' => 1.5]);
+        $this->item($u, 'Goblin Guide', ['color_identity' => 'R', 'type_line' => 'Creature — Goblin Scout', 'rarity' => 'rare', 'price_usd' => 4]);
+        $this->item($u, 'Sol Ring', ['color_identity' => 'C', 'type_line' => 'Artifact', 'rarity' => 'uncommon', 'price_usd' => 2]);
+        $this->item($u, 'Lightning Helix', ['color_identity' => 'RW', 'type_line' => 'Instant', 'rarity' => 'uncommon', 'price_usd' => 0.5]);
+        $this->actingAs($u);
+
+        $this->get('/me/collection?color=R')->assertSee('Goblin Guide')->assertSee('Lightning Helix')->assertDontSee('Sol Ring');
+        $this->get('/me/collection?color=C')->assertSee('Sol Ring')->assertDontSee('Goblin Guide');
+        $this->get('/me/collection?color=M')->assertSee('Lightning Helix')->assertDontSee('Lightning Bolt');
+        $this->get('/me/collection?type=Creature')->assertSee('Goblin Guide')->assertDontSee('Lightning Bolt');
+        $this->get('/me/collection?rarity=uncommon')->assertSee('Sol Ring')->assertSee('Lightning Helix')->assertDontSee('Goblin Guide');
+        $this->get('/me/collection?min=1&max=3')->assertSee('Lightning Bolt')->assertSee('Sol Ring')->assertDontSee('Goblin Guide')->assertDontSee('Lightning Helix');
+        $this->get('/me/collection?color=X')->assertSessionHasErrors('color');
+        $this->get('/me/collection?view=list')->assertOk()->assertSee('binder-table', false)->assertSee('Goblin Guide');
+    }
+
+    public function test_plus_minus_shortcut_and_removal_at_zero(): void
+    {
+        [$ana, $bia] = [$this->user('Ana'), $this->user('Bia')];
+        $item = $this->item($ana, 'Sol Ring', ['quantity' => 2, 'for_trade' => 2]);
+
+        $this->actingAs($ana)->patch('/me/collection/'.$item->id, ['delta' => 1])->assertRedirect(route('collection.index').'#item-'.$item->id);
+        $this->assertSame(3, $item->fresh()->quantity);
+        $this->patch('/me/collection/'.$item->id, ['delta' => -1]);
+        $this->patch('/me/collection/'.$item->id, ['delta' => -1]);
+        $this->assertSame(1, $item->fresh()->quantity);
+        $this->assertSame(1, $item->fresh()->for_trade); // troca acompanha a quantidade
+        $this->patch('/me/collection/'.$item->id, ['delta' => 5])->assertSessionHasErrors('delta');
+        $this->actingAs($bia)->patch('/me/collection/'.$item->id, ['delta' => -1])->assertNotFound();
+        $this->actingAs($ana)->patch('/me/collection/'.$item->id, ['delta' => -1])->assertSessionHas('status', 'Sol Ring removida da coleção.');
+        $this->assertNull($item->fresh());
+    }
+
+    public function test_refresh_command_fills_missing_colors_from_scryfall(): void
+    {
+        $u = $this->user('Ana');
+        $item = $this->item($u, 'Sol Ring');
+        $this->mock(ScryfallClient::class, fn ($m) => $m->shouldReceive('byIds')->once()->andReturn([
+            strtolower($item->scryfall_id) => ['scryfall_id' => $item->scryfall_id, 'name' => 'Sol Ring', 'color_identity' => null, 'type_line' => 'Artifact', 'rarity' => 'uncommon', 'image_url' => null],
+        ]));
+
+        $this->artisan('collection:refresh')->assertSuccessful();
+        $this->assertSame(['C', 'Artifact', 'uncommon'], [$item->fresh()->color_identity, $item->fresh()->type_line, $item->fresh()->rarity]);
+    }
 }

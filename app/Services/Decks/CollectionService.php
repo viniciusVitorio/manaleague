@@ -32,10 +32,47 @@ class CollectionService
             }
             $price = $foil ? ($card['price_usd_foil'] ?? $card['price_usd'] ?? null) : ($card['price_usd'] ?? null);
             $item->fill(['name' => $card['name'], 'set_code' => $card['set_code'] ?? null, 'image_url' => $card['image_url'] ?? null,
-                'type_line' => $card['type_line'] ?? null, 'rarity' => $card['rarity'] ?? null, 'price_usd' => $price ?? $item->price_usd, 'quantity' => $quantity])->save();
+                'type_line' => $card['type_line'] ?? null, 'rarity' => $card['rarity'] ?? null, 'price_usd' => $price ?? $item->price_usd, 'quantity' => $quantity,
+                'color_identity' => self::colorIdentity($card) ?? $item->color_identity])->save();
 
             return $item;
         });
+    }
+
+    /** "WU", "C" para incolor, null quando a carta veio sem essa informação. */
+    public static function colorIdentity(array $card): ?string
+    {
+        return array_key_exists('color_identity', $card) ? (($card['color_identity'] ?? '') ?: 'C') : null;
+    }
+
+    /**
+     * Preenche cor/tipo/raridade/imagem de itens antigos que ficaram sem essa informação.
+     *
+     * @return int itens atualizados
+     */
+    public function refreshMetadata(): int
+    {
+        $updated = 0;
+        CollectionItem::query()->where(fn ($q) => $q->whereNull('color_identity')->orWhereNull('type_line')->orWhereNull('rarity'))
+            ->orderBy('id')->chunkById(300, function ($items) use (&$updated) {
+                $cards = $this->scryfall->byIds($items->pluck('scryfall_id')->all());
+                foreach ($items as $item) {
+                    $card = $cards[strtolower($item->scryfall_id)] ?? null;
+                    if (! $card) {
+                        continue;
+                    }
+                    $item->fill([
+                        'color_identity' => $item->color_identity ?? self::colorIdentity($card), 'type_line' => $item->type_line ?? $card['type_line'],
+                        'rarity' => $item->rarity ?? $card['rarity'], 'image_url' => $item->image_url ?? $card['image_url'],
+                    ]);
+                    if ($item->isDirty()) {
+                        $item->save();
+                        $updated++;
+                    }
+                }
+            });
+
+        return $updated;
     }
 
     /**

@@ -111,6 +111,27 @@ class ScryfallClient
         return ['found' => $found, 'missing' => $missing];
     }
 
+    /**
+     * Busca impressões pelo ID do Scryfall (em lotes de 75).
+     *
+     * @param  list<string>  $ids
+     * @return array<string, array<string, mixed>> cartas normalizadas, indexadas pelo ID em minúsculas
+     */
+    public function byIds(array $ids): array
+    {
+        $cards = [];
+        foreach (array_chunk(array_values(array_unique(array_map('strtolower', $ids))), 75) as $chunk) {
+            $identifiers = array_map(fn (string $id) => ['id' => $id], $chunk);
+            $response = $this->send(fn (PendingRequest $http) => $http->post(self::BASE.'/cards/collection', ['identifiers' => $identifiers]));
+            foreach ($response['data'] ?? [] as $card) {
+                $normalized = $this->normalize($card);
+                $cards[strtolower($normalized['scryfall_id'])] = $normalized;
+            }
+        }
+
+        return $cards;
+    }
+
     /** Carta encontrada por collection(): a edicao pedida, ou qualquer edicao com aquele nome. */
     public static function pick(array $found, string $name, ?string $set = null): ?array
     {
