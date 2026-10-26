@@ -20,7 +20,7 @@ class User extends Authenticatable
 
     protected function casts(): array
     {
-        return ['email_verified_at' => 'datetime', 'password' => 'hashed', 'is_admin' => 'boolean'];
+        return ['email_verified_at' => 'datetime', 'password' => 'hashed', 'is_admin' => 'boolean', 'show_deck_ownership' => 'boolean'];
     }
 
     /** is_admin nao e fillable: so via `php artisan ml:admin`. */

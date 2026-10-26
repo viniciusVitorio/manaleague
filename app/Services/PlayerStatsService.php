@@ -16,6 +16,7 @@ class PlayerStatsService
         $titles = $runnerUps = $thirdPlaces = $undefeatedRuns = $cleanSweeps = $comebacks = 0;
         $zeroTwo = $bye = false;
         $decks = [];
+        $deckRecords = []; // por deck salvo (players.deck_id): vitórias, derrotas e torneios
 
         foreach ($entries as $entry) {
             $matches = $this->matchesFor($entry);
@@ -23,6 +24,10 @@ class PlayerStatsService
             $deckName = $entry->deck_name ?: 'Deck não informado';
             $deckKey = $deckName.'|'.($entry->deck_colors ?? '');
             $decks[$deckKey] ??= ['name' => $deckName, 'colors' => $entry->deck_colors, 'wins' => 0, 'losses' => 0];
+            if ($entry->deck_id) {
+                $deckRecords[$entry->deck_id] ??= ['wins' => 0, 'losses' => 0, 'tournaments' => 0];
+                $deckRecords[$entry->deck_id]['tournaments']++;
+            }
 
             foreach ($matches as $match) {
                 [$for, $against] = $this->score($match, $entry->id);
@@ -33,6 +38,7 @@ class PlayerStatsService
                 if ($for > $against) {
                     $wins++;
                     $decks[$deckKey]['wins']++;
+                    if ($entry->deck_id) $deckRecords[$entry->deck_id]['wins']++;
                     $bestStreak = max($bestStreak, ++$currentStreak);
                     if ($for === 2 && $against === 0 && $match->status === GameMatch::STATUS_FINISHED) $cleanSweeps++;
                     if ($against > 0 && $match->stage !== GameMatch::STAGE_LEAGUE) $comebacks++;
@@ -40,6 +46,7 @@ class PlayerStatsService
                     $losses++;
                     $entryLosses++;
                     $decks[$deckKey]['losses']++;
+                    if ($entry->deck_id) $deckRecords[$entry->deck_id]['losses']++;
                     $currentStreak = 0;
                     $zeroTwo = $zeroTwo || ($for === 0 && $against === 2);
                 } else {
@@ -71,6 +78,7 @@ class PlayerStatsService
             'best_streak' => $bestStreak,
             'tournaments' => $tournaments->sortByDesc('tournament_date')->values(),
             'decks' => collect($decks)->values(),
+            'deck_records' => $deckRecords,
             // Fatos consumidos pelo AchievementService.
             'facts' => [
                 'titles' => $titles, 'runner_ups' => $runnerUps, 'third_places' => $thirdPlaces,

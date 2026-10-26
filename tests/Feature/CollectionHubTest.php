@@ -68,4 +68,117 @@ class CollectionHubTest extends TestCase
         $this->assertSame(6, $item->fresh()->for_trade); // nunca mais que a quantidade
         $this->actingAs($zeca)->patch('/me/collection/'.$item->id, ['quantity' => 1])->assertNotFound();
     }
+
+    private function item(User $user, string $name, array $attrs = []): CollectionItem
+    {
+        return CollectionItem::create($attrs + ['user_id' => $user->id, 'scryfall_id' => (string) Str::uuid(), 'name' => $name, 'quantity' => 1, 'condition' => 'NM']);
+    }
+
+    public function test_filters_by_color_type_rarity_and_price_and_list_view(): void
+    {
+        $u = $this->user('Ana');
+        $this->item($u, 'Lightning Bolt', ['color_identity' => 'R', 'type_line' => 'Instant', 'rarity' => 'common', 'price_usd' => 1.5]);
+        $this->item($u, 'Goblin Guide', ['color_identity' => 'R', 'type_line' => 'Creature — Goblin Scout', 'rarity' => 'rare', 'price_usd' => 4]);
+        $this->item($u, 'Sol Ring', ['color_identity' => 'C', 'type_line' => 'Artifact', 'rarity' => 'uncommon', 'price_usd' => 2]);
+        $this->item($u, 'Lightning Helix', ['color_identity' => 'RW', 'type_line' => 'Instant', 'rarity' => 'uncommon', 'price_usd' => 0.5]);
+        $this->actingAs($u);
+
+        $this->get('/me/collection?color=R')->assertSee('Goblin Guide')->assertSee('Lightning Helix')->assertDontSee('Sol Ring');
+        $this->get('/me/collection?color=C')->assertSee('Sol Ring')->assertDontSee('Goblin Guide');
+        $this->get('/me/collection?color=M')->assertSee('Lightning Helix')->assertDontSee('Lightning Bolt');
+        $this->get('/me/collection?type=Creature')->assertSee('Goblin Guide')->assertDontSee('Lightning Bolt');
+        $this->get('/me/collection?rarity=uncommon')->assertSee('Sol Ring')->assertSee('Lightning Helix')->assertDontSee('Goblin Guide');
+        $this->get('/me/collection?min=1&max=3')->assertSee('Lightning Bolt')->assertSee('Sol Ring')->assertDontSee('Goblin Guide')->assertDontSee('Lightning Helix');
+        $this->get('/me/collection?color=X')->assertSessionHasErrors('color');
+        $this->get('/me/collection?view=list')->assertOk()->assertSee('binder-table', false)->assertSee('Goblin Guide');
+    }
+
+    public function test_plus_minus_shortcut_and_removal_at_zero(): void
+    {
+        [$ana, $bia] = [$this->user('Ana'), $this->user('Bia')];
+        $item = $this->item($ana, 'Sol Ring', ['quantity' => 2, 'for_trade' => 2]);
+
+        $this->actingAs($ana)->patch('/me/collection/'.$item->id, ['delta' => 1])->assertRedirect(route('collection.index').'#item-'.$item->id);
+        $this->assertSame(3, $item->fresh()->quantity);
+        $this->patch('/me/collection/'.$item->id, ['delta' => -1]);
+        $this->patch('/me/collection/'.$item->id, ['delta' => -1]);
+        $this->assertSame(1, $item->fresh()->quantity);
+        $this->assertSame(1, $item->fresh()->for_trade); // troca acompanha a quantidade
+        $this->patch('/me/collection/'.$item->id, ['delta' => 5])->assertSessionHasErrors('delta');
+        $this->actingAs($bia)->patch('/me/collection/'.$item->id, ['delta' => -1])->assertNotFound();
+        $this->actingAs($ana)->patch('/me/collection/'.$item->id, ['delta' => -1])->assertSessionHas('status', 'Sol Ring removida da coleção.');
+        $this->assertNull($item->fresh());
+    }
+
+    public function test_missing_page_shopping_list_and_add_missing_to_collection(): void
+    {
+        [$ana, $bia] = [$this->user('Ana'), $this->user('Bia')];
+        $ana->friendProfiles()->attach($bia->playerProfile, ['status' => 'accepted']);
+        $bia->friendProfiles()->attach($ana->playerProfile, ['status' => 'accepted']);
+        $deck = $ana->playerProfile->decks()->create(['name' => 'Burn', 'format' => 'Pauper', 'is_visible_to_friends' => true]);
+        $deck->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Lightning Bolt', 'quantity' => 4, 'board' => 'main', 'set_code' => 'M11', 'color_identity' => 'R', 'type_line' => 'Instant', 'rarity' => 'common']);
+        $deck->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Sol Ring', 'quantity' => 1, 'board' => 'main']);
+        $this->item($ana, 'Lightning Bolt', ['quantity' => 1]);
+
+        $this->actingAs($ana)->get(route('collection.missing', $deck))->assertOk()
+            ->assertSee("3 Lightning Bolt\n1 Sol Ring", false)->assertSee('Adicionar faltantes à coleção');
+        $this->post(route('collection.missing.add', $deck), ['condition' => 'LP', 'foil' => 1])
+            ->assertRedirect(route('collection.missing', $deck))->assertSessionHas('status', '4 cartas adicionadas à coleção. O deck está completo.');
+        $this->assertSame(4, (int) CollectionItem::where('user_id', $ana->id)->where('name', 'Lightning Bolt')->sum('quantity'));
+        $new = CollectionItem::where('user_id', $ana->id)->where('name', 'Lightning Bolt')->where('condition', 'LP')->first();
+        $this->assertTrue($new->foil);
+        $this->assertSame('R', $new->color_identity);
+        $this->assertSame('C', CollectionItem::where('name', 'Sol Ring')->first()->color_identity);
+        $this->post(route('collection.missing.add', $deck), ['condition' => 'NM'])->assertSessionHas('status', 'Nada faltando: o deck já está completo.');
+
+        // amigo vê os faltantes, mas não pode jogar cartas na própria coleção a partir do deck alheio
+        $this->actingAs($bia)->get(route('collection.missing', $deck))->assertOk()->assertDontSee('Adicionar faltantes à coleção');
+        $this->post(route('collection.missing.add', $deck), ['condition' => 'NM'])->assertNotFound();
+    }
+
+    public function test_deck_page_shows_owned_copies_to_owner_only(): void
+    {
+        [$ana, $bia] = [$this->user('Ana'), $this->user('Bia')];
+        $ana->friendProfiles()->attach($bia->playerProfile, ['status' => 'accepted']);
+        $bia->friendProfiles()->attach($ana->playerProfile, ['status' => 'accepted']);
+        $deck = $ana->playerProfile->decks()->create(['name' => 'Burn', 'format' => 'Pauper', 'is_visible_to_friends' => true]);
+        $deck->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Lightning Bolt', 'quantity' => 3, 'board' => 'main']);
+        $deck->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Lightning Bolt', 'quantity' => 1, 'board' => 'side']);
+        $deck->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Sol Ring', 'quantity' => 1, 'board' => 'main']);
+        $this->item($ana, 'Lightning Bolt', ['quantity' => 2]);
+        $this->item($ana, 'Sol Ring', ['quantity' => 1, 'foil' => true]);
+
+        $this->actingAs($ana)->get(route('decks.show', $deck))->assertOk()
+            ->assertSee('owned-badge is-some', false)->assertSee('2/4')->assertSee('owned-badge is-ok', false)->assertSee('1/1');
+        $this->actingAs($bia)->get(route('decks.show', $deck))->assertOk()->assertDontSee('owned-badge', false);
+
+        // dono pode ocultar (e voltar a mostrar); a escolha fica salva na conta
+        $this->actingAs($ana)->patch(route('preferences.deck-ownership'), ['show' => 0])->assertRedirect();
+        $this->assertFalse($ana->fresh()->show_deck_ownership);
+        $this->actingAs($ana->fresh())->get(route('decks.show', $deck))->assertOk()->assertDontSee('owned-badge', false)->assertSee('Mostrar o que tenho');
+        $this->patch(route('preferences.deck-ownership'), ['show' => 1]);
+        $this->actingAs($ana->fresh())->get(route('decks.show', $deck))->assertSee('owned-badge', false)->assertSee('Ocultar minha coleção');
+    }
+
+    public function test_deck_owner_without_collection_sees_no_indicator_or_toggle(): void
+    {
+        $zeca = $this->user('Zeca');
+        $deck = $zeca->playerProfile->decks()->create(['name' => 'Elfos', 'format' => 'Pauper']);
+        $deck->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Llanowar Elves', 'quantity' => 4, 'board' => 'main']);
+
+        $this->actingAs($zeca)->get(route('decks.show', $deck))->assertOk()
+            ->assertDontSee('owned-badge', false)->assertDontSee('Ocultar minha coleção')->assertDontSee('Mostrar o que tenho');
+    }
+
+    public function test_refresh_command_fills_missing_colors_from_scryfall(): void
+    {
+        $u = $this->user('Ana');
+        $item = $this->item($u, 'Sol Ring');
+        $this->mock(ScryfallClient::class, fn ($m) => $m->shouldReceive('byIds')->once()->andReturn([
+            strtolower($item->scryfall_id) => ['scryfall_id' => $item->scryfall_id, 'name' => 'Sol Ring', 'color_identity' => null, 'type_line' => 'Artifact', 'rarity' => 'uncommon', 'image_url' => null],
+        ]));
+
+        $this->artisan('collection:refresh')->assertSuccessful();
+        $this->assertSame(['C', 'Artifact', 'uncommon'], [$item->fresh()->color_identity, $item->fresh()->type_line, $item->fresh()->rarity]);
+    }
 }

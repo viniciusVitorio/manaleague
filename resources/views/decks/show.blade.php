@@ -6,7 +6,7 @@
 @endphp
 <header class="deck-hero card" @if($summary['cover']) style="--cover: url('{{ $summary['cover'] }}')" @endif>
     <div class="deck-hero-inner">
-        <a class="back-link" href="{{ $isOwner ? route('profiles.edit') : route('profiles.show', $deck->profile) }}">← {{ $isOwner ? 'Meus decks' : $deck->profile->nickname }}</a>
+        <a class="back-link" href="{{ $isOwner ? route('decks.index') : route('profiles.show', $deck->profile) }}">← {{ $isOwner ? 'Meus decks' : $deck->profile->nickname }}</a>
         <div class="title-line"><span class="format-badge">{{ $deck->format ?: 'Formato livre' }}</span>@if($deck->is_primary)<span class="status status-finished">★ Principal</span>@endif @include('decks.partials.single-set-badge')</div>
         <h1>{{ $deck->name }}</h1>
         <div class="deck-hero-meta">
@@ -68,7 +68,17 @@
     @endif
 
     <section class="card section-card">
-        <div class="section-heading"><div><span class="eyebrow">Lista</span><h2>Cartas</h2></div><span class="muted">{{ $summary['main'] }} no deck</span></div>
+        <div class="section-heading"><div><span class="eyebrow">Lista</span><h2>Cartas</h2></div>
+            <div class="section-heading-side">
+                <span class="muted">{{ $summary['main'] }} no deck</span>
+                @if($hasCollection)
+                    <form method="POST" action="{{ route('preferences.deck-ownership') }}" class="ownership-toggle">@csrf @method('PATCH')
+                        <input type="hidden" name="show" value="{{ $showOwnership ? 0 : 1 }}">
+                        <button class="btn btn-ghost btn-small" aria-pressed="{{ $showOwnership ? 'true' : 'false' }}" title="Mostra, ao lado de cada carta, quantas cópias você tem na coleção">{{ $showOwnership ? 'Ocultar minha coleção' : 'Mostrar o que tenho' }}</button>
+                    </form>
+                @endif
+            </div>
+        </div>
         @if($isOwner && ($summary['main'] || $summary['side']))<p class="muted small-note drag-hint">Arraste as cartas entre o deck e o sideboard, ou use os botões ↓ side / ↑ deck.</p>@endif
         <div class="drop-zone" @if($isOwner) data-drop-board="main" data-drop-label="Deck" @endif>
         @forelse($summary['groups'] as $group => $cards)

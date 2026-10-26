@@ -65,7 +65,8 @@ class SingleSetDeckTest extends TestCase
         $owner = $deck->profile->account;
 
         $this->actingAs($owner)->get(route('decks.show', $deck))->assertOk()->assertSee('Coleção única · LTR');
-        $this->actingAs($owner)->get(route('profiles.edit'))->assertOk()->assertSee('Coleção única · LTR');
+        $this->actingAs($owner)->get(route('decks.index'))->assertOk()->assertSee('Coleção única · LTR');
+        $deck->forceFill(['is_visible_to_friends' => true, 'showcase_position' => 1])->save(); // no perfil, o deck aparece pela vitrine
         $this->actingAs($owner)->get(route('profiles.show', $deck->profile))->assertOk()->assertSee('Coleção única · LTR');
 
         $deck->cards()->create($this->card('Counterspell', 'main', 1, 'DMR'));

@@ -20,6 +20,43 @@ class DeckController extends Controller
 
     public function __construct(private readonly DeckBuilderService $builder) {}
 
+    /** Página "Decks": todos os decks do jogador, com estatísticas, filtro por formato e criação de deck. */
+    public function index(Request $request): View
+    {
+        $user = $request->user();
+        $profile = $user->ensurePlayerProfile();
+        $filters = $request->validate(['format' => ['nullable', 'string', 'max:20']]);
+
+        $all = $profile->decks()->with('cards')->orderByDesc('is_primary')->orderBy('name')->get();
+        $records = app(\App\Services\PlayerStatsService::class)->for($profile)['deck_records'];
+        $hasCollection = \App\Models\CollectionItem::where('user_id', $user->id)->exists();
+        $coverage = $hasCollection ? app(\App\Services\Decks\CollectionService::class)->deckCoverage($user)->keyBy(fn ($c) => $c['deck']->id) : collect();
+
+        $cards = fn (Deck $deck) => (int) $deck->cards->sum('quantity');
+        $formats = $all->groupBy(fn (Deck $deck) => $deck->format ?: 'Livre')->map->count()->sortDesc();
+        $played = collect($records)->only($all->pluck('id')->all());
+
+        $stats = [
+            'decks' => $all->count(),
+            'visible' => $all->where('is_visible_to_friends', true)->count(),
+            'top_format' => $formats->keys()->first(),
+            'top_format_count' => (int) $formats->first(),
+            'wins' => (int) $played->sum('wins'),
+            'losses' => (int) $played->sum('losses'),
+            'tournaments' => (int) $played->sum('tournaments'),
+            'complete' => $coverage->where('percent', 100)->count(),
+        ];
+
+        $format = $filters['format'] ?? null;
+        $decks = $all->when($format, fn ($decks) => $decks->filter(fn (Deck $deck) => ($deck->format ?: 'Livre') === $format))
+            ->map(fn (Deck $deck) => [
+                'deck' => $deck, 'cards' => $cards($deck), 'cover' => $this->builder->coverOf($deck), 'single_set' => $deck->singleSet(),
+                'record' => $records[$deck->id] ?? null, 'coverage' => $coverage->get($deck->id),
+            ]);
+
+        return view('decks.index', compact('decks', 'stats', 'formats', 'format', 'hasCollection'));
+    }
+
     public function show(Request $request, Deck $deck): View
     {
         $isOwner = $this->isOwner($request, $deck);
@@ -31,7 +68,18 @@ class DeckController extends Controller
         $deck->load('profile');
         $summary = $this->builder->summary($deck);
 
-        return view('decks.show', compact('deck', 'summary', 'isOwner'));
+        // Dono: quantas cópias de cada carta ele tem na coleção, contra o total pedido no deck (main + side + comandante).
+        // Só para quem usa a coleção (tem algum item) e não desligou a opção.
+        $owned = collect();
+        $needed = collect();
+        $hasCollection = $isOwner && \App\Models\CollectionItem::where('user_id', $request->user()->id)->exists();
+        $showOwnership = $hasCollection && $request->user()->show_deck_ownership !== false;
+        if ($showOwnership) {
+            $owned = app(\App\Services\Decks\CollectionService::class)->ownedByName($request->user());
+            $needed = $deck->cards()->get()->groupBy(fn ($c) => mb_strtolower($c->name))->map(fn ($c) => (int) $c->sum('quantity'));
+        }
+
+        return view('decks.show', compact('deck', 'summary', 'isOwner', 'owned', 'needed', 'hasCollection', 'showOwnership'));
     }
 
 
@@ -71,6 +119,8 @@ class DeckController extends Controller
         DB::transaction(function () use ($deck, $validated): void {
             if ($validated['is_primary'] ?? false) $deck->profile->decks()->whereKeyNot($deck->id)->update(['is_primary' => false]);
             $deck->update($validated);
+            // Deck que ficou privado sai da vitrine do perfil (lá só entram decks que os amigos podem ver).
+            if (! $deck->is_visible_to_friends && $deck->showcase_position) $deck->forceFill(['showcase_position' => null])->save();
             // Com cartas cadastradas, as cores vem da identidade de cor delas.
             $this->builder->syncColors($deck);
             if ($deck->is_primary) $this->syncPrimary($deck->fresh());
@@ -106,7 +156,7 @@ class DeckController extends Controller
         $this->ensureOwner($request, $deck);
         if ($deck->is_primary) return back()->withErrors(['deck' => 'Escolha outro deck principal antes de excluir este.']);
         $deck->delete();
-        return redirect()->route('profiles.edit')->with('status', 'Deck removido.');
+        return redirect()->route('decks.index')->with('status', 'Deck removido.');
     }
 
     private function validateDeck(Request $request): array

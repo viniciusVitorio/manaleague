@@ -59,6 +59,12 @@ Artisan::command('ml:construtor {email : E-mail da conta} {--revoke : Remove a c
     return 0;
 })->purpose('Concede (ou remove) a conquista Construtor da Liga para quem ajudou no projeto');
 
+Artisan::command('collection:refresh', function (): int {
+    $n = app(\App\Services\Decks\CollectionService::class)->refreshMetadata();
+    $this->info("{$n} item(ns) da coleção atualizados com cor, tipo e raridade do Scryfall.");
+    return 0;
+})->purpose('Preenche cor/tipo/raridade de itens antigos da coleção (usado pelos filtros)');
+
 Artisan::command('ranked:tick', function (): int {
     app(\App\Services\Ranked\SeasonService::class)->refresh();
     $this->info('Temporadas atualizadas.');

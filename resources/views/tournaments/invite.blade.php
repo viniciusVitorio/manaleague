@@ -13,7 +13,7 @@
 <form method="POST" action="{{ route('tournaments.invite.store',$tournament->invite_token) }}">@csrf
 @include('tournaments.partials.deck-picker', ['profile' => $profile, 'current' => null, 'pickerId' => 'invite'])
 <button class="btn btn-primary btn-block">Entrar no torneio</button></form>
-<p class="auth-link"><a href="{{ route('profiles.edit') }}">Editar perfil e decks</a></p>
+<p class="auth-link"><a href="{{ route('decks.index') }}">Gerenciar meus decks</a></p>
 @endif
 @else<div class="closed-state"><strong>Inscrições encerradas</strong><p>Este torneio já começou.</p></div>@endif
 </div></div>

@@ -267,7 +267,7 @@ class DeckCardsTest extends TestCase
         $user = User::factory()->create();
 
 
-        $this->actingAs($user)->get(route('profiles.edit'))->assertOk()->assertSee('Novos decks começam privados; marque para compartilhar com amigos');
+        $this->actingAs($user)->get(route('decks.index'))->assertOk()->assertSee('Novos decks começam privados; marque para compartilhar com amigos');
 
         $this->actingAs($user)->post(route('decks.store'), ['name' => 'Primeiro', 'format' => 'Pauper'])->assertRedirect();
         $deck = Deck::query()->sole();

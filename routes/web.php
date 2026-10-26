@@ -59,6 +59,8 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/me/profile/photo', [AvatarController::class, 'update'])->middleware('throttle:10,1')->name('profiles.photo.update');
     Route::delete('/me/profile/photo', [AvatarController::class, 'destroy'])->middleware('throttle:10,1')->name('profiles.photo.destroy');
     Route::put('/me/password', [PasswordController::class, 'update'])->middleware('throttle:5,1')->name('password.change');
+    Route::patch('/me/preferences', [\App\Http\Controllers\PreferencesController::class, 'update'])->name('preferences.update');
+    Route::patch('/me/preferences/theme', [\App\Http\Controllers\PreferencesController::class, 'toggleTheme'])->name('preferences.theme');
 
     Route::get('/me/friends', [FriendController::class, 'index'])->middleware('throttle:60,1')->name('friends.index');
     Route::patch('/me/friends/privacy', [FriendController::class, 'privacy'])->name('friends.privacy');
@@ -67,6 +69,9 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/me/friends/{code}', [FriendController::class, 'destroy'])->name('friends.destroy');
 
     Route::get('/cards/search', [DeckCardController::class, 'search'])->middleware('throttle:40,1')->name('cards.search');
+    Route::get('/me/decks', [DeckController::class, 'index'])->name('decks.index');
+    Route::put('/me/showcase/{slot}', [\App\Http\Controllers\ShowcaseController::class, 'update'])->whereIn('slot', ['1', '2', '3'])->name('showcase.update');
+    Route::delete('/me/showcase/{slot}', [\App\Http\Controllers\ShowcaseController::class, 'destroy'])->whereIn('slot', ['1', '2', '3'])->name('showcase.destroy');
     Route::post('/me/decks', [DeckController::class, 'store'])->name('decks.store');
     Route::get('/decks/{deck}', [DeckController::class, 'show'])->name('decks.show');
     Route::get('/me/decks/{deck}/edit', [DeckController::class, 'edit'])->name('decks.edit');

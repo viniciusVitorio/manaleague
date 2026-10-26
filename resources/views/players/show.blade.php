@@ -45,7 +45,7 @@
     {{-- Card de identidade: so uma acao secundaria, no canto (regra em docs/ui-rules.md). Navegacao fica no menu. --}}
     <div class="profile-hero-action">
     @if($isOwner)
-        <a class="ui-btn ui-btn-outline ui-btn-sm" href="{{ route('profiles.edit') }}"><x-icon name="pencil" :size="14" />Editar perfil</a>
+        <div class="deck-actions"><a class="btn btn-secondary" href="{{ route('challenges.index') }}">Desafios 1v1</a><a class="btn btn-secondary" href="{{ route('challenges.rivalries') }}">Rivalidades</a><a class="btn btn-primary" href="{{ route('profiles.edit') }}">Editar perfil e decks</a></div>
     @else
         @php($friendLabel = match($friendshipStatus) { 'pending' => 'Cancelar solicitação', 'accepted' => 'Remover amizade', default => 'Solicitar amizade' })
         <form method="POST" action="{{ route('profiles.friend', $profile) }}">@csrf @method('PATCH')<button class="ui-btn ui-btn-outline ui-btn-sm"><x-icon name="{{ $friendshipStatus ? 'users' : 'user-plus' }}" :size="14" />{{ $friendLabel }}</button></form>
@@ -115,6 +115,95 @@
     @endif
 </section>
 @endif
+@php($filledSlots = collect($showcase['slots'])->filter())
+@if($isOwner || $filledSlots->isNotEmpty())
+@push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/hub.css') }}">@endpush
+<section class="card section-card deck-showcase" id="vitrine">
+    <div class="section-heading"><div><span class="eyebrow">Arsenal</span><h2>Vitrine de decks</h2></div>@if($isOwner)<a class="btn btn-small btn-secondary" href="{{ route('decks.index') }}">Gerenciar decks</a>@endif</div>
+    @if($isOwner && $filledSlots->isEmpty())
+        <p class="muted small-note">Escolha até 3 decks para mostrar no seu perfil. Enquanto a vitrine estiver vazia, seus amigos veem o deck principal e os próximos decks visíveis.</p>
+    @endif
+
+    <div class="showcase-slots">
+        @foreach($showcase['slots'] as $slot => $d)
+            @if($d)
+                <div class="showcase-slot">
+                    @include('decks.partials.deck-card', ['d' => $d, 'manage' => false])
+                    @if($isOwner)
+                        <div class="ui-dropdown showcase-slot-menu">
+                            <button type="button" class="showcase-menu-btn" data-menu-button aria-expanded="false" aria-controls="showcase-menu-{{ $slot }}" aria-label="Opções do espaço {{ $slot }} da vitrine"><x-icon name="ellipsis" /></button>
+                            <div class="ui-menu ui-menu-end" id="showcase-menu-{{ $slot }}" hidden>
+                                <button type="button" class="ui-menu-item" data-showcase-pick="{{ $slot }}"><x-icon name="repeat" />Trocar deck</button>
+                                <form method="POST" action="{{ route('showcase.destroy', $slot) }}">@csrf @method('DELETE')<button class="ui-menu-item"><x-icon name="x" />Tirar da vitrine</button></form>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @elseif($isOwner)
+                <button type="button" class="showcase-empty" data-showcase-pick="{{ $slot }}" aria-label="Adicionar deck ao espaço {{ $slot }} da vitrine">
+                    <span class="showcase-empty-icon"><x-icon name="plus" :size="20" /></span>
+                    <strong>Adicionar deck</strong><small>à vitrine</small>
+                </button>
+            @endif
+        @endforeach
+    </div>
+
+    @if($isOwner)
+        <a class="ui-link deck-showcase-more" href="{{ route('decks.index') }}">Ver todos os {{ $showcase['total'] }} {{ $showcase['total'] === 1 ? 'deck' : 'decks' }}<x-icon name="arrow-right" :size="14" /></a>
+    @elseif($showcase['others']->isNotEmpty())
+        <details class="deck-showcase-more">
+            <summary>Ver mais {{ $showcase['others']->count() }} {{ $showcase['others']->count() === 1 ? 'deck' : 'decks' }}</summary>
+            <div class="deck-cards">@foreach($showcase['others'] as $d)@include('decks.partials.deck-card', ['d' => $d, 'manage' => false])@endforeach</div>
+        </details>
+    @endif
+</section>
+
+@if($isOwner)
+<dialog class="showcase-picker" id="showcase-picker" aria-labelledby="showcase-picker-title">
+    <form method="POST" action="{{ route('showcase.update', 1) }}" class="showcase-picker-inner" data-showcase-form>@csrf @method('PUT')
+        <header class="showcase-picker-head">
+            <h2 id="showcase-picker-title">Escolher deck para a vitrine</h2>
+            <button type="button" class="ui-icon-btn" data-showcase-close aria-label="Fechar"><x-icon name="x" /></button>
+        </header>
+        @if($showcase['pickable']->count() > 4)
+            <label class="hub-search showcase-picker-search"><x-icon name="search" /><input type="search" placeholder="Buscar deck…" aria-label="Buscar deck" data-showcase-search></label>
+        @endif
+        <div class="showcase-picker-list">
+            @forelse($showcase['pickable'] as $d)
+                @php($pick = $d['deck'])
+                <div class="showcase-pick {{ $pick->is_visible_to_friends ? '' : 'is-disabled' }}" data-name="{{ mb_strtolower($pick->name) }}">
+                    <span class="showcase-pick-art" @if($d['cover']) style="--art: url('{{ $d['cover'] }}')" @endif aria-hidden="true"></span>
+                    <span class="showcase-pick-info">
+                        <strong>{{ $pick->name }}</strong>
+                        <small>{{ $pick->format ?: 'Formato livre' }} · {{ $d['cards'] }} {{ $d['cards'] === 1 ? 'carta' : 'cartas' }} @include('partials.color-pips', ['colors' => $pick->colors])</small>
+                    </span>
+                    @if(! $pick->is_visible_to_friends)
+                        <span class="showcase-pick-note"><x-icon name="lock" :size="12" />Privado · <a href="{{ route('decks.edit', $pick) }}">tornar visível</a></span>
+                    @else
+                        @if($pick->showcase_position)<span class="showcase-pick-note">Na vitrine (espaço {{ $pick->showcase_position }})</span>@endif
+                        <button class="ui-btn ui-btn-outline ui-btn-sm" name="deck_id" value="{{ $pick->id }}">{{ $pick->showcase_position ? 'Mover para cá' : 'Escolher' }}</button>
+                    @endif
+                </div>
+            @empty
+                <p class="muted">Você ainda não tem decks. <a href="{{ route('decks.index') }}#novo-deck">Criar o primeiro</a></p>
+            @endforelse
+            <p class="muted small showcase-picker-empty" hidden>Nenhum deck com esse nome.</p>
+        </div>
+    </form>
+</dialog>
+<script src="{{ \App\Support\VersionedAsset::url('js/showcase.js') }}" defer></script>
+@endif
+@endif
+
+<div class="profile-columns">
+    <section class="card section-card"><span class="eyebrow">Arsenal utilizado</span><h2>Decks nos torneios</h2>
+        @forelse($summary['decks'] as $deck)<div class="history-row"><div><strong>{{ $deck['name'] }}</strong><small>@if($deck['colors'])@include('partials.color-pips', ['colors' => $deck['colors']])@else Cores não informadas @endif</small></div><b>{{ $deck['wins'] }}W — {{ $deck['losses'] }}L</b></div>@empty<p class="muted">Nenhum deck registrado.</p>@endforelse
+    </section>
+    <section class="card section-card"><span class="eyebrow">Histórico</span><h2>Campeonatos</h2>
+        @forelse($summary['tournaments'] as $tournament)<a class="history-row" href="{{ route('arena.public', $tournament->public_slug) }}"><div><strong>{{ $tournament->name }}</strong><small>{{ $tournament->format }} · {{ $tournament->tournament_date?->format('d/m/Y') }}</small></div><span>→</span></a>@empty<p class="muted">Nenhum torneio disputado.</p>@endforelse
+    </section>
+</div>
+
 @if(($tradeBinder ?? null) !== null && $tradeBinder->isNotEmpty())
 @push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/hub.css') }}">@endpush
 <section class="card section-card" id="trocas">
@@ -160,35 +249,6 @@
         </form>
     @endif
 </section>
-
-@if($decks->isNotEmpty() || $isOwner)
-<section class="card section-card">
-    <div class="section-heading"><div><span class="eyebrow">Arsenal</span><h2>Decks</h2></div>@if($isOwner)<a class="btn btn-small btn-secondary" href="{{ route('profiles.edit') }}#novo-deck">Novo deck</a>@endif</div>
-    <div class="deck-grid">
-    @forelse($decks as $deck)
-        <a class="deck-tile" href="{{ route('decks.show', $deck) }}">
-            <div><strong>{{ $deck->is_primary ? '★ ' : '' }}{{ $deck->name }}</strong><small>{{ $deck->format ?: 'Formato livre' }} · {{ (int) $deck->cards_sum_quantity }} cartas</small>@include('decks.partials.single-set-badge')</div>
-            @include('partials.color-pips', ['colors' => $deck->colors])
-
-
-            @if($isOwner && !$deck->is_visible_to_friends)<small class="muted">🔒 Privado</small>@endif
-
-        </a>
-    @empty
-        <p class="muted">Nenhum deck cadastrado ainda.</p>
-    @endforelse
-    </div>
-</section>
-@endif
-
-<div class="profile-columns">
-    <section class="card section-card"><span class="eyebrow">Arsenal utilizado</span><h2>Decks nos torneios</h2>
-        @forelse($summary['decks'] as $deck)<div class="history-row"><div><strong>{{ $deck['name'] }}</strong><small>@if($deck['colors'])@include('partials.color-pips', ['colors' => $deck['colors']])@else Cores não informadas @endif</small></div><b>{{ $deck['wins'] }}W — {{ $deck['losses'] }}L</b></div>@empty<p class="muted">Nenhum deck registrado.</p>@endforelse
-    </section>
-    <section class="card section-card"><span class="eyebrow">Histórico</span><h2>Campeonatos</h2>
-        @forelse($summary['tournaments'] as $tournament)<a class="history-row" href="{{ route('arena.public', $tournament->public_slug) }}"><div><strong>{{ $tournament->name }}</strong><small>{{ $tournament->format }} · {{ $tournament->tournament_date?->format('d/m/Y') }}</small></div><span>→</span></a>@empty<p class="muted">Nenhum torneio disputado.</p>@endforelse
-    </section>
-</div>
 
 
 

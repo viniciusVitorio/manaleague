@@ -58,3 +58,33 @@
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
+
+// Filtros da coleção: abre/fecha o painel, aplica a ordenação na hora e não manda campos vazios na URL.
+(function () {
+    'use strict';
+    function init() {
+        var form = document.querySelector('form[data-autosubmit]');
+        if (!form) return;
+        var toggle = form.querySelector('[data-filter-toggle]');
+        var panel = document.getElementById(toggle ? toggle.getAttribute('aria-controls') : '');
+        // Sem JS o painel fica sempre aberto; com JS ele começa fechado e abre pelo botão "Filtros".
+        if (toggle && panel) { panel.hidden = true; toggle.setAttribute('aria-expanded', 'false'); }
+        if (toggle && panel) toggle.addEventListener('click', function () {
+            var open = panel.hidden;
+            panel.hidden = !open;
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (open) { var first = panel.querySelector('input, select'); if (first) first.focus(); }
+        });
+        var sort = form.elements.sort;
+        if (sort) sort.addEventListener('change', function () { form.requestSubmit ? form.requestSubmit() : form.submit(); });
+        form.addEventListener('submit', function () {
+            Array.prototype.forEach.call(form.elements, function (el) {
+                if (!el.name || el.disabled) return;
+                var empty = el.value === '' || (el.name === 'show' && el.value === 'all') || (el.name === 'sort' && el.value === 'name') || (el.name === 'view' && el.value === 'grid');
+                if (el.type === 'radio' && !el.checked) return;
+                if (empty) el.disabled = true;
+            });
+        });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();

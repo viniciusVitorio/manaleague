@@ -32,10 +32,74 @@ class CollectionService
             }
             $price = $foil ? ($card['price_usd_foil'] ?? $card['price_usd'] ?? null) : ($card['price_usd'] ?? null);
             $item->fill(['name' => $card['name'], 'set_code' => $card['set_code'] ?? null, 'image_url' => $card['image_url'] ?? null,
-                'type_line' => $card['type_line'] ?? null, 'rarity' => $card['rarity'] ?? null, 'price_usd' => $price ?? $item->price_usd, 'quantity' => $quantity])->save();
+                'type_line' => $card['type_line'] ?? null, 'rarity' => $card['rarity'] ?? null, 'price_usd' => $price ?? $item->price_usd, 'quantity' => $quantity,
+                'color_identity' => self::colorIdentity($card) ?? $item->color_identity])->save();
 
             return $item;
         });
+    }
+
+    /** "WU", "C" para incolor, null quando a carta veio sem essa informação. */
+    public static function colorIdentity(array $card): ?string
+    {
+        return array_key_exists('color_identity', $card) ? (($card['color_identity'] ?? '') ?: 'C') : null;
+    }
+
+    /**
+     * Adiciona à coleção as cópias que faltam para montar o deck (ex.: depois de comprar).
+     *
+     * @return int cópias adicionadas
+     */
+    public function addMissing(User $user, Deck $deck, bool $foil, string $condition): int
+    {
+        $missing = collect($this->missing($user, $deck, exact: false))->where('missing', '>', 0)->keyBy(fn ($row) => mb_strtolower($row['name']));
+        if ($missing->isEmpty()) {
+            return 0;
+        }
+        $added = 0;
+        foreach ($deck->cards()->orderBy('id')->get()->unique(fn ($c) => mb_strtolower($c->name)) as $card) {
+            $row = $missing->get(mb_strtolower($card->name));
+            if (! $row) {
+                continue;
+            }
+            $this->add($user, [
+                'scryfall_id' => $card->scryfall_id, 'name' => $card->name, 'set_code' => $card->set_code, 'image_url' => $card->image_url,
+                'type_line' => $card->type_line, 'rarity' => $card->rarity, 'color_identity' => $card->color_identity,
+            ], ['quantity' => $row['missing'], 'foil' => $foil, 'condition' => $condition]);
+            $added += $row['missing'];
+        }
+
+        return $added;
+    }
+
+    /**
+     * Preenche cor/tipo/raridade/imagem de itens antigos que ficaram sem essa informação.
+     *
+     * @return int itens atualizados
+     */
+    public function refreshMetadata(): int
+    {
+        $updated = 0;
+        CollectionItem::query()->where(fn ($q) => $q->whereNull('color_identity')->orWhereNull('type_line')->orWhereNull('rarity'))
+            ->orderBy('id')->chunkById(300, function ($items) use (&$updated) {
+                $cards = $this->scryfall->byIds($items->pluck('scryfall_id')->all());
+                foreach ($items as $item) {
+                    $card = $cards[strtolower($item->scryfall_id)] ?? null;
+                    if (! $card) {
+                        continue;
+                    }
+                    $item->fill([
+                        'color_identity' => $item->color_identity ?? self::colorIdentity($card), 'type_line' => $item->type_line ?? $card['type_line'],
+                        'rarity' => $item->rarity ?? $card['rarity'], 'image_url' => $item->image_url ?? $card['image_url'],
+                    ]);
+                    if ($item->isDirty()) {
+                        $item->save();
+                        $updated++;
+                    }
+                }
+            });
+
+        return $updated;
     }
 
     /**
@@ -165,7 +229,8 @@ class CollectionService
         return $userId ? CollectionItem::where('user_id', $userId)->where('for_trade', '>', 0)->orderBy('name')->get() : collect();
     }
 
-    private function ownedByName(User $user): Collection
+    /** Cópias na coleção por nome (minúsculo), somando impressões, acabamentos e condições. */
+    public function ownedByName(User $user): Collection
     {
         return CollectionItem::where('user_id', $user->id)->get()->groupBy(fn ($i) => mb_strtolower($i->name))->map(fn ($i) => (int) $i->sum('quantity'));
     }

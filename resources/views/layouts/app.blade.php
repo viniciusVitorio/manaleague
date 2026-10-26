@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="pt-BR">
+@php($theme = \App\Support\Theme::current())
+<html lang="pt-BR" data-theme="{{ $theme }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,8 +13,9 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ asset('site.webmanifest') }}">
-    <meta name="theme-color" content="#09090b">
+    <meta name="theme-color" content="{{ $theme === 'light' ? '#fafafa' : '#09090b' }}">
     <script src="{{ \App\Support\VersionedAsset::url('js/nav.js') }}" defer></script>
+    <script src="{{ \App\Support\VersionedAsset::url('js/password-toggle.js') }}" defer></script>
     <script src="{{ \App\Support\VersionedAsset::url('js/release-notice.js') }}" defer></script>
     @stack('head')
 </head>
