@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\AvatarService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,7 +16,7 @@ class SecurityHeaders
     private const CSP = "default-src 'self'; "
         ."script-src 'self' 'unsafe-inline'; "   // handlers inline simples (copiar link, confirm())
         ."style-src 'self' 'unsafe-inline'; "
-        ."img-src 'self' data: https://cards.scryfall.io; "   // imagens oficiais das cartas
+        ."img-src 'self' data: https://cards.scryfall.io%AVATARS%; "   // cartas oficiais + bucket das fotos de perfil
         ."font-src 'self'; "
         ."connect-src 'self'; "
         ."object-src 'none'; "
@@ -23,12 +24,22 @@ class SecurityHeaders
         ."form-action 'self'; "
         ."frame-ancestors 'self'";
 
+    public function __construct(private readonly AvatarService $avatars) {}
+
+    /** Fotos de perfil vem do bucket S3 (URL assinada) quando AVATAR_DISK=s3; so essa origem e liberada. */
+    private function csp(): string
+    {
+        $origin = $this->avatars->cspOrigin();
+
+        return str_replace('%AVATARS%', $origin ? ' '.$origin : '', self::CSP);
+    }
+
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
 
         $headers = [
-            'Content-Security-Policy' => self::CSP,
+            'Content-Security-Policy' => $this->csp(),
             'X-Frame-Options' => 'SAMEORIGIN',
             'X-Content-Type-Options' => 'nosniff',
             'Referrer-Policy' => 'strict-origin-when-cross-origin',

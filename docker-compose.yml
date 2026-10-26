@@ -25,6 +25,10 @@ services:
       MAIL_FROM_NAME: "${MAIL_FROM_NAME:-ManaLeague}"
       AWS_SES_REGION: "${AWS_SES_REGION:-us-east-1}"
       AWS_SES_CONFIGURATION_SET: "${AWS_SES_CONFIGURATION_SET:-}"
+      # Foto de perfil: local em dev; s3 em producao (bucket privado, credenciais da IAM Role da EC2).
+      AVATAR_DISK: "${AVATAR_DISK:-local}"
+      AWS_BUCKET: "${AWS_BUCKET:-}"
+      AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION:-us-east-1}"
     volumes:
       - app_storage:/var/www/html/storage
     healthcheck:

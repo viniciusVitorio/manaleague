@@ -8,6 +8,7 @@
 | Caddy | porta publica (80/443), TLS automatico (Let's Encrypt), compressao, headers e proxy FastCGI |
 | Laravel/PHP-FPM | autenticacao, autorizacao, round-robin, ranking, finais e headers de seguranca (`SecurityHeaders`) |
 | SQLite | usuarios, torneios, jogadores, partidas e sessoes |
+| Amazon S3 (privado) | fotos de perfil (`avatars/<uuid>.webp`), lidas pelo navegador via URL assinada |
 | GitHub Actions | CI, scanners, quality gate e CD |
 | SonarQube Cloud | analise estatica e Quality Gate |
 | Terraform | EC2, chave e firewall reproduziveis |
@@ -43,6 +44,7 @@ Commit → PHPUnit → Composer Audit/Trivy → Sonar → Quality Gate
 - **Servicos de dominio:** `PairingService` gera confrontos e `StandingsService` calcula a tabela sem misturar regra de negocio com HTML.
 - **Maquina de estados do torneio:** `setup → league → finals → finished`; cada transicao valida o estado atual com lock, e placares so podem ser editados na fase da partida.
 - **Pagina publica tokenizada:** amigos acompanham o placar sem conta, mas nao recebem endpoint de escrita.
+- **Foto de perfil no S3 privado:** o upload passa pelo Laravel (`AvatarService`), que valida, reencoda em WebP 256x256 (descarta EXIF e payloads) e grava com nome UUID. As views usam o componente `<x-avatar>` (foto ou emoji/inicial). Com `AVATAR_DISK=s3` o navegador recebe *presigned GET* com inicio arredondado a janelas de 30 min (mesma URL = cache do navegador) e validade de janela + 90 min; a CSP libera so a origem do bucket. Com `AVATAR_DISK=local` (padrao em dev e no deploy ate o bucket existir) a rota `/avatars/{uuid}.webp` serve o arquivo do volume.
 
 ## Modulos
 
@@ -73,4 +75,8 @@ Cada modulo registra as proprias rotas (com middleware explicito) e e carregado 
 - Nova dependencia: `bacon/bacon-qr-code` (PNG gerado localmente, sem GD/Imagick e sem servico externo; o token do convite nunca sai do servidor).
 - Nao ha fila nem cron novos: notificacoes sao gravadas na hora (somente no app, sem e-mail) e desafios expiram de forma preguicosa ao abrir as paginas.
 - Todos os CSS/JS usam `VersionedAsset::url`, entao cada deploy invalida o cache do navegador automaticamente.
+- Fotos de perfil: a imagem Docker passa a ter `gd` (JPEG/PNG/WebP) e `exif`; a migration `2026_10_26_*` cria `player_profiles.avatar_path`. Ativar o S3 em producao:
+  1. `terraform apply` (cria o bucket privado e a policy `s3-profile-photos` na role da EC2; revise o plano: nao pode haver `-/+` na instancia);
+  2. no GitHub (Settings > Secrets and variables > Actions > Variables): `AVATAR_DISK=s3` e `AVATAR_BUCKET=<output avatar_bucket>`;
+  3. novo deploy. Sem essas variaveis as fotos ficam no volume local (`storage/app/private/avatars`); fotos enviadas antes da troca nao sao copiadas sozinhas (`aws s3 sync` do volume para o bucket, se houver).
 - Testes: `php artisan test` (PHPUnit) e `node --test tests/js/deck-simulator.test.cjs` (simulador de mao).

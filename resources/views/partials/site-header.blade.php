@@ -15,7 +15,6 @@
     ];
     $is = fn (string $patterns) => request()->routeIs(...explode('|', $patterns));
     $moreActive = collect($more)->contains(fn ($l) => $is($l[3]));
-    $initial = $user->avatarMark();
 @endphp
 <header class="site-header">
     <div class="container site-header-inner">
@@ -41,7 +40,7 @@
             </a>
             <div class="ui-dropdown site-account">
                 <button type="button" class="ui-avatar-btn" data-menu-button aria-expanded="false" aria-controls="menu-account" aria-label="Conta de {{ $user->name }}">
-                    <span class="ui-avatar">{{ $initial }}</span>@if($pendingFriends)<span class="ui-dot-alert" aria-hidden="true"></span>@endif
+                    <x-avatar :of="$user" class="ui-avatar" />@if($pendingFriends)<span class="ui-dot-alert" aria-hidden="true"></span>@endif
                 </button>
                 <div class="ui-menu ui-menu-end" id="menu-account" hidden>
                     <div class="ui-menu-label"><strong>{{ $user->playerProfile?->nickname ?: $user->name }}</strong><span>{{ $user->email }}</span></div>

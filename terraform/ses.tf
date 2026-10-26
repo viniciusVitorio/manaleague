@@ -118,7 +118,7 @@ data "aws_iam_policy_document" "ec2_assume" {
 
 resource "aws_iam_role" "app" {
   name               = "${var.project_name}-app"
-  description        = "Role da EC2 do ManaLeague: apenas envio de e-mail pelo SES."
+  description        = "Role da EC2 do ManaLeague: envio de e-mail pelo SES e fotos de perfil no S3."
   assume_role_policy = data.aws_iam_policy_document.ec2_assume.json
 
   tags = {
