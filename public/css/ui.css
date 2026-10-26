@@ -246,3 +246,47 @@ input[type=radio]:checked::before{transform:scale(1)}
 
 /* Concessao manual de conquista especial (admin) */
 .admin-grant { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--ui-border, #27272a); }
+
+/* Foto de perfil (x-avatar): a imagem preenche o circulo/quadrado do avatar */
+.ui-avatar.has-photo, .profile-avatar.has-photo { overflow: hidden; padding: 0; }
+.ui-avatar.has-photo img, .profile-avatar.has-photo img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.avatar-upload { display: flex; align-items: flex-start; gap: 16px; }
+.avatar-upload-actions { display: grid; gap: 8px; flex: 1; min-width: 0; }
+.avatar-upload-actions input[type=file] { margin-top: 6px; max-width: 100%; }
+@media (max-width: 480px) { .avatar-upload { flex-direction: column; } }
+/* Com foto o avatar grande (perfil/edicao) cresce para a imagem aparecer; o do cabecalho preenche o botao */
+.profile-avatar.large.has-photo { width: 104px; height: 104px; border-radius: 16px; }
+.ui-avatar-btn .ui-avatar.has-photo { width: 34px; height: 34px; }
+@media (max-width: 480px) { .profile-avatar.large.has-photo { width: 80px; height: 80px; border-radius: 14px; } }
+
+/* Cabecalho do perfil como card: foto, nome e acoes ficam dentro do mesmo grid dos cards de baixo */
+.profile-hero.card { align-items: center; padding: 20px; margin-bottom: 12px; }
+.profile-hero.card .profile-title { align-items: center; gap: 20px; }
+.profile-hero.card + .stat-grid, .profile-hero.card + .unlock-banner { margin-top: 0; }
+@media (max-width: 780px) { .profile-hero.card { align-items: stretch; padding: 16px; } .profile-hero.card .profile-title { gap: 14px; } }
+@media (max-width: 780px) { .profile-hero.card .profile-title { align-items: flex-start; } .profile-hero.card .deck-actions { justify-content: flex-start; } }
+/* Acao unica do card de perfil: canto superior direito, nunca centralizada ao lado do conteudo */
+.profile-hero.card { position: relative; }
+.profile-hero-action { align-self: flex-start; flex: 0 0 auto; }
+.profile-hero-action form { margin: 0; }
+@media (max-width: 780px) { .profile-hero-action { position: absolute; top: 12px; right: 12px; } }
+
+/* ---------- Mostrar/ocultar senha ---------- */
+.pw-field{position:relative;display:block;margin-top:6px}
+.pw-field input{margin-top:0!important;padding-right:44px!important}
+.pw-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:inline-grid;place-items:center;width:34px;height:32px;padding:0;border:0;border-radius:var(--ui-radius-sm);background:transparent;color:var(--ui-fg-subtle);cursor:pointer}
+.pw-toggle:hover{color:var(--ui-fg);background:var(--ui-muted)}
+.pw-toggle:focus-visible{outline:2px solid var(--ui-ring);outline-offset:0}
+input::-ms-reveal{display:none}
+
+/* ---------- Preferências: escolha do tema ---------- */
+.pref-group{border:0;padding:0;margin:0 0 16px}
+.pref-group legend{padding:0;margin-bottom:8px;font-weight:600;font-size:.88rem}
+.theme-options{display:flex;flex-wrap:wrap;gap:10px}
+.theme-option{display:flex!important;align-items:center;gap:10px;margin:0;padding:10px 12px;border:1px solid var(--ui-border);border-radius:var(--ui-radius);cursor:pointer;font-size:.88rem}
+.theme-option:has(input:checked){border-color:var(--ui-fg-subtle);background:var(--ui-muted)}
+.theme-swatch{display:inline-flex;width:34px;height:22px;border-radius:5px;overflow:hidden;border:1px solid var(--ui-border-strong)}
+.theme-swatch span{flex:1}
+.theme-option-dark .theme-swatch span:first-child{background:#09090b}.theme-option-dark .theme-swatch span:last-child{background:#27272a}
+.theme-option-light .theme-swatch span:first-child{background:#fafafa}.theme-option-light .theme-swatch span:last-child{background:#e4e4e7}
+.theme-toggle{margin:0;display:inline-flex}

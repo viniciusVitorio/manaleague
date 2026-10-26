@@ -45,7 +45,7 @@
     {{-- Card de identidade: so uma acao secundaria, no canto (regra em docs/ui-rules.md). Navegacao fica no menu. --}}
     <div class="profile-hero-action">
     @if($isOwner)
-        <div class="deck-actions"><a class="btn btn-secondary" href="{{ route('challenges.index') }}">Desafios 1v1</a><a class="btn btn-secondary" href="{{ route('challenges.rivalries') }}">Rivalidades</a><a class="btn btn-primary" href="{{ route('profiles.edit') }}">Editar perfil e decks</a></div>
+        <a class="ui-btn ui-btn-outline ui-btn-sm" href="{{ route('profiles.edit') }}"><x-icon name="pencil" :size="14" />Editar perfil</a>
     @else
         @php($friendLabel = match($friendshipStatus) { 'pending' => 'Cancelar solicitação', 'accepted' => 'Remover amizade', default => 'Solicitar amizade' })
         <form method="POST" action="{{ route('profiles.friend', $profile) }}">@csrf @method('PATCH')<button class="ui-btn ui-btn-outline ui-btn-sm"><x-icon name="{{ $friendshipStatus ? 'users' : 'user-plus' }}" :size="14" />{{ $friendLabel }}</button></form>
