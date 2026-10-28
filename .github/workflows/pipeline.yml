@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Patch notes: publicar, editar ou apagar uma GitHub Release so sincroniza a aba de patch notes
+  # na producao (nao testa nem reimplanta codigo). O push na main continua sendo o deploy de codigo.
+  release:
+    types: [published, edited, deleted]
 
 permissions:
   contents: read
@@ -13,6 +17,8 @@ jobs:
   test:
     name: Automated tests
     runs-on: ubuntu-latest
+    # security e sonar dependem deste job, entao tambem ficam de fora em eventos de release.
+    if: github.event_name != 'release'
     steps:
       - uses: actions/checkout@v4
       - name: Configure PHP
@@ -84,13 +90,18 @@ jobs:
     name: Deploy to AWS EC2
     runs-on: ubuntu-latest
     needs: [security, sonar]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Em release os jobs anteriores sao pulados (nao falham); !failure() deixa o deploy seguir so com a sincronizacao.
+    if: >-
+      !failure() && !cancelled() &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release')
     environment: production
     concurrency:
       group: manaleague-production
       cancel-in-progress: false
     steps:
+      # So o deploy de codigo precisa do repositorio (a tag de uma release apagada pode nem existir mais).
       - uses: actions/checkout@v4
+        if: github.event_name == 'push'
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -109,6 +120,7 @@ jobs:
             grep -q 'InvalidPermission.Duplicate' aws-error.log || { cat aws-error.log; exit 1; }
           }
       - name: Validate production APP_KEY
+        if: github.event_name == 'push'
         env:
           APP_KEY: ${{ secrets.APP_KEY }}
         run: |
@@ -116,10 +128,18 @@ jobs:
             echo "APP_KEY must be a Laravel base64 key with 32 random bytes." >&2
             exit 1
           fi
-      - name: Prepare SSH and release files
+      - name: Prepare SSH
         env:
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/manaleague
+          chmod 600 ~/.ssh/manaleague
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+      - name: Prepare release files
+        if: github.event_name == 'push'
+        env:
           APP_KEY: ${{ secrets.APP_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           # SES so e ativado quando a variavel de repositorio MAIL_MAILER=ses existir
@@ -130,19 +150,17 @@ jobs:
           AVATAR_DISK: ${{ vars.AVATAR_DISK || 'local' }}
           AVATAR_BUCKET: ${{ vars.AVATAR_BUCKET }}
         run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/manaleague
-          chmod 600 ~/.ssh/manaleague
-          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
           printf 'APP_NAME=ManaLeague\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://manaleague.com.br\nLOG_CHANNEL=stderr\nLOG_LEVEL=warning\nDB_CONNECTION=sqlite\nDB_DATABASE=/var/www/html/storage/app/database.sqlite\nSESSION_DRIVER=database\nSESSION_ENCRYPT=true\nSESSION_SECURE_COOKIE=true\nSESSION_HTTP_ONLY=true\nSESSION_SAME_SITE=lax\nCACHE_STORE=database\nQUEUE_CONNECTION=database\nAPP_PORT=80\nHTTPS_PORT=443\nCADDY_DOMAINS="manaleague.com.br, www.manaleague.com.br"\nMAIL_MAILER=%s\nMAIL_FROM_ADDRESS=nao-responda@manaleague.com.br\nMAIL_FROM_NAME=ManaLeague\nAWS_SES_REGION=%s\nAWS_SES_CONFIGURATION_SET=manaleague-transactional\nAVATAR_DISK=%s\nAWS_BUCKET=%s\nAWS_DEFAULT_REGION=%s\n' "$APP_KEY" "$MAIL_MAILER" "$AWS_REGION" "$AVATAR_DISK" "$AVATAR_BUCKET" "$AWS_REGION" > deploy.env
           tar --exclude=.git --exclude=terraform --exclude=vendor --exclude=.env --exclude=deploy.env -czf /tmp/release.tar.gz .
       - name: Upload release
+        if: github.event_name == 'push'
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
         run: |
           scp -i ~/.ssh/manaleague /tmp/release.tar.gz deploy.env "$EC2_USER@$EC2_HOST:/tmp/"
       - name: Activate release
+        if: github.event_name == 'push'
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
@@ -164,6 +182,24 @@ jobs:
           sudo docker compose -p manaleague exec -T app php artisan optimize
           curl --fail --retry 10 --retry-delay 3 --retry-all-errors --resolve manaleague.com.br:443:127.0.0.1 https://manaleague.com.br/login >/dev/null
           REMOTE
+      - name: Export published GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Rascunhos e pre-releases ficam de fora. Pagina todas as releases (100 por chamada).
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --paginate \
+            --jq '.[] | select((.draft | not) and (.prerelease | not)) | {tag: .tag_name, name, body, published_at}' \
+            | jq -s '.' > patch-notes.json
+          echo "$(jq length patch-notes.json) release(s) publicada(s) para sincronizar."
+      - name: Sync patch notes
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        # O JSON vai pela entrada padrao do SSH direto para o comando, sem arquivo temporario no servidor.
+        run: |
+          ssh -i ~/.ssh/manaleague "$EC2_USER@$EC2_HOST" \
+            "cd /opt/manaleague/current && sudo docker compose -p manaleague exec -T app php artisan patch-notes:sync" \
+            < patch-notes.json
       - name: Remove temporary SSH access
         if: always()
         continue-on-error: true

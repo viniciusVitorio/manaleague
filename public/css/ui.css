@@ -290,3 +290,19 @@ input::-ms-reveal{display:none}
 .theme-option-dark .theme-swatch span:first-child{background:#09090b}.theme-option-dark .theme-swatch span:last-child{background:#27272a}
 .theme-option-light .theme-swatch span:first-child{background:#fafafa}.theme-option-light .theme-swatch span:last-child{background:#e4e4e7}
 .theme-toggle{margin:0;display:inline-flex}
+
+/* ---------- Patch notes ---------- */
+.patch-notes{display:grid;gap:var(--s3);margin-bottom:var(--s6)}
+.patch-note{scroll-margin-top:80px}
+.patch-note-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s3)}
+.patch-note-head h2{margin:0;font-size:1.1rem}
+.patch-note-meta{display:flex;align-items:center;gap:var(--s2);flex-shrink:0;color:var(--ui-fg-subtle);font-size:.78rem}
+.patch-note-body{color:var(--ui-fg-muted);font-size:.9rem;overflow-wrap:anywhere}
+.patch-note-body h3{margin:var(--s4) 0 var(--s2);color:var(--ui-fg);font-size:.92rem;font-weight:600;letter-spacing:-.01em}
+.patch-note-body h3:first-child{margin-top:0}
+.patch-note-body p{margin:0 0 var(--s3);white-space:pre-line}
+.patch-note-body ul{margin:0 0 var(--s3);padding-left:20px}
+.patch-note-body li+li{margin-top:var(--s1)}
+.patch-note-body>:last-child{margin-bottom:0}
+.patch-note-empty{margin:0;color:var(--ui-fg-subtle);font-size:.85rem}
+@media(max-width:480px){.patch-note-head{flex-direction:column;gap:var(--s2)}}

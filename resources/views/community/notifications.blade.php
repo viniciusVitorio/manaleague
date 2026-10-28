@@ -5,7 +5,8 @@
     $unreadCount = $notifications->getCollection()->whereNull('read_at')->count();
     $categories = ['tournament' => ['Torneios', 'Rodadas prontas e resultados finais', 'trophy'], 'match' => ['Partidas', 'Placares enviados, confirmados e contestados', 'target'],
         'challenge' => ['Desafios', 'Convites, aceites e placares de desafios', 'swords'], 'ranked' => ['Ranked', 'Partidas ranqueadas e variação de pontos', 'chart'],
-        'club' => ['Clubes', 'Convites e mudanças nos seus clubes', 'shield'], 'achievement' => ['Conquistas', 'Conquistas desbloqueadas', 'crown']];
+        'club' => ['Clubes', 'Convites e mudanças nos seus clubes', 'shield'], 'achievement' => ['Conquistas', 'Conquistas desbloqueadas', 'crown'],
+        'patch_note' => ['Patch notes', 'Novas versões do ManaLeague', 'megaphone']];
 @endphp
 <header class="page-head">
     <div><h1>Notificações</h1><p>Avisos do ManaLeague sobre suas partidas, torneios e desafios.</p></div>

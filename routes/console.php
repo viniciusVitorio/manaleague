@@ -80,3 +80,26 @@ Artisan::command('ranked:prune', function (): int {
 
 \Illuminate\Support\Facades\Schedule::command('ranked:tick')->everyMinute()->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('ranked:prune')->daily();
+
+Artisan::command('patch-notes:sync {file? : Arquivo JSON com as releases (sem ele, le da entrada padrao)}', function (?string $file = null): int {
+    if ($file !== null && ! is_file($file)) {
+        $this->error("Arquivo nao encontrado: {$file}");
+        return 1;
+    }
+    $raw = $file !== null ? file_get_contents($file) : stream_get_contents(STDIN);
+    $raw = preg_replace('/^\xEF\xBB\xBF/', '', (string) $raw); // BOM de arquivos salvos no Windows
+
+    try {
+        $releases = json_decode((string) $raw, true, 64, JSON_THROW_ON_ERROR);
+        $result = app(\App\Services\PatchNoteSync::class)->sync($releases);
+    } catch (JsonException|InvalidArgumentException $exception) {
+        $this->error('Nada foi alterado: '.$exception->getMessage());
+        return 1;
+    }
+
+    $this->info("Patch notes sincronizados: {$result['created']} novo(s), {$result['updated']} atualizado(s), {$result['deleted']} removido(s).");
+    if ($result['announced']) {
+        $this->info("Aviso da versão {$result['announced']} no sino de {$result['notified']} conta(s).");
+    }
+    return 0;
+})->purpose('Copia as GitHub Releases publicadas (JSON gerado no deploy) para a aba de patch notes');
