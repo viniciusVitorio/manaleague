@@ -1,0 +1,3 @@
+{{-- Envolve um nome com o link do perfil, sem mudar o texto. Aceita inscrição de torneio (Player), perfil ou conta. Só vira link quando há perfil e quem vê pode abrir (PlayerProfilePolicy). Nunca use dentro de outro link. --}}@props(['of' => null])
+@php($profile = match (true) { $of instanceof \App\Models\PlayerProfile => $of, $of instanceof \App\Models\Player => $of->player_profile_id ? $of->profile : null, $of instanceof \App\Models\User => $of->playerProfile, default => null })
+@if($profile && auth()->user()?->can('view', $profile))<a {{ $attributes->merge(['class' => 'player-link']) }} href="{{ route('profiles.show', $profile) }}">{{ $slot }}</a>@else{{ $slot }}@endif

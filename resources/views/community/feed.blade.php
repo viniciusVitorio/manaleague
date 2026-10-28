@@ -50,7 +50,7 @@
 
     <x-ui.card title="Destaques da semana" icon="sparkles" meta="7 dias">
         @forelse($weekly as $i => $w)
-            <div class="friends-rank-row"><span class="num">{{ $i + 1 }}</span><x-avatar :of="$w['profile']" class="ui-avatar" aria-hidden="true" /><span class="friends-rank-name">{{ $w['profile']->nickname }}</span><strong class="num">{{ $w['wins'] }} {{ $w['wins'] === 1 ? 'vitória' : 'vitórias' }}</strong></div>
+            <div class="friends-rank-row"><span class="num">{{ $i + 1 }}</span><x-profile-link :of="$w['profile']" class="avatar-link" tabindex="-1" aria-hidden="true"><x-avatar :of="$w['profile']" class="ui-avatar" aria-hidden="true" /></x-profile-link><span class="friends-rank-name"><x-profile-link :of="$w['profile']">{{ $w['profile']->nickname }}</x-profile-link></span><strong class="num">{{ $w['wins'] }} {{ $w['wins'] === 1 ? 'vitória' : 'vitórias' }}</strong></div>
         @empty
             <p class="muted small">Ninguém do seu grupo jogou torneio nos últimos 7 dias.</p>
         @endforelse
@@ -67,7 +67,7 @@
     @if($suggestions->isNotEmpty())
     <x-ui.card title="Talvez você conheça" icon="user-plus">
         @foreach($suggestions as $s)
-            <div class="member-row"><x-avatar :of="$s['profile']" class="ui-avatar" aria-hidden="true" /><span class="member-name"><a href="{{ route('profiles.show', $s['profile']) }}">{{ $s['profile']->nickname }}</a><small>{{ $s['mutual']->count() }} {{ $s['mutual']->count() === 1 ? 'amigo' : 'amigos' }} em comum</small></span>
+            <div class="member-row"><x-profile-link :of="$s['profile']" class="avatar-link" tabindex="-1" aria-hidden="true"><x-avatar :of="$s['profile']" class="ui-avatar" aria-hidden="true" /></x-profile-link><span class="member-name"><a href="{{ route('profiles.show', $s['profile']) }}">{{ $s['profile']->nickname }}</a><small>{{ $s['mutual']->count() }} {{ $s['mutual']->count() === 1 ? 'amigo' : 'amigos' }} em comum</small></span>
             <form method="POST" action="{{ route('friends.store', $s['profile']->friend_code) }}">@csrf<button class="ui-btn ui-btn-outline ui-btn-sm">Adicionar</button></form></div>
         @endforeach
     </x-ui.card>

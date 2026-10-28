@@ -3,7 +3,7 @@
 @section('content')
 <h1>Resultados enviados · {{ $tournament->name }}</h1>
 @forelse($submissions as $submission)
-<article class="card section-card mobile-result"><h2>{{ $submission->gameMatch->playerOne?->displayName() }} × {{ $submission->gameMatch->playerTwo?->displayName() }}</h2>
+<article class="card section-card mobile-result"><h2><x-profile-link :of="$submission->gameMatch->playerOne">{{ $submission->gameMatch->playerOne?->displayName() }}</x-profile-link> × <x-profile-link :of="$submission->gameMatch->playerTwo">{{ $submission->gameMatch->playerTwo?->displayName() }}</x-profile-link></h2>
 <p>{{ $submission->status }} · {{ $submission->player_one_games }} × {{ $submission->player_two_games }}</p>
 @if($submission->dispute_reason)<p>Contestação: {{ $submission->dispute_reason }}</p>@endif
 @if($submission->resolution_reason)<p>Resolução: {{ $submission->resolution_reason }}</p>@endif

@@ -8,8 +8,10 @@
         let etag = null, delay = 10000;
         const state = board.querySelector('[data-live-status]');
         const statusLabel = {pending: 'em jogo', finished: 'encerrada', bye: 'folga'};
+        // Mesma regra do ranking: 🔥 com 3 vitórias seguidas, ⚡ com 6 ou mais.
+        const streakMark = n => n >= 6 ? ' ⚡' : (n >= 3 ? ' 🔥' : '');
         const render = data => {
-            const rows = data.standings.map(row => { const li = document.createElement('li'); li.textContent = `${row.name} — ${row.points} pts · ${row.wins}V ${row.draws}E ${row.losses}D`; return li; });
+            const rows = data.standings.map(row => { const li = document.createElement('li'); li.textContent = `${row.name}${streakMark(row.streak)} — ${row.points} pts · ${row.wins}V ${row.draws}E ${row.losses}D`; return li; });
             board.querySelector('[data-live-standings]').replaceChildren(...rows);
             const matches = data.matches.map(match => { const p = document.createElement('p'); p.textContent = `R${match.round} · ${match.one} ${match.one_score ?? '–'} × ${match.two_score ?? '–'} ${match.two} · ${statusLabel[match.status] ?? match.status}`; return p; });
             board.querySelector('[data-live-matches]').replaceChildren(...matches);

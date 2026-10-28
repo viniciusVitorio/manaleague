@@ -5,7 +5,7 @@
     @forelse($ranking as $row)
         <tr class="{{ $row['rank'] <= 4 ? 'qualified' : '' }}">
             <td><span class="rank rank-{{ $row['rank'] }}">{{ $row['rank'] }}</span></td>
-            <td><strong>{{ $row['player']->displayName() }}</strong><small>{{ $row['player']->deck_name ?: 'Deck não informado' }} @if($row['player']->deck_colors) · {{ $row['player']->deck_colors }} @endif</small></td>
+            <td><strong><x-profile-link :of="$row['player']">{{ $row['player']->displayName() }}</x-profile-link></strong><x-streak :count="$row['streak']" /><small>{{ $row['player']->deck_name ?: 'Deck não informado' }} @if($row['player']->deck_colors) · {{ $row['player']->deck_colors }} @endif</small></td>
             <td>{{ $row['played'] }}</td><td>{{ $row['wins'] }}</td><td>{{ $row['draws'] }}</td><td>{{ $row['losses'] }}</td><td>{{ $row['game_diff'] > 0 ? '+' : '' }}{{ $row['game_diff'] }}</td><td><strong>{{ $row['points'] }}</strong></td>
         </tr>
     @empty

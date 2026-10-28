@@ -33,6 +33,7 @@ mude a regra aqui primeiro — nao abra excecao escondida na tela.
 | **Vazio** (`<x-ui.empty>`) | estado sem dados | 1 CTA que leva para criar o dado |
 
 - Card de identidade **nao** leva botoes de navegacao (ex.: "Desafios", "Rivalidades"): isso ja existe no menu.
+- Excecao: o icone "Copiar link do perfil" ao lado do nome nao conta como a acao do card (e parte do titulo, como num perfil de rede social).
 - Uma pagina tem **no maximo 1 botao primario** (branco). Todo o resto e `outline` ou `ghost`.
 - Acao destrutiva (remover, excluir) nunca e primaria; pede confirmacao quando apaga dados.
 
@@ -54,6 +55,11 @@ mude a regra aqui primeiro — nao abra excecao escondida na tela.
 - Sempre `<x-avatar :of="$perfilOuUsuario" class="...">` — nunca imprimir `mark()`/emoji direto.
 - Tamanhos: 28px (listas/cabecalho do site), 42px (linhas de amigos), 62px (grande sem foto), **104px** (grande com foto; 80px no celular).
 - Foto preenche o quadrado (`object-fit: cover`); sem foto mostra o emoji ou a inicial centralizada.
+- Nome de jogador e clicavel, como numa rede social: envolva com `<x-profile-link :of="$playerOuPerfilOuConta">nome</x-profile-link>`.
+  O texto nao muda (sublinha so no hover) e o link so aparece se quem ve pode abrir o perfil.
+  **Nunca** dentro de outro link (card ou linha clicavel), nem em `<label>`, `<option>` ou atributo.
+- Avatar ao lado do nome tambem leva ao perfil: `<x-profile-link :of="..." class="avatar-link" tabindex="-1" aria-hidden="true"><x-avatar .../></x-profile-link>`
+  (fora do Tab e dos leitores de tela, porque o nome ao lado ja e o link acessivel).
 
 ## 7. Celular (≤780px)
 

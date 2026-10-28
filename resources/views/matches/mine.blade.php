@@ -3,7 +3,7 @@
 @section('content')
 <h1>Minhas partidas</h1>
 @forelse($matches as $match)
-<article class="card section-card mobile-result"><h2>{{ $match->tournament->name }} · Rodada {{ $match->round }}</h2><p>@if($match->pod_player_ids){{ $match->tournament->players->whereIn('id', $match->pod_player_ids)->map->displayName()->join(' · ') }}@else{{ $match->playerOne?->displayName() }} × {{ $match->playerTwo?->displayName() ?? 'BYE' }}@endif</p>
+<article class="card section-card mobile-result"><h2>{{ $match->tournament->name }} · Rodada {{ $match->round }}</h2><p>@if($match->pod_player_ids)@foreach($match->tournament->players->whereIn('id', $match->pod_player_ids)->values() as $podPlayer)@unless($loop->first) · @endunless<x-profile-link :of="$podPlayer">{{ $podPlayer->displayName() }}</x-profile-link>@endforeach @else<x-profile-link :of="$match->playerOne">{{ $match->playerOne?->displayName() }}</x-profile-link> × <x-profile-link :of="$match->playerTwo">{{ $match->playerTwo?->displayName() ?? 'BYE' }}</x-profile-link>@endif</p>
 @php($submission=$submissions->get($match->id))
 @if($submission)
 <p>{{ match($submission->status) {'pending'=>'Aguardando confirmação','disputed'=>'Contestado · aguardando organizador','confirmed'=>'Confirmado','resolved'=>'Resolvido pelo organizador',default=>$submission->status} }} · {{ $submission->player_one_games }} × {{ $submission->player_two_games }}</p>

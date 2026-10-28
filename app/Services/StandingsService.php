@@ -24,12 +24,14 @@ class StandingsService
                 'games_against' => 0,
                 'game_diff' => 0,
                 'points' => 0,
+                'streak' => 0,
             ];
         }
 
         $matches = $tournament->matches()
             ->when(!in_array($tournament->system, ['single_elimination','double_elimination']), fn ($query) => $query->where('stage', GameMatch::STAGE_LEAGUE))
             ->whereIn('status', [GameMatch::STATUS_FINISHED, GameMatch::STATUS_BYE])
+            ->orderBy('round')->orderBy('id')
             ->get();
 
         foreach ($matches as $match) {
@@ -38,6 +40,7 @@ class StandingsService
                     $table[$id]['played']++;
                     $table[$id][$rank===1?'wins':'losses']++;
                     $table[$id]['points'] += count($match->pod_player_ids) - $rank;
+                    $this->streak($table[$id], $rank === 1);
                 }
                 continue;
             }
@@ -51,6 +54,7 @@ class StandingsService
             $table[$one]['games_against'] += $twoGames;
 
             if ($two === null) {
+                // BYE conta como vitoria na tabela, mas nao entra (nem zera) a sequencia de vitorias.
                 $table[$one]['wins']++;
                 $table[$one]['points'] += 3;
                 continue;
@@ -64,15 +68,21 @@ class StandingsService
                 $table[$one]['wins']++;
                 $table[$one]['points'] += 3;
                 $table[$two]['losses']++;
+                $this->streak($table[$one], true);
+                $this->streak($table[$two], false);
             } elseif ($twoGames > $oneGames) {
                 $table[$two]['wins']++;
                 $table[$two]['points'] += 3;
                 $table[$one]['losses']++;
+                $this->streak($table[$two], true);
+                $this->streak($table[$one], false);
             } else {
                 $table[$one]['draws']++;
                 $table[$two]['draws']++;
                 $table[$one]['points']++;
                 $table[$two]['points']++;
+                $this->streak($table[$one], false);
+                $this->streak($table[$two], false);
             }
         }
 
@@ -94,5 +104,11 @@ class StandingsService
 
                 return $row;
             });
+    }
+
+    /** Vitorias seguidas mais recentes no torneio (partidas em ordem de rodada); empate ou derrota zera. */
+    private function streak(array &$row, bool $won): void
+    {
+        $row['streak'] = $won ? $row['streak'] + 1 : 0;
     }
 }

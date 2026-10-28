@@ -57,9 +57,8 @@ class PlayerProfileController extends Controller
     {
         $user = $request->user();
         $isOwner = $profile->account_user_id === $user->id;
-        // Amigo de amigo ve o perfil (sem decks) se a pessoa aparece na busca (discoverable).
-        $viaFriend = ! $isOwner && $profile->discoverable && $this->friendships->isFriendOfFriend($user, $profile);
-        abort_unless($isOwner || $viaFriend || $this->organizedTournamentWith($user, $profile) || $this->hasRelationship($user, $profile), 403);
+        // Perfil aberto para quem tem o link; "Só com código" fica só para quem tem vínculo (PlayerProfilePolicy).
+        $this->authorize('view', $profile);
 
         $summary = $this->stats->for($profile);
         $this->achievements->sync($profile, $summary);
@@ -84,8 +83,11 @@ class PlayerProfileController extends Controller
         $tradeBinder = ($isOwner || $friendshipStatus === FriendshipService::ACCEPTED) ? app(CollectionService::class)->tradeBinder($profile->account_user_id) : null;
 
         $showcase = $this->showcase($decks, $summary, $isOwner);
+        // Confronto direto entre quem visita e o dono do perfil (torneios, desafios e Ranked).
+        $viewerProfile = $isOwner ? null : $user->playerProfile;
+        $headToHead = $viewerProfile ? app(\App\Services\HeadToHeadService::class)->between($viewerProfile, $profile) : null;
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked', 'profileFriends', 'tradeBinder'));
+        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked', 'profileFriends', 'tradeBinder', 'headToHead'));
     }
 
     /** Patente por formato (temporadas em andamento) + historico. Visivel para quem pode ver o perfil. */
@@ -196,9 +198,8 @@ class PlayerProfileController extends Controller
             return back()->with('status', $status === FriendshipService::ACCEPTED ? 'Amizade removida.' : 'Solicitação cancelada.');
         }
 
-        $incoming = $this->friendships->hasIncomingRequest($user, $profile);
-        abort_unless($incoming || $this->organizedTournamentWith($user, $profile), 403);
         abort_unless($profile->account_user_id, 422, 'Este perfil ainda não possui uma conta.');
+        $this->authorize('befriend', $profile);
 
         return match ($this->friendships->request($user, $profile)) {
             'accepted' => back()->with('status', 'Vocês agora são amigos.'),
@@ -210,17 +211,5 @@ class PlayerProfileController extends Controller
     private function ownProfile(Request $request): PlayerProfile
     {
         return $request->user()->ensurePlayerProfile();
-    }
-
-    private function organizedTournamentWith(User $user, PlayerProfile $profile): bool
-    {
-        return $profile->entries()->whereHas('tournament', fn ($query) => $query->where('user_id', $user->id))->exists();
-    }
-
-    /** Existe amizade ou pedido em qualquer um dos sentidos. */
-    private function hasRelationship(User $user, PlayerProfile $profile): bool
-    {
-        return $this->friendships->status($user, $profile) !== null
-            || $this->friendships->hasIncomingRequest($user, $profile);
     }
 }

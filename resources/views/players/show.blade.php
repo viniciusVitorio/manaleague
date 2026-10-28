@@ -5,14 +5,24 @@
     $unlocked = $achievements->where('unlocked', true);
     $fresh = $achievements->where('is_new', true);
 @endphp
-<a class="back-link" href="{{ $isOwner ? route('tournaments.index') : route('friends.index') }}">← {{ $isOwner ? 'Torneios' : 'Amigos' }}</a>
+@php
+    // Visitante chega pelo ranking, desafios, clube... volta para onde estava (só páginas do próprio site).
+    $previous = url()->previous();
+    $backUrl = ! $isOwner && $previous !== url()->current() && str_starts_with($previous, url('/').'/') ? $previous : null;
+@endphp
+@push('head')<script src="{{ \App\Support\VersionedAsset::url('js/copy-link.js') }}" defer></script>@endpush
+<a class="back-link" href="{{ $isOwner ? route('tournaments.index') : ($backUrl ?? route('friends.index')) }}">← {{ $isOwner ? 'Torneios' : ($backUrl ? 'Voltar' : 'Amigos') }}</a>
 <header class="profile-hero card">
     <div>
         <div class="profile-title">
             <x-avatar :of="$profile" class="profile-avatar large" />
             <div>
                 <span class="eyebrow">{{ $isOwner ? 'Meu perfil' : 'Perfil do jogador' }}</span>
-                <h1>{{ $profile->nickname }}</h1>
+                <div class="profile-name-line">
+                    <h1>{{ $profile->nickname }}</h1>
+                    <button type="button" class="ui-icon-btn profile-copy-link" data-copy-link="{{ route('profiles.show', $profile) }}" aria-label="Copiar link do perfil" title="Copiar link do perfil"><x-icon name="link" /></button>
+                    <span class="profile-copy-status" data-copy-status role="status" aria-live="polite"></span>
+                </div>
                 @if($ranked && $ranked['ratings']->isNotEmpty())<p><a href="#ranque">@include('ranked.partials.tier', ['rating' => $ranked['ratings']->first()->rating, 'tiers' => $ranked['tiers']])</a> <span class="muted">{{ $ranked['ratings']->first()->format }} · {{ $ranked['ratings']->first()->rating }} ELO</span></p>@endif
 
                 @if($showPreferredDeck)<p>{{ $profile->preferred_deck_name ?: 'Deck principal não informado' }} @if($profile->preferred_deck_colors) · @include('partials.color-pips', ['colors' => $profile->preferred_deck_colors]) @endif</p>@endif
@@ -28,7 +38,7 @@
                         <div class="friends-pop-panel" role="list">
                         @foreach($profileFriends as $person)
                             <div class="friends-pop-row" role="listitem">
-                                <x-avatar :of="$person" class="profile-avatar" />
+                                <x-profile-link :of="$person" class="avatar-link" tabindex="-1" aria-hidden="true"><x-avatar :of="$person" class="profile-avatar" /></x-profile-link>
                                 <span class="friends-pop-name">@if($person->friend_state === 'me'){{ $person->nickname }}<small>Você</small>@else<a href="{{ route('profiles.show', $person) }}">{{ $person->nickname }}</a><small>{{ $person->friend_state === 'friend' ? 'Amigo em comum' : ($person->friend_state === 'sent' ? 'Pedido enviado' : 'Amigo de '.$profile->nickname) }}</small>@endif</span>
                                 @if($person->friend_state === 'incoming')<form method="POST" action="{{ route('friends.accept-code', $person->friend_code) }}">@csrf @method('PATCH')<button class="ui-btn ui-btn-outline ui-btn-sm">Aceitar</button></form>
                                 @elseif($person->friend_state === 'none')<form method="POST" action="{{ route('friends.store', $person->friend_code) }}">@csrf<button class="ui-btn ui-btn-ghost ui-btn-sm" aria-label="Adicionar {{ $person->nickname }}"><x-icon name="user-plus" /></button></form>@endif
@@ -46,7 +56,7 @@
     <div class="profile-hero-action">
     @if($isOwner)
         <a class="ui-btn ui-btn-outline ui-btn-sm" href="{{ route('profiles.edit') }}"><x-icon name="pencil" :size="14" />Editar perfil</a>
-    @else
+    @elseif($friendshipStatus || auth()->user()->can('befriend', $profile))
         @php($friendLabel = match($friendshipStatus) { 'pending' => 'Cancelar solicitação', 'accepted' => 'Remover amizade', default => 'Solicitar amizade' })
         <form method="POST" action="{{ route('profiles.friend', $profile) }}">@csrf @method('PATCH')<button class="ui-btn ui-btn-outline ui-btn-sm"><x-icon name="{{ $friendshipStatus ? 'users' : 'user-plus' }}" :size="14" />{{ $friendLabel }}</button></form>
     @endif
@@ -68,7 +78,7 @@
 <section class="card section-card">
     <span class="eyebrow">Novas conexões</span><h2>Solicitações de amizade</h2>
     @foreach($friendRequests as $requester)
-        <div class="history-row"><div><strong>{{ $requester->playerProfile?->avatar ? $requester->playerProfile->avatar.' ' : '' }}{{ $requester->playerProfile?->nickname ?? $requester->name }}</strong><small>quer ser seu amigo no ManaLeague</small></div><div class="deck-actions"><form method="POST" action="{{ route('friends.accept', $requester) }}">@csrf @method('PATCH')<button class="btn btn-small btn-primary">Aceitar</button></form><form method="POST" action="{{ route('friends.reject', $requester) }}">@csrf @method('DELETE')<button class="btn btn-small btn-ghost">Recusar</button></form></div></div>
+        <div class="history-row"><div><strong><x-profile-link :of="$requester">{{ $requester->playerProfile?->avatar ? $requester->playerProfile->avatar.' ' : '' }}{{ $requester->playerProfile?->nickname ?? $requester->name }}</x-profile-link></strong><small>quer ser seu amigo no ManaLeague</small></div><div class="deck-actions"><form method="POST" action="{{ route('friends.accept', $requester) }}">@csrf @method('PATCH')<button class="btn btn-small btn-primary">Aceitar</button></form><form method="POST" action="{{ route('friends.reject', $requester) }}">@csrf @method('DELETE')<button class="btn btn-small btn-ghost">Recusar</button></form></div></div>
     @endforeach
 </section>
 @endif
@@ -86,6 +96,24 @@
     <article class="card stat-card"><b>{{ $summary['winrate'] }}%</b><span>Aproveitamento</span></article>
     <article class="card stat-card"><b>{{ $summary['best_streak'] }}</b><span>Maior sequência</span></article>
 </div>
+
+@php($headToHead ??= null)
+@if($headToHead && ($headToHead['played'] || $friendshipStatus === 'accepted'))
+<section class="card section-card head-to-head" aria-labelledby="h2h-title">
+    <span class="eyebrow">Confronto direto</span><h2 id="h2h-title">Você × {{ $profile->nickname }}</h2>
+    @if($headToHead['played'])
+        @php($last = $headToHead['last'])
+        <div class="h2h-record">
+            <div><b>{{ $headToHead['wins'] }}</b><span>{{ $headToHead['wins'] === 1 ? 'Vitória' : 'Vitórias' }}</span></div>
+            <div><b>{{ $headToHead['losses'] }}</b><span>{{ $headToHead['losses'] === 1 ? 'Derrota' : 'Derrotas' }}</span></div>
+            @if($headToHead['draws'])<div><b>{{ $headToHead['draws'] }}</b><span>{{ $headToHead['draws'] === 1 ? 'Empate' : 'Empates' }}</span></div>@endif
+        </div>
+        <p class="h2h-last">{{ $headToHead['played'] }} {{ $headToHead['played'] === 1 ? 'partida' : 'partidas' }} · última: {{ $last['kind'] }}, {{ ['win' => 'você venceu', 'loss' => 'você perdeu', 'draw' => 'empate'][$last['result']] }} por {{ $last['me'] }}×{{ $last['them'] }} em {{ $last['date']->timezone(config('app.timezone'))->format('d/m/Y') }}</p>
+    @else
+        <x-ui.empty icon="swords" title="Vocês ainda não se enfrentaram" text="Chame para um desafio e comece a rivalidade." :href="route('challenges.index', ['opponent' => $profile->id])" action="Desafiar" />
+    @endif
+</section>
+@endif
 
 
 @if($ranked)

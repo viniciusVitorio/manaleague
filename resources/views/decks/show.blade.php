@@ -15,7 +15,7 @@
             @if($summary['side'])<span><b>{{ $summary['side'] }}</b> no side</span>@endif
             <span><b>{{ $summary['lands'] }}</b> terrenos</span>
             <span>CMC médio <b>{{ number_format($summary['avg_cmc'], 2, ',', '') }}</b></span>
-            @unless($isOwner)<span>por <b>{{ $deck->profile->nickname }}</b></span>@endunless
+            @unless($isOwner)<span>por <b><x-profile-link :of="$deck->profile">{{ $deck->profile->nickname }}</x-profile-link></b></span>@endunless
         </div>
     </div>
     @if($isOwner)
