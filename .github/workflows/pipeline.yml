@@ -132,11 +132,20 @@ jobs:
         env:
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
+        # A regra do security group leva alguns segundos para valer: tenta ler a chave do host por ate ~2 minutos.
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/manaleague
           chmod 600 ~/.ssh/manaleague
-          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          for attempt in $(seq 1 12); do
+            if ssh-keyscan -T 5 -H "$EC2_HOST" > host-keys 2>/dev/null && [ -s host-keys ]; then
+              cat host-keys >> ~/.ssh/known_hosts
+              break
+            fi
+            echo "SSH ainda nao liberado (tentativa $attempt de 12), aguardando..."
+            sleep 5
+          done
+          [ -s host-keys ] || { echo "Nao foi possivel conectar na porta 22 da EC2." >&2; exit 1; }
       - name: Prepare release files
         if: github.event_name == 'push'
         env:
