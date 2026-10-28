@@ -13,6 +13,7 @@
         ['collection.index', 'Coleção', 'library', 'collection.index'],
         ['clubs.index', 'Clubes', 'shield', 'clubs.*'],
         ['feed.index', 'Comunidade', 'activity', 'feed.index'],
+        ['patch-notes.index', 'Patch notes', 'megaphone', 'patch-notes.*'],
     ];
     $is = fn (string $patterns) => request()->routeIs(...explode('|', $patterns));
     $moreActive = collect($more)->contains(fn ($l) => $is($l[3]));

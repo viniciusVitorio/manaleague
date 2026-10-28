@@ -7,6 +7,7 @@ use App\Http\Controllers\DeckController;
 use App\Http\Controllers\FriendController;
 use App\Http\Controllers\FriendRequestController;
 use App\Http\Controllers\MatchController;
+use App\Http\Controllers\PatchNoteController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\PlayerProfileController;
@@ -29,6 +30,7 @@ foreach (['competition', 'live', 'deck-tools', 'community', 'challenges', 'ranke
 }
 
 Route::view('/', 'welcome')->name('home');
+Route::get('/patch-notes', [PatchNoteController::class, 'index'])->name('patch-notes.index');
 Route::get('/t/{slug}', PublicArenaController::class)->middleware('throttle:60,1')->name('arena.public');
 // Foto de perfil no disco local (dev/testes); com S3 redireciona para a URL assinada.
 Route::get('/avatars/{file}', [AvatarController::class, 'show'])

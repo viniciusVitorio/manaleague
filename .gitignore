@@ -24,3 +24,6 @@
 !.gitignore
 # Fotos de perfil e outros arquivos enviados no disco local (dev)
 /storage/app/private/
+
+# Export local das GitHub Releases (docs/patch-notes.md)
+/patch-notes.json
