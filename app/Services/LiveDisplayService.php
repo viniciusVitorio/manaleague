@@ -10,7 +10,7 @@ class LiveDisplayService
             'name'=>$t->name, 'format'=>$t->format, 'status'=>$t->status,
             'standings'=>app(StandingsService::class)->for($t)->map(fn($r)=>[
                 'rank'=>$r['rank'],'name'=>$r['player']->displayName(),'points'=>$r['points'],
-                'played'=>$r['played'],'wins'=>$r['wins'],'draws'=>$r['draws'],'losses'=>$r['losses'],
+                'played'=>$r['played'],'wins'=>$r['wins'],'draws'=>$r['draws'],'losses'=>$r['losses'],'streak'=>$r['streak'],
             ])->all(),
             'matches'=>$t->matches()->with(['playerOne.profile','playerTwo.profile'])->orderBy('round')->orderBy('id')->get()->map(fn($m)=>[
                 'id'=>$m->id,'round'=>$m->round,'stage'=>$m->stage,'status'=>$m->status,

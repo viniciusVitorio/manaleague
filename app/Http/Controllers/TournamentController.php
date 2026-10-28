@@ -19,8 +19,15 @@ class TournamentController extends Controller
 
     public function index(Request $request): View
     {
-        $tournaments = $request->user()->tournaments()->withCount('players')->latest()->get();
-        return view('tournaments.index', compact('tournaments'));
+        $user = $request->user();
+        $tournaments = $user->tournaments()->withCount('players')->latest()->get();
+        // Torneios de outros organizadores em que o jogador tem inscrição vinculada à conta.
+        $playing = Tournament::query()
+            ->where('user_id', '!=', $user->id)
+            ->whereHas('players.profile', fn ($query) => $query->where('account_user_id', $user->id))
+            ->with('user.playerProfile')->withCount('players')->latest()->get();
+
+        return view('tournaments.index', compact('tournaments', 'playing'));
     }
 
     public function create(): View { return view('tournaments.create'); }

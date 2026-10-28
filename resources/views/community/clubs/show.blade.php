@@ -29,9 +29,9 @@
         @endif
         @forelse($posts as $post)
             <article @class(['post', 'is-pinned' => $post->pinned])>
-                <x-avatar :of="$post->author" class="ui-avatar" aria-hidden="true" />
+                <x-profile-link :of="$post->author" class="avatar-link" tabindex="-1" aria-hidden="true"><x-avatar :of="$post->author" class="ui-avatar" aria-hidden="true" /></x-profile-link>
                 <div class="post-body">
-                    <p class="post-head"><strong>{{ $post->author->playerProfile?->nickname ?? $post->author->name }}</strong> <time datetime="{{ $post->created_at->toIso8601String() }}">{{ $post->created_at->diffForHumans() }}</time>@if($post->pinned) <x-ui.badge tone="info"><x-icon name="pin" size="11" />Fixado</x-ui.badge>@endif</p>
+                    <p class="post-head"><strong><x-profile-link :of="$post->author">{{ $post->author->playerProfile?->nickname ?? $post->author->name }}</x-profile-link></strong> <time datetime="{{ $post->created_at->toIso8601String() }}">{{ $post->created_at->diffForHumans() }}</time>@if($post->pinned) <x-ui.badge tone="info"><x-icon name="pin" size="11" />Fixado</x-ui.badge>@endif</p>
                     <p class="post-text">{{ $post->body }}</p>
                 </div>
                 @if($post->user_id === auth()->id() || $role === 'owner')<form method="POST" action="{{ route('clubs.posts.destroy', [$club, $post]) }}" data-confirm="Apagar este aviso?">@csrf @method('DELETE')<button class="ui-btn ui-btn-ghost ui-btn-sm" aria-label="Apagar aviso"><x-icon name="trash" /></button></form>@endif
@@ -48,8 +48,9 @@
             <div class="tools-table-wrap"><table class="rank-table">
                 <thead><tr><th scope="col">#</th><th scope="col">Jogador</th><th scope="col" class="num">Pts</th><th scope="col" class="num">V-E-D</th><th scope="col" class="num">Torneios</th><th scope="col" class="num">Títulos</th></tr></thead>
                 <tbody>
+                @php($rankProfiles = \App\Models\PlayerProfile::whereIn('id', $ranking->take(20)->pluck('profile_id')->filter())->get()->keyBy('id'))
                 @foreach($ranking->take(20) as $i => $r)
-                    <tr><td class="num">{{ $i + 1 }}</td><td>@if($r['avatar'] ?? null){{ $r['avatar'] }} @endif{{ $r['name'] }}</td><td class="num"><strong>{{ $r['points'] }}</strong></td><td class="num">{{ $r['wins'] }}-{{ $r['draws'] }}-{{ $r['losses'] }}</td><td class="num">{{ $r['events'] }}</td><td class="num">@if($r['titles'])<x-icon name="trophy" size="13" /> {{ $r['titles'] }}@else — @endif</td></tr>
+                    <tr><td class="num">{{ $i + 1 }}</td><td><x-profile-link :of="($r['profile_id'] ?? null) ? $rankProfiles->get($r['profile_id']) : null">@if($r['avatar'] ?? null){{ $r['avatar'] }} @endif{{ $r['name'] }}</x-profile-link></td><td class="num"><strong>{{ $r['points'] }}</strong></td><td class="num">{{ $r['wins'] }}-{{ $r['draws'] }}-{{ $r['losses'] }}</td><td class="num">{{ $r['events'] }}</td><td class="num">@if($r['titles'])<x-icon name="trophy" size="13" /> {{ $r['titles'] }}@else — @endif</td></tr>
                 @endforeach
                 </tbody>
             </table></div>
@@ -114,7 +115,7 @@
         @foreach($members as $member)
             @php($nick = $member->playerProfile?->nickname ?? $member->name)
             <div class="member-row">
-                <x-avatar :of="$member" class="ui-avatar" aria-hidden="true" />
+                <x-profile-link :of="$member" class="avatar-link" tabindex="-1" aria-hidden="true"><x-avatar :of="$member" class="ui-avatar" aria-hidden="true" /></x-profile-link>
                 <span class="member-name">@if($member->playerProfile && $member->id !== auth()->id())<a href="{{ route('profiles.show', $member->playerProfile) }}">{{ $nick }}</a>@else{{ $nick }}@endif<small>{{ ['owner' => 'Dono', 'organizer' => 'Organizador', 'member' => 'Membro'][$member->pivot->role] }}{{ $member->id === auth()->id() ? ' · você' : '' }}</small></span>
                 @if($member->pivot->role !== 'owner')
                     @if($role === 'owner' || ($manage && $member->pivot->role === 'member') || $member->id === auth()->id())

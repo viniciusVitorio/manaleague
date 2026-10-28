@@ -15,8 +15,8 @@
             @forelse($results as $person)
                 @php($state = $statusById[$person->id] ?? null)
                 <div class="person-row">
-                    <x-avatar :of="$person" class="profile-avatar" />
-                    <div class="person-info"><strong>{{ $person->nickname }}</strong><small>{{ $person->preferred_deck_name ?: 'Deck principal não informado' }}</small></div>
+                    <x-profile-link :of="$person" class="avatar-link" tabindex="-1" aria-hidden="true"><x-avatar :of="$person" class="profile-avatar" /></x-profile-link>
+                    <div class="person-info"><strong><x-profile-link :of="$person">{{ $person->nickname }}</x-profile-link></strong><small>{{ $person->preferred_deck_name ?: 'Deck principal não informado' }}</small></div>
                     @if($state === 'friend')<span class="pill pill-ok">Amigos</span>
                     @elseif($state === 'sent')<span class="pill">Pedido enviado</span>
                     @elseif($state === 'incoming')<form method="POST" action="{{ route('friends.accept-code', $person->friend_code) }}">@csrf @method('PATCH')<button class="btn btn-small btn-primary">Aceitar pedido</button></form>
@@ -35,8 +35,8 @@
         <div class="people-list">
         @foreach($incoming as $person)
             <div class="person-row">
-                <x-avatar :of="$person" class="profile-avatar" />
-                <div class="person-info"><strong>{{ $person->nickname }}</strong><small>quer ser seu amigo</small></div>
+                <x-profile-link :of="$person" class="avatar-link" tabindex="-1" aria-hidden="true"><x-avatar :of="$person" class="profile-avatar" /></x-profile-link>
+                <div class="person-info"><strong><x-profile-link :of="$person">{{ $person->nickname }}</x-profile-link></strong><small>quer ser seu amigo</small></div>
                 <div class="deck-actions">
                     <form method="POST" action="{{ route('friends.accept-code', $person->friend_code) }}">@csrf @method('PATCH')<button class="btn btn-small btn-primary">Aceitar</button></form>
                     <form method="POST" action="{{ route('friends.destroy', $person->friend_code) }}">@csrf @method('DELETE')<button class="btn btn-small btn-ghost">Recusar</button></form>
@@ -53,7 +53,7 @@
         <div class="people-list">
         @foreach($suggestions as $s)
             <div class="person-row">
-                <x-avatar :of="$s['profile']" class="profile-avatar" />
+                <x-profile-link :of="$s['profile']" class="avatar-link" tabindex="-1" aria-hidden="true"><x-avatar :of="$s['profile']" class="profile-avatar" /></x-profile-link>
                 <div class="person-info"><a href="{{ route('profiles.show', $s['profile']) }}"><strong>{{ $s['profile']->nickname }}</strong></a><small>{{ $s['mutual']->count() === 1 ? 'Amigo de '.$s['mutual'][0]->nickname : $s['mutual']->count().' amigos em comum: '.$s['mutual']->take(2)->pluck('nickname')->join(', ').($s['mutual']->count() > 2 ? '…' : '') }}</small></div>
                 <form method="POST" action="{{ route('friends.store', $s['profile']->friend_code) }}">@csrf<button class="btn btn-small btn-secondary">Adicionar</button></form>
             </div>
@@ -67,7 +67,7 @@
         <div class="people-list">
         @forelse($friends as $friend)
             <div class="person-row">
-                <x-avatar :of="$friend" class="profile-avatar" />
+                <x-profile-link :of="$friend" class="avatar-link" tabindex="-1" aria-hidden="true"><x-avatar :of="$friend" class="profile-avatar" /></x-profile-link>
                 <div class="person-info"><a href="{{ route('profiles.show', $friend) }}"><strong>{{ $friend->nickname }}</strong></a><small>{{ $friend->preferred_deck_name ?: 'Deck principal não informado' }}@if($friend->preferred_deck_colors) · @include('partials.color-pips', ['colors' => $friend->preferred_deck_colors])@endif</small></div>
                 <div class="deck-actions">
                     <a class="btn btn-small btn-ghost" href="{{ route('profiles.show', $friend) }}">Ver perfil</a>
@@ -92,8 +92,8 @@
     <section class="card section-card">
         <span class="eyebrow">Privacidade</span><h2>Quem pode me encontrar</h2>
         <form method="POST" action="{{ route('friends.privacy') }}">@csrf @method('PATCH')
-            <label class="radio-label"><input type="radio" name="discoverable" value="1" @checked($profile->discoverable)> <span><strong>Todo mundo</strong><small>Apareço na busca por apelido.</small></span></label>
-            <label class="radio-label"><input type="radio" name="discoverable" value="0" @checked(! $profile->discoverable)> <span><strong>Só com código</strong><small>Só me acha quem tiver meu código.</small></span></label>
+            <label class="radio-label"><input type="radio" name="discoverable" value="1" @checked($profile->discoverable)> <span><strong>Todo mundo</strong><small>Apareço na busca por apelido e meu perfil abre para qualquer jogador.</small></span></label>
+            <label class="radio-label"><input type="radio" name="discoverable" value="0" @checked(! $profile->discoverable)> <span><strong>Só com código</strong><small>Só me acha quem tiver meu código; meu perfil fica só para amigos e organizadores.</small></span></label>
             <button class="btn btn-ghost btn-block">Salvar privacidade</button>
         </form>
     </section>
@@ -104,7 +104,7 @@
         <div class="people-list compact">
         @foreach($outgoing as $person)
             <div class="person-row">
-                <div class="person-info"><strong>{{ $person->avatar }} {{ $person->nickname }}</strong></div>
+                <div class="person-info"><strong><x-profile-link :of="$person">{{ $person->avatar }} {{ $person->nickname }}</x-profile-link></strong></div>
                 <form method="POST" action="{{ route('friends.destroy', $person->friend_code) }}">@csrf @method('DELETE')<button class="btn btn-small btn-ghost">Cancelar</button></form>
             </div>
         @endforeach

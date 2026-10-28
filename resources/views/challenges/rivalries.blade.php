@@ -23,8 +23,8 @@
     @forelse($rivals as $rival)
         @php($pct = $rival['played'] ? round($rival['wins'] / $rival['played'] * 100) : 0)
         <div class="ui-row rival-row">
-            <x-avatar :of="$rival['profile']" class="ui-avatar" aria-hidden="true" />
-            <span class="ui-row-main"><span class="ui-row-title">{{ $rival['profile']->nickname }}</span><span class="ui-row-sub">{{ $rival['played'] }} {{ $rival['played'] === 1 ? 'série' : 'séries' }}@if($rival['ranked']) · {{ $rival['ranked'] }} ranqueada{{ $rival['ranked'] > 1 ? 's' : '' }}@endif · {{ $pct }}% de vitórias</span></span>
+            <x-profile-link :of="$rival['profile']" class="avatar-link" tabindex="-1" aria-hidden="true"><x-avatar :of="$rival['profile']" class="ui-avatar" aria-hidden="true" /></x-profile-link>
+            <span class="ui-row-main"><span class="ui-row-title"><x-profile-link :of="$rival['profile']">{{ $rival['profile']->nickname }}</x-profile-link></span><span class="ui-row-sub">{{ $rival['played'] }} {{ $rival['played'] === 1 ? 'série' : 'séries' }}@if($rival['ranked']) · {{ $rival['ranked'] }} ranqueada{{ $rival['ranked'] > 1 ? 's' : '' }}@endif · {{ $pct }}% de vitórias</span></span>
             <span class="rival-bar" aria-hidden="true"><span style="width: {{ $pct }}%"></span></span>
             <span class="rival-record" aria-label="{{ $rival['wins'] }} vitórias, {{ $rival['losses'] }} derrotas{{ $rival['draws'] ? ' e '.$rival['draws'].' empates' : '' }}"><strong>{{ $rival['wins'] }}</strong>–{{ $rival['losses'] }}@if($rival['draws'])–{{ $rival['draws'] }}@endif</span>
             <a class="ui-btn ui-btn-outline ui-btn-sm" href="{{ route('challenges.index', ['opponent' => $rival['profile']->id]) }}">Revanche</a>

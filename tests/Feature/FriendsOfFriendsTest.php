@@ -40,12 +40,13 @@ class FriendsOfFriendsTest extends TestCase
 
         // amigo de amigo abre o perfil, mas sem a lista de amigos dele e sem decks
         $this->actingAs($ana)->get('/players/'.$caio->playerProfile->id)->assertOk()->assertSee('Caio')->assertDontSee('friends-pop', false);
-        // perfil "so por codigo" continua fechado, e estranhos tambem
+        // perfil "so por codigo" continua fechado; perfis abertos abrem ate para estranhos (sem decks nem lista de amigos)
         $this->actingAs($ana)->get('/players/'.$priv->playerProfile->id)->assertForbidden();
         $stranger = $this->user('Zeca');
-        $this->actingAs($stranger)->get('/players/'.$caio->playerProfile->id)->assertForbidden();
+        $this->actingAs($stranger)->get('/players/'.$caio->playerProfile->id)->assertOk()->assertDontSee('friends-pop', false);
         $this->actingAs($caio)->get('/players/'.$duda->playerProfile->id)->assertOk(); // Caio-Bia-Duda
-        $this->actingAs($stranger)->get('/players/'.$bia->playerProfile->id)->assertForbidden();
+        $this->actingAs($stranger)->get('/players/'.$bia->playerProfile->id)->assertOk()->assertDontSee('friends-pop', false);
+        $this->actingAs($stranger)->get('/players/'.$priv->playerProfile->id)->assertForbidden();
 
         $this->actingAs($ana)->post(route('friends.store', $caio->playerProfile->friend_code))->assertRedirect();
         $this->actingAs($ana)->get('/players/'.$bia->playerProfile->id)->assertSee('Pedido enviado');

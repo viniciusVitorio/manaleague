@@ -52,13 +52,24 @@ class PlayerProfileTest extends TestCase
         $this->actingAs($player)->patch(route('profiles.update'), ['nickname' => 'Vini', 'avatar' => '🧙🐉'])->assertSessionHasErrors('avatar');
     }
 
-    public function test_profile_is_private_to_unrelated_accounts(): void
+    public function test_open_profile_works_like_a_social_network_but_code_only_stays_private(): void
     {
         $owner = User::factory()->create();
         $profile = $owner->playerProfile()->create(['user_id' => $owner->id, 'nickname' => 'Liliana']);
-        $intruder = User::factory()->create();
-        $this->actingAs($intruder)->get(route('profiles.show', $profile))->assertForbidden();
-        $this->actingAs($intruder)->patch(route('profiles.friend', $profile))->assertForbidden();
+        $visitor = User::factory()->create();
+
+        // Perfil aberto (padrão): quem tem o link vê e pode pedir amizade.
+        $this->actingAs($visitor)->get(route('profiles.show', $profile))->assertOk()->assertSee('Liliana')->assertSee('Solicitar amizade');
+        $this->actingAs($visitor)->patch(route('profiles.friend', $profile))->assertRedirect();
+        $this->assertDatabaseHas('player_profile_user', ['user_id' => $visitor->id, 'player_profile_id' => $profile->id, 'status' => 'pending']);
+
+        // "Só com código": estranhos não veem nem pedem amizade pelo perfil.
+        $profile->update(['discoverable' => false]);
+        $stranger = User::factory()->create();
+        $this->actingAs($stranger)->get(route('profiles.show', $profile))->assertForbidden();
+        $this->actingAs($stranger)->patch(route('profiles.friend', $profile))->assertForbidden();
+        // ...mas quem já tem vínculo (pedido enviado) continua vendo.
+        $this->actingAs($visitor)->get(route('profiles.show', $profile))->assertOk()->assertSee('Cancelar solicitação');
     }
 
     public function test_stats_unlock_requested_achievements(): void

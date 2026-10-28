@@ -35,7 +35,7 @@ Requisitos levantados antes da implementacao (fase de Requisitos do SSDLC). Cada
 | RS08 | Concorrencia nao corrompe o torneio | transacao + `lockForUpdate` na geracao de rodadas e nas inscricoes (limite de vagas) | `PairingService`, `TournamentInviteController` |
 | RS09 | Alteracoes de placar sao rastreaveis | log `match.result_saved` com usuario, valor anterior e novo | `MatchController` |
 | RS10 | Navegador protegido contra clickjacking, sniffing e injecao de recursos externos | middleware `SecurityHeaders` (CSP, XFO, nosniff, Referrer, COOP, HSTS em HTTPS) | `SecurityHeadersTest` |
-| RS11 | Dados pessoais minimos expostos entre usuarios | perfis privados; pedidos de amizade mostram apelido, nunca e-mail | `PlayerProfileTest`, `FriendshipTest` |
+| RS11 | Dados pessoais minimos expostos entre usuarios | perfil aberto a quem tem o link (`PlayerProfilePolicy`), exceto "So com codigo" (so quem tem vinculo); decks privados, lista de amigos e fichario so para amigos; e-mail e codigo de amigo nunca aparecem para outros | `PlayerProfileTest`, `FriendsOfFriendsTest`, `TournamentSocialTest` |
 | RS12 | Nenhum segredo versionado | `APP_KEY` obrigatoria via ambiente/GitHub Secrets, `.env` ignorado, Trivy no pipeline | `docker-compose.yml`, `.gitignore`, workflow |
 | RS13 | Dependencias sem vulnerabilidades conhecidas | `composer audit` + Trivy HIGH/CRITICAL bloqueiam o deploy | `.github/workflows/pipeline.yml` |
 | RS14 | Recuperacao de senha nao revela quais e-mails tem conta e nao permite reuso de link | resposta generica, token com hash e expiracao de 60 min, uso unico, throttle | `PasswordResetTest` |

@@ -5,8 +5,8 @@
 @endphp
 @if($final)
 <div class="podium-grid">
-    <div class="podium second"><span>🥈</span><small>2º lugar</small><strong>{{ $runnerUp?->name ?? 'Em disputa' }}</strong></div>
-    <div class="podium first"><span>🏆</span><small>Campeão</small><strong>{{ $champion?->name ?? 'Em disputa' }}</strong></div>
-    <div class="podium third"><span>🥉</span><small>3º lugar</small><strong>{{ $bronze?->name ?? 'Em disputa' }}</strong></div>
+    <div class="podium second"><span>🥈</span><small>2º lugar</small><strong><x-profile-link :of="$runnerUp">{{ $runnerUp?->name ?? 'Em disputa' }}</x-profile-link></strong></div>
+    <div class="podium first"><span>🏆</span><small>Campeão</small><strong><x-profile-link :of="$champion">{{ $champion?->name ?? 'Em disputa' }}</x-profile-link></strong></div>
+    <div class="podium third"><span>🥉</span><small>3º lugar</small><strong><x-profile-link :of="$bronze">{{ $bronze?->name ?? 'Em disputa' }}</x-profile-link></strong></div>
 </div>
 @endif

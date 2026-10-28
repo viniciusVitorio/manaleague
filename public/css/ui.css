@@ -306,3 +306,27 @@ input::-ms-reveal{display:none}
 .patch-note-body>:last-child{margin-bottom:0}
 .patch-note-empty{margin:0;color:var(--ui-fg-subtle);font-size:.85rem}
 @media(max-width:480px){.patch-note-head{flex-direction:column;gap:var(--s2)}}
+
+/* ---------- Ranking: link do perfil e sequência de vitórias ---------- */
+.player-link{color:inherit;text-decoration:none;border-radius:4px}
+.player-link:hover{text-decoration:underline;text-underline-offset:3px}
+.player-link:focus-visible{outline:2px solid var(--ui-ring);outline-offset:2px}
+.streak{display:inline-block;margin-left:6px;font-size:.9em;line-height:1;cursor:default}
+
+/* ---------- Torneios: organizados x participando ---------- */
+.tournament-section{margin-bottom:var(--s8)}
+.tournament-section .section-heading h2{display:flex;align-items:center;gap:var(--s2)}
+.tournament-empty{grid-column:1/-1}
+
+/* ---------- Perfil: copiar link, confronto direto, avatar clicável ---------- */
+.profile-name-line{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s2)}
+.profile-name-line h1{margin:0}
+.profile-copy-link{width:32px;height:32px;border-color:transparent;background:transparent;color:var(--ui-fg-subtle)}
+.profile-copy-link:hover{background:var(--ui-muted);color:var(--ui-fg)}
+.profile-copy-status{color:var(--ui-success);font-size:.78rem}
+.profile-copy-status:empty{display:none}
+.h2h-record{display:flex;flex-wrap:wrap;gap:var(--s6);margin:var(--s2) 0 var(--s3)}
+.h2h-record b{display:block;font-size:1.45rem;font-weight:700;line-height:1.2}
+.h2h-record span{color:var(--ui-fg-subtle);font-size:.75rem}
+.h2h-last{margin:0;color:var(--ui-fg-muted);font-size:.85rem}
+.avatar-link{display:contents}
