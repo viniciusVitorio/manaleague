@@ -92,13 +92,7 @@ resource "aws_route53_record" "dmarc" {
   name    = "_dmarc.${var.domain_name}"
   type    = "TXT"
   ttl     = 600
-  records = [join("; ", compact([
-    "v=DMARC1",
-    "p=${var.dmarc_policy}",
-    var.dmarc_report_email != "" ? "rua=mailto:${var.dmarc_report_email}" : "",
-    "adkim=r",
-    "aspf=r",
-  ]))]
+  records = [local.dmarc_record]
 }
 
 ############################################

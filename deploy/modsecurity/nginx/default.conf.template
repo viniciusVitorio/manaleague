@@ -1,0 +1,78 @@
+# ManaLeague — Nginx do container WAF (owasp/modsecurity-crs: ModSecurity v3 + OWASP CRS v4).
+# Substitui o default.conf.template da imagem (que so faz proxy_pass): aqui o Nginx serve o
+# public/ do Laravel e passa o PHP para o PHP-FPM, com a ModSecurity inspecionando tudo antes.
+# A ModSecurity ja vem ligada pela imagem (conf.d/modsecurity.conf: modsecurity on + CRS).
+# Variaveis ${...} sao preenchidas pelo envsubst da imagem no start; $variavel sem chaves e do Nginx.
+
+server_tokens off;
+more_clear_headers Server;
+
+# So o Caddy alcanca esta porta (ela nao e publicada no host), entao o X-Forwarded-Proto dele e confiavel.
+map $http_x_forwarded_proto $manaleague_https {
+    default "";
+    https on;
+}
+
+server {
+    listen ${PORT} default_server;
+    server_name _;
+
+    root /var/www/html/public;
+    index index.php;
+    charset utf-8;
+
+    # Foto de perfil ate 5 MB (o Laravel valida de novo); a ModSecurity tem limite proprio (MODSEC_REQ_BODY_LIMIT).
+    client_max_body_size 8m;
+
+    # IP real do visitante: o Caddy manda em X-Real-IP (ja resolvido a partir do CF-Connecting-IP,
+    # aceito so das faixas da Cloudflare). So confiamos no cabecalho vindo da rede interna do Docker.
+    set_real_ip_from 10.0.0.0/8;
+    set_real_ip_from 172.16.0.0/12;
+    set_real_ip_from 192.168.0.0/16;
+    set_real_ip_from 127.0.0.1;
+    real_ip_header X-Real-IP;
+    real_ip_recursive off;
+
+    # Pagina de bloqueio do WAF. X-WAF-Block marca que o 403 veio da ModSecurity (o smoke test usa isso).
+    error_page 403 /__waf/blocked.html;
+    location = /__waf/blocked.html {
+        internal;
+        modsecurity off;
+        alias /etc/nginx/waf/blocked.html;
+        default_type "text/html; charset=utf-8";
+        add_header Cache-Control "no-store" always;
+        add_header X-WAF-Block "modsecurity" always;
+    }
+
+    # Healthcheck do container (sem passar pelo WAF nem gerar log).
+    location = /healthz {
+        access_log off;
+        modsecurity off;
+        default_type text/plain;
+        return 200 "OK";
+    }
+
+    # Arquivos ocultos (.env, .git, .htaccess...) nunca saem; .well-known continua liberado.
+    location ~ /\.(?!well-known) {
+        return 404;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # So o front controller do Laravel executa PHP; qualquer outro .php e 404.
+    location = /index.php {
+        fastcgi_pass ${APP_FASTCGI};
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root/index.php;
+        fastcgi_param HTTPS $manaleague_https if_not_empty;
+        fastcgi_param HTTP_PROXY "";
+        fastcgi_hide_header X-Powered-By;
+        fastcgi_read_timeout 60s;
+    }
+
+    location ~ \.php$ {
+        return 404;
+    }
+}

@@ -37,20 +37,69 @@ services:
       timeout: 10s
       retries: 3
 
+  waf:
+    # WAF: imagem oficial da OWASP = Nginx + ModSecurity v3 + OWASP Core Rule Set v4 (tag LTS fixa;
+    # atualizar aqui de proposito e rodar o job "WAF" da CI). Serve o public/ e passa o PHP para o app.
+    # Sem porta publicada: so o Caddy (servico web) alcanca o WAF.
+    image: owasp/modsecurity-crs:4.25.2-nginx-alpine-202610180210-lts
+    restart: unless-stopped
+    environment:
+      APP_FASTCGI: app:9000
+      # On = bloqueia ataques; DetectionOnly = so registra (use para investigar falso positivo).
+      MODSEC_RULE_ENGINE: "${WAF_MODE:-On}"
+      # CRS: paranoia 1 (poucos falsos positivos) e limiar de anomalia 5 (= um ataque critico).
+      BLOCKING_PARANOIA: "1"
+      ANOMALY_INBOUND: "5"
+      ANOMALY_OUTBOUND: "4"
+      # O app usa PATCH/PUT/DELETE (formularios com _method e fetch() do construtor de deck).
+      ALLOWED_METHODS: "GET HEAD POST OPTIONS PUT PATCH DELETE"
+      # Uploads: foto de perfil ate 5 MB (o Laravel valida de novo); formularios sem arquivo ate 256 KB.
+      MODSEC_REQ_BODY_LIMIT: "8388608"
+      MODSEC_REQ_BODY_NOFILES_LIMIT: "262144"
+      # Respostas nao sao inspecionadas: economiza CPU/memoria na t3.micro.
+      MODSEC_RESP_BODY_ACCESS: "off"
+      # Audit log (JSON no docker logs) so com cabecalho da transacao + regras disparadas (partes A, H, Z):
+      # sem corpo nem cabecalhos da requisicao (nada de senha ou cookie de sessao no log).
+      MODSEC_AUDIT_LOG_PARTS: "AHZ"
+      # Audit log com as transacoes bloqueadas (403) e com qualquer regra do CRS disparada (auditlog),
+      # inclusive em DetectionOnly e abaixo do limiar: e a evidencia para ajustar falso positivo.
+      # 419/422 comuns do Laravel nao viram ruido.
+      MODSEC_AUDIT_LOG_RELEVANT_STATUS: "^403$"
+      MODSEC_DEFAULT_PHASE1_ACTION: "phase:1,pass,log,auditlog,tag:'$${MODSEC_TAG}'"
+      MODSEC_DEFAULT_PHASE2_ACTION: "phase:2,pass,log,auditlog,tag:'$${MODSEC_TAG}'"
+      NGINX_WORKER_PROCESSES: "1"
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - .:/var/www/html:ro
+      - ./deploy/modsecurity/nginx/default.conf.template:/etc/nginx/templates/conf.d/default.conf.template:ro
+      - ./deploy/modsecurity/nginx/logging.conf.template:/etc/nginx/templates/conf.d/logging.conf.template:ro
+      - ./deploy/modsecurity/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf:/etc/modsecurity.d/owasp-crs/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf:ro
+      - ./deploy/modsecurity/blocked.html:/etc/nginx/waf/blocked.html:ro
+    healthcheck:
+      # O healthcheck da imagem testa a porta HTTPS interna, que nao usamos.
+      test: ["CMD-SHELL", "curl -fs http://127.0.0.1:8080/healthz >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   web:
-    image: caddy:2-alpine
+    # Caddy: borda TLS (Let's Encrypt), IP real via Cloudflare e proxy para o WAF.
+    image: caddy:2.11.7-alpine
     restart: unless-stopped
     environment:
       CADDY_DOMAINS: "${CADDY_DOMAINS:-http://localhost}"
     depends_on:
-      app:
+      waf:
         condition: service_healthy
     ports:
       - "${APP_PORT:-8080}:80"
       - "${HTTPS_PORT:-8443}:443"
     volumes:
-      - .:/var/www/html:ro
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy:/etc/caddy/deploy:ro
       - caddy_data:/data
       - caddy_config:/config
 

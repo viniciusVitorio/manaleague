@@ -54,3 +54,19 @@ variable "dmarc_policy" {
     error_message = "dmarc_policy deve ser none, quarantine ou reject."
   }
 }
+
+variable "cloudflare_account_id" {
+  description = "ID da conta Cloudflare (Dashboard > qualquer dominio > Overview > API > Account ID)."
+  type        = string
+}
+
+variable "origin_ingress" {
+  description = "Quem alcanca 80/443 da EC2: public (durante a troca de nameservers) ou cloudflare (so a Cloudflare)."
+  type        = string
+  default     = "public"
+
+  validation {
+    condition     = contains(["public", "cloudflare"], var.origin_ingress)
+    error_message = "origin_ingress deve ser public ou cloudflare."
+  }
+}

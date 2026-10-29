@@ -50,3 +50,13 @@ output "avatar_bucket" {
   description = "Bucket privado das fotos de perfil (use na variavel AVATAR_BUCKET do GitHub, com AVATAR_DISK=s3)."
   value       = aws_s3_bucket.avatars.bucket
 }
+
+output "cloudflare_name_servers" {
+  description = "Nameservers da Cloudflare: coloque no registro.br no lugar dos da AWS."
+  value       = cloudflare_zone.app.name_servers
+}
+
+output "cloudflare_zone_status" {
+  description = "pending ate a Cloudflare enxergar os nameservers novos; depois active."
+  value       = cloudflare_zone.app.status
+}

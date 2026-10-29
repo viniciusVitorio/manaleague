@@ -36,17 +36,18 @@
     }
 
     // Paineis simples abertos por botao: <button data-toggle="id-do-painel">. O painel usa o atributo hidden.
+    // Delegado no document: continua valendo para botoes que chegam numa atualizacao sem recarregar.
     function initToggles() {
-        document.querySelectorAll('[data-toggle]').forEach(function (button) {
-            button.addEventListener('click', function () {
-                var panel = document.getElementById(button.dataset.toggle);
-                if (!panel) return;
-                panel.hidden = !panel.hidden;
-                document.querySelectorAll('[data-toggle="' + button.dataset.toggle + '"][aria-expanded]').forEach(function (b) {
-                    b.setAttribute('aria-expanded', panel.hidden ? 'false' : 'true');
-                });
-                if (!panel.hidden) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        document.addEventListener('click', function (event) {
+            var button = event.target.closest && event.target.closest('[data-toggle]');
+            if (!button) return;
+            var panel = document.getElementById(button.dataset.toggle);
+            if (!panel) return;
+            panel.hidden = !panel.hidden;
+            document.querySelectorAll('[data-toggle="' + button.dataset.toggle + '"][aria-expanded]').forEach(function (b) {
+                b.setAttribute('aria-expanded', panel.hidden ? 'false' : 'true');
             });
+            if (!panel.hidden) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         });
     }
 
@@ -117,11 +118,11 @@
 
     // Switches "ligado = recebe": desligar habilita o hidden que envia a categoria como silenciada.
     function initMuteSwitches() {
-        document.querySelectorAll('[data-mute]').forEach(function (sw) {
-            sw.addEventListener('change', function () {
-                var field = document.querySelector('[data-mute-field="' + sw.dataset.mute + '"]');
-                if (field) field.disabled = sw.checked;
-            });
+        document.addEventListener('change', function (event) {
+            var sw = event.target.closest && event.target.closest('[data-mute]');
+            if (!sw) return;
+            var field = document.querySelector('[data-mute-field="' + sw.dataset.mute + '"]');
+            if (field) field.disabled = sw.checked;
         });
     }
 
@@ -131,15 +132,15 @@
             var form = event.target;
             if (form.dataset && form.dataset.confirm && !window.confirm(form.dataset.confirm)) event.preventDefault();
         }, true);
-        document.querySelectorAll('[data-copy]').forEach(function (button) {
-            button.addEventListener('click', function () {
-                var target = document.querySelector(button.dataset.copy);
-                if (!target) return;
-                var text = 'value' in target ? target.value : target.textContent.trim();
-                var done = function () { var old = button.textContent; button.textContent = 'Copiado!'; setTimeout(function () { button.textContent = old; }, 1500); };
-                if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () { target.select && target.select(); });
-                else if (target.select) { target.select(); document.execCommand('copy'); done(); }
-            });
+        document.addEventListener('click', function (event) {
+            var button = event.target.closest && event.target.closest('[data-copy]');
+            if (!button) return;
+            var target = document.querySelector(button.dataset.copy);
+            if (!target) return;
+            var text = 'value' in target ? target.value : target.textContent.trim();
+            var done = function () { var old = button.textContent; button.textContent = 'Copiado!'; setTimeout(function () { button.textContent = old; }, 1500); };
+            if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () { target.select && target.select(); });
+            else if (target.select) { target.select(); document.execCommand('copy'); done(); }
         });
     }
 

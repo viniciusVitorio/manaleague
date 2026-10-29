@@ -1,17 +1,28 @@
+{
+	servers {
+		# Atras da Cloudflare: o IP real vem em CF-Connecting-IP, aceito so das faixas da Cloudflare.
+		import {$CADDY_CONF_DIR:/etc/caddy/deploy}/caddy/cloudflare-trusted-proxies.caddy
+		client_ip_headers CF-Connecting-IP
+	}
+}
+
+# Caddy = borda TLS (Let's Encrypt automatico, HTTP->HTTPS, compressao, headers).
+# Toda requisicao segue para o WAF: Nginx + ModSecurity v3 + OWASP CRS (servico "waf" do compose),
+# que serve o public/ e passa o PHP para o PHP-FPM. O Caddy nao fala direto com o app.
 {$CADDY_DOMAINS:http://localhost} {
-    root * /var/www/html/public
-    encode zstd gzip
-    php_fastcgi app:9000
-    file_server
+	encode zstd gzip
 
-    @hidden path /.env /.git/* /storage/*.key
-    respond @hidden 404
+	reverse_proxy {$WAF_UPSTREAM:waf:8080} {
+		# IP real do visitante (client_ip ja considera so os proxies confiaveis): a ModSecurity
+		# registra o IP certo e o throttle do Laravel continua por pessoa, nao por servidor da Cloudflare.
+		header_up X-Real-IP {client_ip}
+	}
 
-    header {
-        -Server
-        X-Frame-Options "SAMEORIGIN"
-        X-Content-Type-Options "nosniff"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "geolocation=(), microphone=(), camera=()"
-    }
+	header {
+		-Server
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+	}
 }

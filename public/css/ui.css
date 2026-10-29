@@ -344,3 +344,11 @@ input::-ms-reveal{display:none}
 .check-in-box{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3);padding:var(--s3) var(--s4);margin-bottom:var(--s3);border:1px dashed var(--ui-border-strong);border-radius:var(--ui-radius)}
 .check-in-box p{margin:0}
 .check-in-box.is-done{border-style:solid;border-color:rgba(74,222,128,.3)}
+
+/* Formularios assincronos (js/async-forms.js): envio sem recarregar a pagina */
+form.is-submitting { cursor: progress; }
+form.is-submitting [data-async-busy] { opacity: .6; }
+.async-toasts { position: fixed; right: var(--s4); bottom: var(--s4); z-index: 80; display: flex; flex-direction: column; gap: var(--s2); max-width: min(380px, calc(100vw - 2 * var(--s4))); pointer-events: none; }
+.async-toast { padding: var(--s3) var(--s4); border: 1px solid var(--ui-border); border-left: 3px solid var(--ui-success); border-radius: var(--ui-radius-sm); background: var(--ui-card); color: var(--ui-fg); font-size: .88rem; box-shadow: 0 10px 30px rgba(0,0,0,.45); animation: ui-pop .12s var(--ui-ease); transition: opacity .3s; pointer-events: auto; }
+.async-toast-danger { border-left-color: var(--ui-danger); }
+.async-toast.is-leaving { opacity: 0; }

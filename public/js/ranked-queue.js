@@ -5,5 +5,9 @@
         const button = event.target.closest('[data-confirm]');
         if (button && !window.confirm(button.dataset.confirm)) event.preventDefault();
     });
-    document.querySelectorAll('[data-autosubmit]').forEach(input => input.addEventListener('change', () => input.form.submit()));
+    // requestSubmit (e nao submit) para passar pelos formularios assincronos; delegado para sobreviver as atualizacoes.
+    document.addEventListener('change', event => {
+        const input = event.target.closest && event.target.closest('[data-autosubmit]');
+        if (input && input.form) input.form.requestSubmit ? input.form.requestSubmit() : input.form.submit();
+    });
 })();

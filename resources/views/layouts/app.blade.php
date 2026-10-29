@@ -28,10 +28,12 @@
     <script src="{{ \App\Support\VersionedAsset::url('js/nav.js') }}" defer></script>
     <script src="{{ \App\Support\VersionedAsset::url('js/password-toggle.js') }}" defer></script>
     <script src="{{ \App\Support\VersionedAsset::url('js/release-notice.js') }}" defer></script>
+    <script src="{{ \App\Support\VersionedAsset::url('js/vendor/idiomorph.min.js') }}" defer></script>
+    <script src="{{ \App\Support\VersionedAsset::url('js/async-forms.js') }}" defer></script>
     @stack('head')
 </head>
 <body>
-<div id="release-notice" class="alert alert-success" role="status" hidden data-release="{{ \App\Support\VersionedAsset::coreRelease() }}" data-check-url="{{ route('home') }}">
+<div id="release-notice" class="alert alert-success" role="status" hidden data-async-keep data-release="{{ \App\Support\VersionedAsset::coreRelease() }}" data-check-url="{{ route('home') }}">
     Nova versão do ManaLeague disponível. Salve suas alterações antes de atualizar.
     <button type="button" class="btn btn-small btn-secondary" data-release-reload>Atualizar página</button>
     <button type="button" class="btn btn-small btn-ghost" data-release-dismiss>Depois</button>

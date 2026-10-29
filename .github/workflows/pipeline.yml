@@ -86,10 +86,43 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
 
+  waf:
+    name: WAF (ModSecurity + OWASP CRS)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cloudflare IP ranges are up to date
+        run: |
+          live="$( (curl --fail -s https://www.cloudflare.com/ips-v4; echo; curl --fail -s https://www.cloudflare.com/ips-v6) | grep -v '^$' | sort)"
+          ours="$(grep -oE '[0-9a-f:.]+/[0-9]+' deploy/caddy/cloudflare-trusted-proxies.caddy | sort)"
+          if [[ "$live" != "$ours" ]]; then
+            echo "deploy/caddy/cloudflare-trusted-proxies.caddy esta desatualizado:"; diff <(echo "$ours") <(echo "$live"); exit 1
+          fi
+      - name: Start the stack (Caddy -> Nginx + ModSecurity/CRS -> PHP-FPM/Laravel)
+        run: |
+          printf 'APP_KEY=base64:%s\nAPP_ENV=production\nAPP_DEBUG=false\nAPP_URL=http://localhost:8080\nLOG_LEVEL=warning\n' "$(openssl rand -base64 32)" > .env
+          docker compose up -d --build --wait --wait-timeout 300
+      - name: WAF smoke test (legit traffic passes, attacks are blocked)
+        run: bash docker/waf/waf-smoke.sh http://localhost:8080
+      - name: Forged client IP headers are ignored
+        run: |
+          probe="ip-probe-${GITHUB_RUN_ID}"
+          curl -s -o /dev/null -H 'CF-Connecting-IP: 6.6.6.6' -H 'X-Real-IP: 6.6.6.6' "http://localhost:8080/$probe"
+          sleep 1
+          line="$(docker compose logs waf 2>&1 | grep "$probe" | tail -n 1)"
+          echo "$line"
+          if [[ -z "$line" || "$line" == *6.6.6.6* ]]; then
+            echo "IP forjado chegou ao WAF/app (ou a requisicao nao apareceu no log)"; exit 1
+          fi
+      - name: Stack logs
+        if: always()
+        run: docker compose logs --no-color --tail=150 waf web app
+
   deploy:
     name: Deploy to AWS EC2
     runs-on: ubuntu-latest
-    needs: [security, sonar]
+    needs: [security, sonar, waf]
     # Em release os jobs anteriores sao pulados (nao falham); !failure() deixa o deploy seguir so com a sincronizacao.
     if: >-
       !failure() && !cancelled() &&
@@ -158,8 +191,10 @@ jobs:
           # Sem elas as fotos ficam no volume local da EC2 (storage/app/private/avatars).
           AVATAR_DISK: ${{ vars.AVATAR_DISK || 'local' }}
           AVATAR_BUCKET: ${{ vars.AVATAR_BUCKET }}
+          # WAF: On bloqueia; a variavel WAF_MODE=DetectionOnly so registra (investigar falso positivo sem deploy de codigo).
+          WAF_MODE: ${{ vars.WAF_MODE || 'On' }}
         run: |
-          printf 'APP_NAME=ManaLeague\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://manaleague.com.br\nLOG_CHANNEL=stderr\nLOG_LEVEL=warning\nDB_CONNECTION=sqlite\nDB_DATABASE=/var/www/html/storage/app/database.sqlite\nSESSION_DRIVER=database\nSESSION_ENCRYPT=true\nSESSION_SECURE_COOKIE=true\nSESSION_HTTP_ONLY=true\nSESSION_SAME_SITE=lax\nCACHE_STORE=database\nQUEUE_CONNECTION=database\nAPP_PORT=80\nHTTPS_PORT=443\nCADDY_DOMAINS="manaleague.com.br, www.manaleague.com.br"\nMAIL_MAILER=%s\nMAIL_FROM_ADDRESS=nao-responda@manaleague.com.br\nMAIL_FROM_NAME=ManaLeague\nAWS_SES_REGION=%s\nAWS_SES_CONFIGURATION_SET=manaleague-transactional\nAVATAR_DISK=%s\nAWS_BUCKET=%s\nAWS_DEFAULT_REGION=%s\n' "$APP_KEY" "$MAIL_MAILER" "$AWS_REGION" "$AVATAR_DISK" "$AVATAR_BUCKET" "$AWS_REGION" > deploy.env
+          printf 'APP_NAME=ManaLeague\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://manaleague.com.br\nLOG_CHANNEL=stderr\nLOG_LEVEL=warning\nDB_CONNECTION=sqlite\nDB_DATABASE=/var/www/html/storage/app/database.sqlite\nSESSION_DRIVER=database\nSESSION_ENCRYPT=true\nSESSION_SECURE_COOKIE=true\nSESSION_HTTP_ONLY=true\nSESSION_SAME_SITE=lax\nCACHE_STORE=database\nQUEUE_CONNECTION=database\nAPP_PORT=80\nHTTPS_PORT=443\nCADDY_DOMAINS="manaleague.com.br, www.manaleague.com.br"\nMAIL_MAILER=%s\nMAIL_FROM_ADDRESS=nao-responda@manaleague.com.br\nMAIL_FROM_NAME=ManaLeague\nAWS_SES_REGION=%s\nAWS_SES_CONFIGURATION_SET=manaleague-transactional\nAVATAR_DISK=%s\nAWS_BUCKET=%s\nAWS_DEFAULT_REGION=%s\nWAF_MODE=%s\n' "$APP_KEY" "$MAIL_MAILER" "$AWS_REGION" "$AVATAR_DISK" "$AVATAR_BUCKET" "$AWS_REGION" "$WAF_MODE" > deploy.env
           tar --exclude=.git --exclude=terraform --exclude=vendor --exclude=.env --exclude=deploy.env -czf /tmp/release.tar.gz .
       - name: Upload release
         if: github.event_name == 'push'
@@ -187,7 +222,10 @@ jobs:
             sleep 10
           done
           sudo docker info >/dev/null
-          sudo docker compose -p manaleague up -d --build --remove-orphans
+          # Caddy e WAF (owasp/modsecurity-crs) sao imagens oficiais com tag fixa; so o app e construido aqui.
+          sudo docker compose -p manaleague pull --quiet waf web
+          sudo docker compose -p manaleague build app
+          sudo docker compose -p manaleague up -d --no-build --remove-orphans --wait --wait-timeout 180
           sudo docker compose -p manaleague exec -T app php artisan optimize
           curl --fail --retry 10 --retry-delay 3 --retry-all-errors --resolve manaleague.com.br:443:127.0.0.1 https://manaleague.com.br/login >/dev/null
           REMOTE

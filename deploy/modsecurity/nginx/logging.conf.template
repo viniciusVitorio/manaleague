@@ -1,0 +1,7 @@
+# ManaLeague — log de acesso do container WAF.
+# $remote_addr ja e o IP real do visitante (real_ip); via= e quem entregou a requisicao (o Caddy).
+log_format manaleague '$remote_addr - [$time_local] "$request" $status $body_bytes_sent '
+                      '"$http_user_agent" via=$realip_remote_addr rt=$request_time';
+
+access_log ${ACCESSLOG} manaleague;
+error_log ${ERRORLOG} ${LOGLEVEL};

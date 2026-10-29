@@ -18,16 +18,22 @@ resource "aws_key_pair" "deployer" {
   public_key = file(pathexpand(var.public_key_path))
 }
 
+locals {
+  web_ingress_cidrs = var.origin_ingress == "cloudflare" ? data.cloudflare_ip_ranges.cloudflare.ipv4_cidrs : ["0.0.0.0/0"]
+}
+
 resource "aws_security_group" "web" {
   name        = "${var.project_name}-web"
   description = "HTTP publico e SSH restrito para ManaLeague"
 
+  # Com origin_ingress = "cloudflare" so a Cloudflare alcanca a origem: ninguem contorna o WAF/rate limit
+  # da borda batendo direto no IP da EC2.
   ingress {
     description = "HTTP"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = local.web_ingress_cidrs
   }
 
   ingress {
@@ -35,7 +41,7 @@ resource "aws_security_group" "web" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = local.web_ingress_cidrs
   }
 
   ingress {

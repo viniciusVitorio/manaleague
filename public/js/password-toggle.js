@@ -56,4 +56,6 @@
 
     function init() { document.querySelectorAll('input[type="password"]').forEach(enhance); }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+    // Depois de um envio sem recarregar (js/async-forms.js) os campos voltam como o servidor mandou.
+    document.addEventListener('manaleague:updated', init);
 })();

@@ -5,7 +5,9 @@
 | Componente | Responsabilidade |
 |---|---|
 | Browser | interface e envio de formularios com CSRF |
-| Caddy | porta publica (80/443), TLS automatico (Let's Encrypt), compressao, headers e proxy FastCGI |
+| Cloudflare (Free) | DNS, proxy reverso na borda, protecao DDoS, Free Managed Ruleset e rate limit das rotas de autenticacao |
+| Caddy | porta publica (80/443), TLS automatico (Let's Encrypt), IP real via `CF-Connecting-IP`, compressao, headers e proxy reverso para o WAF |
+| WAF: Nginx + ModSecurity v3 + OWASP CRS v4 | imagem oficial `owasp/modsecurity-crs` (tag LTS fixa, sem porta publicada): inspeciona toda requisicao com o **OWASP Core Rule Set**, serve o `public/` e passa so o `index.php` para o PHP-FPM |
 | Laravel/PHP-FPM | autenticacao, autorizacao, round-robin, ranking, finais e headers de seguranca (`SecurityHeaders`) |
 | SQLite | usuarios, torneios, jogadores, partidas e sessoes |
 | Amazon S3 (privado) | fotos de perfil (`avatars/<uuid>.webp`), lidas pelo navegador via URL assinada |
@@ -13,13 +15,12 @@
 | SonarQube Cloud | analise estatica e Quality Gate |
 | Terraform | EC2, chave e firewall reproduziveis |
 
-> `deploy/nginx/default.conf` fica como alternativa ao Caddy para quem preferir Nginx; o `docker-compose.yml` usa Caddy.
-
 ## Fluxo de requisicao
 
 ```text
-Internet → Security Group :80/:443 → Caddy (TLS) → PHP-FPM/Laravel → SQLite
-                                        ↘ headers         ↘ CSP/HSTS/XFO (middleware)
+Internet → Cloudflare (DDoS, Free Managed Ruleset, rate limit) → Security Group :80/:443 (so faixas da Cloudflare)
+         → Caddy (TLS, IP real) → Nginx + ModSecurity/OWASP CRS (WAF) → PHP-FPM/Laravel → SQLite
+                ↘ headers                  ↘ 403 "Requisicao bloqueada"      ↘ CSP/HSTS/XFO (middleware)
 ```
 
 ## Fluxo de entrega
@@ -36,7 +37,10 @@ Commit → PHPUnit → Composer Audit/Trivy → Sonar → Quality Gate
 
 - **SQLite:** reduz custo e configuracao para um trabalho academico de baixa carga.
 - **Docker Compose:** reproduz o mesmo runtime local e na EC2.
-- **Caddy separado:** divide servidor web e PHP-FPM e emite certificado TLS sem configuracao manual.
+- **Caddy na borda:** emite e renova o certificado TLS sozinho (Full strict na Cloudflare) e resolve o IP real; o WAF fica atras dele, numa rede interna do Docker.
+- **WAF em duas camadas:** a Cloudflare Free segura volume (DDoS, rate limit, regras gerenciadas basicas); o OWASP CRS completo roda na origem com a **ModSecurity v3** (servico `waf` do `docker-compose.yml`, imagem oficial `owasp/modsecurity-crs`), porque o CRS da Cloudflare so existe no plano Pro. Configuracao do CRS por variavel de ambiente da imagem: paranoia 1, limiar de anomalia 5, metodos `PUT/PATCH/DELETE` liberados, limites de corpo (8 MB com arquivo, 256 KB sem) e respostas fora da inspecao. Excecoes do projeto em `deploy/modsecurity/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf` (senhas, token CSRF e cookies do Laravel fora da inspecao; nunca uma regra inteira desligada). Nginx do WAF em `deploy/modsecurity/nginx/` e pagina de bloqueio em `deploy/modsecurity/blocked.html` (resposta 403 com `X-WAF-Block`). `WAF_MODE=DetectionOnly` (variavel do GitHub) vira `MODSEC_RULE_ENGINE` e so registra, para investigar falso positivo sem deploy de codigo. Regras disparadas aparecem em `docker compose logs waf` (error log com id/mensagem e audit log JSON com partes `AHZ`, sem corpo nem cookies). A CI (job `WAF`) sobe a stack inteira e roda `docker/waf/waf-smoke.sh`: trafego legitimo do app nao pode ser bloqueado e ataques classicos (SQLi, XSS, LFI, RCE, PHP injection, scanner, Log4Shell, TRACE) precisam ser.
+- **IP real atras do proxy:** o Caddy so aceita `CF-Connecting-IP` vindo das faixas da Cloudflare (`deploy/caddy/cloudflare-trusted-proxies.caddy`, conferido pela CI) e repassa em `X-Real-IP`; o Nginx do WAF so confia nesse cabecalho vindo da rede interna e entrega o IP como `REMOTE_ADDR` ao PHP. A ModSecurity registra e o throttle do Laravel conta por visitante (a CI confere que `CF-Connecting-IP`/`X-Real-IP` forjados sao ignorados).
+- **Formularios sem recarregar a pagina:** `public/js/async-forms.js` (no layout principal) envia todo `<form method="POST">` com `fetch()` e o cabecalho `X-ManaLeague-Async: 1`. Os controllers nao mudam: o middleware `AsyncFormRedirects` (primeiro do grupo `web`) troca o redirect por `200 {"redirect": url}`, entao a mensagem flash e os erros de validacao continuam na sessao. Se a URL final e a mesma pagina, o script busca a pagina e atualiza o `<body>` no lugar com Idiomorph (`public/js/vendor/idiomorph.min.js`, 0BSD): rolagem, foco, `<details>` abertos e ouvintes ficam. Outra URL (criar torneio, login, excluir) navega normalmente. Mensagens fora da tela viram aviso no canto; 419/403/429/erro de rede tambem. Fica de fora: GET, `target="_blank"` e `data-async="off"`; `data-async-keep` protege um elemento da atualizacao (ex.: resultados da busca de cartas). Scripts de tela usam eventos delegados ou o evento `manaleague:updated`, e `window.ManaLeague.refresh()` atualiza a tela depois de um `fetch` proprio.
 - **Headers na aplicacao e no proxy:** defesa em profundidade; trocar o proxy nao remove as protecoes.
 - **Volumes nomeados:** preservam banco e dados entre releases.
 - **Releases imutaveis:** cada commit e extraido em uma pasta e um symlink `current` e trocado.

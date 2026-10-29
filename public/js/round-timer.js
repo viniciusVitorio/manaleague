@@ -4,6 +4,8 @@
     'use strict';
     var ENDING_SECONDS = 5 * 60;
 
+    var known = new WeakMap();
+
     function setup(timer) {
         var clock = timer.querySelector('[data-round-clock]');
         var endsAt = null;
@@ -26,6 +28,7 @@
             timer.classList.toggle('is-ending', !over && left <= ENDING_SECONDS);
         }
 
+        known.set(timer, configure);
         configure(timer.getAttribute('data-ends-at'), timer.getAttribute('data-server-now'));
         setInterval(tick, 1000);
         timer.addEventListener('round-timer:update', function (event) {
@@ -36,4 +39,13 @@
     function pad(n) { return (n < 10 ? '0' : '') + n; }
 
     document.querySelectorAll('[data-round-timer]').forEach(setup);
+
+    // Envio sem recarregar (js/async-forms.js): iniciar/reiniciar/parar o tempo muda data-ends-at.
+    document.addEventListener('manaleague:updated', function () {
+        document.querySelectorAll('[data-round-timer]').forEach(function (timer) {
+            var configure = known.get(timer);
+            if (configure) configure(timer.getAttribute('data-ends-at'), timer.getAttribute('data-server-now'));
+            else setup(timer);
+        });
+    });
 })();
