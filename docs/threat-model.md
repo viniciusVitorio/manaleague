@@ -21,7 +21,10 @@
 | Information Disclosure | e-mail de um usuario exposto a outro | Medio | pedidos de amizade exibem apenas apelido; perfis privados |
 | Information Disclosure | adivinhar pagina publica | Medio | slug com sufixo aleatorio de 16 chars (~82 bits) + `throttle:60,1`; sem IDs sequenciais |
 | Information Disclosure / XSS | carregar script ou frame externo | Medio | escape do Blade, CSP `default-src 'self'`, `frame-ancestors 'self'`, `object-src 'none'` |
-| Denial of Service | muitas tentativas de login/convite/arena | Medio | throttle por rota; evolucao futura: WAF |
+| Denial of Service | muitas tentativas de login/convite/arena | Medio | rate limit na borda (Cloudflare: 10 req/10 s por IP nas rotas de autenticacao) + throttle por rota no Laravel com o IP real |
+| Tampering / Injection | SQLi, XSS, LFI, RCE, scanners e Log4Shell antes de chegar no PHP | Alto | WAF na origem: ModSecurity v3 + OWASP CRS v4 (imagem oficial `owasp/modsecurity-crs`, paranoia 1, limiar 5) e Free Managed Ruleset na Cloudflare; regressao em `docker/waf/waf-smoke.sh` na CI |
+| Spoofing | forjar `CF-Connecting-IP`/`X-Forwarded-For` para fugir do rate limit | Medio | cabecalho so e aceito de IPs da Cloudflare; lista conferida pela CI |
+| Elevation of Privilege | contornar a Cloudflare batendo direto no IP da EC2 | Medio | `origin_ingress = "cloudflare"`: Security Group so libera 80/443 para as faixas da Cloudflare; o CRS tambem roda na origem |
 | Elevation of Privilege | trocar `user_id` no formulario | Alto | `user_id` nunca e aceito como entrada; vem da sessao |
 | Supply Chain | dependencia vulneravel | Alto | Composer Audit, Trivy e dependencias versionadas |
 | Infrastructure | SSH aberto ao mundo | Alto | CIDR `/32`, chave ed25519, regra efemera para CI e IMDSv2 |
