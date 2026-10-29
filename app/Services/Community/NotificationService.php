@@ -17,6 +17,10 @@ class NotificationService {
   }
   return true;
  }
+ /** Nao lidas que a pessoa ainda pode ver (mesma regra da caixa de entrada): o numero do sino bate com a pagina. */
+ public function unreadCount(User $user):int {
+  return CommunityNotification::where('user_id',$user->id)->whereNull('read_at')->get()->filter(fn($n)=>$this->canRead($user,$n))->count();
+ }
  public function visible(User $user):\Illuminate\Support\Collection {
   return CommunityNotification::where('user_id',$user->id)->latest('id')->cursor()->filter(fn($n)=>$this->canRead($user,$n))->values()->collect();
  }

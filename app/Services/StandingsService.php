@@ -10,7 +10,7 @@ class StandingsService
 {
     public function for(Tournament $tournament): Collection
     {
-        $players = $tournament->players()->with('profile')->get();
+        $players = $tournament->players()->with(['profile', 'deck'])->get();
         $table = [];
 
         foreach ($players as $player) {

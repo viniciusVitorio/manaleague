@@ -10,7 +10,8 @@
         const statusLabel = {pending: 'em jogo', finished: 'encerrada', bye: 'folga'};
         // Mesma regra do ranking: 🔥 com 3 vitórias seguidas, ⚡ com 6 ou mais.
         const streakMark = n => n >= 6 ? ' ⚡' : (n >= 3 ? ' 🔥' : '');
-        const render = data => {
+        const render = (data, serverNow) => {
+            board.querySelectorAll('[data-round-timer]').forEach(timer => timer.dispatchEvent(new CustomEvent('round-timer:update', {detail: {endsAt: data.round_ends_at, serverNow}})));
             const rows = data.standings.map(row => { const li = document.createElement('li'); li.textContent = `${row.name}${streakMark(row.streak)} — ${row.points} pts · ${row.wins}V ${row.draws}E ${row.losses}D`; return li; });
             board.querySelector('[data-live-standings]').replaceChildren(...rows);
             const matches = data.matches.map(match => { const p = document.createElement('p'); p.textContent = `R${match.round} · ${match.one} ${match.one_score ?? '–'} × ${match.two_score ?? '–'} ${match.two} · ${statusLabel[match.status] ?? match.status}`; return p; });
@@ -21,7 +22,7 @@
             const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 8000);
             try {
                 const response = await fetch(board.dataset.liveUrl, {credentials:'omit',headers:etag ? {'If-None-Match':etag,'Accept':'application/json'} : {'Accept':'application/json'},signal:controller.signal});
-                if (response.status !== 304) { if (!response.ok) throw new Error('offline'); const data = await response.json(); render(data); etag = response.headers.get('ETag'); }
+                if (response.status !== 304) { if (!response.ok) throw new Error('offline'); const data = await response.json(); const date = response.headers.get('Date'); render(data, date ? new Date(date).toISOString() : null); etag = response.headers.get('ETag'); }
                 state.textContent = 'Ao vivo · atualizado ' + new Date().toLocaleTimeString('pt-BR'); delay = 10000;
             } catch { state.textContent = 'Conexão interrompida · tentando novamente; exibindo último placar.'; delay = Math.min(delay * 2, 60000); }
             finally { clearTimeout(timeout); setTimeout(poll,delay); }

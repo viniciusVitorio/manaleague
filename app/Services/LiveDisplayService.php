@@ -8,6 +8,8 @@ class LiveDisplayService
         // Explicit public allowlist: never serialize Eloquent models or submissions.
         return [
             'name'=>$t->name, 'format'=>$t->format, 'status'=>$t->status,
+            // Fim da rodada atual (cronômetro do organizador); o navegador conta o tempo.
+            'round_ends_at'=>$t->roundTimerRunning() ? $t->round_ends_at->toIso8601String() : null,
             'standings'=>app(StandingsService::class)->for($t)->map(fn($r)=>[
                 'rank'=>$r['rank'],'name'=>$r['player']->displayName(),'points'=>$r['points'],
                 'played'=>$r['played'],'wins'=>$r['wins'],'draws'=>$r['draws'],'losses'=>$r['losses'],'streak'=>$r['streak'],

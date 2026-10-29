@@ -1,0 +1,3 @@
+{{-- Cronômetro da rodada atual. Conta no navegador a partir do horário do servidor; o placar ao vivo atualiza quando o organizador inicia ou para. --}}@props(['endsAt' => null])
+@php($remaining = $endsAt ? max(0, now()->diffInSeconds($endsAt, false)) : 0)
+<div {{ $attributes->class(['round-timer', 'is-over' => $endsAt && $remaining <= 0]) }} data-round-timer data-ends-at="{{ $endsAt?->toIso8601String() }}" data-server-now="{{ now()->toIso8601String() }}" @unless($endsAt) hidden @endunless><span class="round-timer-label">Tempo da rodada</span><span class="round-timer-clock" data-round-clock role="timer">{{ $endsAt ? ($remaining > 0 ? sprintf('%02d:%02d', intdiv((int) $remaining, 60), (int) $remaining % 60) : 'Tempo esgotado') : '' }}</span></div>

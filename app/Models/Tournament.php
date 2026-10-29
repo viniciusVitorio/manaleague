@@ -27,7 +27,13 @@ class Tournament extends Model
 
     protected function casts(): array
     {
-        return ['tournament_date' => 'date', 'round_limit' => 'integer', 'ranked' => 'boolean'];
+        return ['tournament_date' => 'date', 'round_limit' => 'integer', 'ranked' => 'boolean', 'round_ends_at' => 'datetime', 'round_minutes' => 'integer'];
+    }
+
+    /** Cronômetro da rodada atual em andamento (definido pelo organizador). */
+    public function roundTimerRunning(): bool
+    {
+        return $this->round_ends_at !== null && in_array($this->status, [self::STATUS_LEAGUE, self::STATUS_FINALS], true);
     }
 
     public function user(): BelongsTo

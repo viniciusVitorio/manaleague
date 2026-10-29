@@ -62,7 +62,7 @@ class CollectionHubTest extends TestCase
             ->assertSee('Amigos têm pra troca')->assertSee('2× BBD')->assertDontSee('Zeca'); // só amigos
 
         // fichário de trocas no perfil: amigo vê, estranho não
-        $this->actingAs($ana)->get('/players/'.$bia->playerProfile->id)->assertOk()->assertSee('Para troca')->assertSee('Chain Lightning');
+        $this->actingAs($ana)->get(route('profiles.show', $bia->playerProfile))->assertOk()->assertSee('Para troca')->assertSee('Chain Lightning');
         $item = CollectionItem::where('user_id', $ana->id)->where('name', 'Mountain')->first();
         $this->actingAs($ana)->patch('/me/collection/'.$item->id, ['quantity' => 6, 'for_trade' => 99])->assertRedirect();
         $this->assertSame(6, $item->fresh()->for_trade); // nunca mais que a quantidade

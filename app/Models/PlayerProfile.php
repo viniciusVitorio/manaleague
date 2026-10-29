@@ -22,6 +22,26 @@ class PlayerProfile extends Model
         static::creating(function (PlayerProfile $profile): void {
             $profile->friend_code ??= static::generateFriendCode();
         });
+        // Endereço do perfil (/p/{handle}) acompanha o apelido; colisões ganham -2, -3...
+        static::saving(function (PlayerProfile $profile): void {
+            if ($profile->handle === null || $profile->isDirty('nickname')) {
+                $profile->handle = static::uniqueHandle((string) $profile->nickname,
+                    fn (string $h) => static::query()->where('handle', $h)->when($profile->exists, fn ($q) => $q->whereKeyNot($profile->id))->exists());
+            }
+        });
+    }
+
+    /** "Ana Lúcia" → "ana-lucia"; sem letras/números vira "jogador". $taken diz se um handle já está em uso. */
+    public static function uniqueHandle(string $nickname, callable $taken): string
+    {
+        $base = \Illuminate\Support\Str::limit(\Illuminate\Support\Str::slug($nickname), 30, '') ?: 'jogador';
+        $base = rtrim($base, '-') ?: 'jogador';
+        $handle = $base;
+        for ($n = 2; $taken($handle); $n++) {
+            $handle = $base.'-'.$n;
+        }
+
+        return $handle;
     }
 
     /** Emoji escolhido no perfil ou, sem ele, a inicial do apelido (para os circulos de avatar). */

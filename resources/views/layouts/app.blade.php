@@ -6,6 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'ManaLeague' }}</title>
+    {{-- Prévia de link (WhatsApp, Telegram, redes): páginas podem definir $og = ['title' => ..., 'description' => ...]. --}}
+    @php($og = ($og ?? []) + ['title' => $title ?? 'ManaLeague', 'description' => 'Torneios de Magic sem planilhas: rodadas, placar ao vivo, decks e ranking entre amigos.'])
+    <meta name="description" content="{{ $og['description'] }}">
+    <meta property="og:site_name" content="ManaLeague">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="pt_BR">
+    <meta property="og:title" content="{{ $og['title'] }}">
+    <meta property="og:description" content="{{ $og['description'] }}">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:image" content="{{ asset('android-chrome-512x512.png') }}">
+    <meta name="twitter:card" content="summary">
     <link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/app.css') }}">
     <link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/ui.css') }}">
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">

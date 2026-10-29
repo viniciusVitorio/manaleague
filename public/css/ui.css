@@ -330,3 +330,17 @@ input::-ms-reveal{display:none}
 .h2h-record span{color:var(--ui-fg-subtle);font-size:.75rem}
 .h2h-last{margin:0;color:var(--ui-fg-muted);font-size:.85rem}
 .avatar-link{display:contents}
+
+/* ---------- Dia de evento: cronômetro (organizador) e check-in ---------- */
+.round-timer-card .section-heading{flex-wrap:wrap}
+.round-timer-actions{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--s3)}
+.round-timer-form{display:flex;align-items:flex-end;gap:var(--s2)}
+.round-timer-form label{margin:0}
+.round-timer-form input{width:96px}
+.player-actions{display:flex;align-items:center;gap:var(--s2)}
+.check-in-on{border-color:rgba(74,222,128,.35);color:var(--ui-success)}
+.check-in-summary{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s2);margin-bottom:var(--s2)}
+.check-in-summary p{margin:0;font-size:.85rem}
+.check-in-box{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3);padding:var(--s3) var(--s4);margin-bottom:var(--s3);border:1px dashed var(--ui-border-strong);border-radius:var(--ui-radius)}
+.check-in-box p{margin:0}
+.check-in-box.is-done{border-style:solid;border-color:rgba(74,222,128,.3)}

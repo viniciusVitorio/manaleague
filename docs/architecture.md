@@ -43,7 +43,8 @@ Commit → PHPUnit → Composer Audit/Trivy → Sonar → Quality Gate
 - **SSH efemero no CI:** o IP `/32` do runner e autorizado somente durante o deploy e revogado no final.
 - **Servicos de dominio:** `PairingService` gera confrontos e `StandingsService` calcula a tabela sem misturar regra de negocio com HTML.
 - **Maquina de estados do torneio:** `setup → league → finals → finished`; cada transicao valida o estado atual com lock, e placares so podem ser editados na fase da partida.
-- **Pagina publica tokenizada:** amigos acompanham o placar sem conta, mas nao recebem endpoint de escrita.
+- **Pagina publica tokenizada:** amigos acompanham o placar sem conta, mas nao recebem endpoint de escrita. Ela traz meta tags Open Graph (formato, data, jogadores e lider/campeao) para a previa do link no WhatsApp.
+- **Perfil pelo apelido:** `/p/{handle}` (gerado do apelido, unico, muda junto com o apelido). O endereco antigo `/players/{id}` so redireciona (301) para quem pode ver o perfil, com `throttle:30,1` contra varredura.
 - **Foto de perfil no S3 privado:** o upload passa pelo Laravel (`AvatarService`), que valida, reencoda em WebP 256x256 (descarta EXIF e payloads) e grava com nome UUID. As views usam o componente `<x-avatar>` (foto ou emoji/inicial). Com `AVATAR_DISK=s3` o navegador recebe *presigned GET* com inicio arredondado a janelas de 30 min (mesma URL = cache do navegador) e validade de janela + 90 min; a CSP libera so a origem do bucket. Com `AVATAR_DISK=local` (padrao em dev e no deploy ate o bucket existir) a rota `/avatars/{uuid}.webp` serve o arquivo do volume.
 
 ## Modulos
@@ -54,6 +55,7 @@ Cada modulo registra as proprias rotas (com middleware explicito) e e carregado 
 |---|---|---|
 | Competicao (round-robin, suico, eliminacao simples/dupla, pods Commander) | `routes/competition.php` + rotas de torneio | `CompetitionService`, `PairingService`, `MatchResultService` (gravador canonico de placar), `StandingsService` |
 | Ao vivo (placar pelo celular, confirmacao/contestacao, QR, Modo TV) | `routes/live.php` | `MatchResultSubmissionService`, `RegistrationQrService`, `LiveDisplayService` |
+| Dia de evento (cronometro da rodada, check-in, remover ausentes) | `routes/competition.php` | `EventDayController`; o cronometro guarda so `round_ends_at` e o navegador conta (`js/round-timer.js`, corrigido pelo horario do servidor) |
 | Decks (versoes imutaveis, simulador de mao, colecao, comparador) | `routes/deck-tools.php` | `Decks\DeckVersionService`, `Decks\DeckAccessService` |
 | Comunidade (painel, feed, notificacoes, clubes) | `routes/community.php` | `Community\DashboardService`, `ActivityService`, `NotificationService`, `ClubService`, `CommunityAccess` |
 | Desafios e conquistas (1v1 casual, rivalidades, conquistas secretas, compartilhamento) | `routes/challenges.php` | `ChallengeService`, `AchievementService` |
