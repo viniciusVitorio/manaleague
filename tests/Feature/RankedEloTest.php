@@ -409,9 +409,9 @@ class RankedEloTest extends TestCase
 
         $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('Ranque')->assertSee('1016')->assertSee('Mestre')
             ->assertSee('Últimas variações')->assertDontSee('Mostrar meu ranque')->assertSee('Ver todas as patentes')->assertSee('Diamante I')->assertSee('875 – 899')->assertSee('900+')->assertSee('divisões de 25 pontos');
-        $this->actingAs($b)->get('/players/'.$a->playerProfile->id)->assertOk()->assertSee('1016');
+        $this->actingAs($b)->get(route('profiles.show', $a->playerProfile))->assertOk()->assertSee('1016');
         $a->playerProfile->update(['ranked_public' => false]); // opcao antiga nao esconde mais
-        $this->actingAs($b)->get('/players/'.$a->playerProfile->id)->assertSee('1016');
+        $this->actingAs($b)->get(route('profiles.show', $a->playerProfile))->assertSee('1016');
 
         foreach (['/ranked', '/ranked/regulamento', '/ranked/leaderboard', '/players/'.$a->playerProfile->id.'/ranked'] as $gone) {
             $this->actingAs($a)->get($gone)->assertNotFound();

@@ -53,6 +53,14 @@ class PlayerProfileController extends Controller
         return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked'));
     }
 
+    /** Endereço antigo /players/{id}: redireciona para /p/{handle} só se quem pede pode ver o perfil. */
+    public function legacy(PlayerProfile $profile): RedirectResponse
+    {
+        $this->authorize('view', $profile);
+
+        return redirect()->route('profiles.show', $profile, 301);
+    }
+
     public function show(Request $request, PlayerProfile $profile): View
     {
         $user = $request->user();

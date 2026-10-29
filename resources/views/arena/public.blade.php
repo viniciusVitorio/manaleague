@@ -1,5 +1,16 @@
 @extends('layouts.app')
-@push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/live.css') }}"><script defer src="{{ \App\Support\VersionedAsset::url('js/live.js') }}"></script>@endpush
+@php
+    // Prévia do link no WhatsApp: formato, data, jogadores e líder (ou campeão).
+    $leader = $ranking->first();
+    $fire = fn (array $row) => $row['streak'] >= 6 ? ' ⚡' : ($row['streak'] >= 3 ? ' 🔥' : '');
+    $highlight = $recap ? 'Campeão: '.$recap['champion']->displayName().' 🏆'
+        : ($leader && $leader['played'] > 0 ? 'Líder: '.$leader['player']->displayName().' ('.$leader['points'].' pts)'.$fire($leader) : null);
+    $title = $tournament->name.' · ManaLeague';
+    $og = ['title' => '🏆 '.$tournament->name, 'description' => implode(' · ', array_filter([
+        $tournament->format, $tournament->tournament_date?->format('d/m/Y'), $tournament->players->count().' jogadores', $highlight,
+    ]))];
+@endphp
+@push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/live.css') }}"><script defer src="{{ \App\Support\VersionedAsset::url('js/live.js') }}"></script><script defer src="{{ \App\Support\VersionedAsset::url('js/round-timer.js') }}"></script>@endpush
 @section('content')
 <a class="btn btn-ghost" href="{{ route('arena.tv',$tournament->public_slug) }}">Modo TV</a>
 @auth<a class="btn btn-ghost" href="{{ route('matches.mine') }}">Minhas partidas</a>@endauth

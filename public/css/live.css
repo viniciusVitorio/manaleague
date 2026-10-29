@@ -1,1 +1,17 @@
  .live-board{margin:1.5rem 0}.live-columns{display:grid;grid-template-columns:1fr 1fr;gap:2rem}.live-columns li,.live-columns p{padding:.7rem;border-bottom:1px solid #343448;overflow-wrap:anywhere}.live-tv{background:#09090f;color:#f4f4fa;font:clamp(18px,1.8vw,32px)/1.5 system-ui;margin:0}.live-tv main{padding:3vw;max-width:1800px;margin:auto}.live-tv h1{font-size:clamp(28px,4vw,72px);margin:.3em 0}.live-tv a{color:#c4b5fd}.live-tv button,.mobile-result button{min-height:44px;padding:.6rem 1rem;cursor:pointer}.qr-screen{text-align:center}.registration-qr{width:min(65vh,90vw);height:auto;image-rendering:pixelated;background:#fff}.mobile-result input,.mobile-result textarea{min-height:44px;width:100%;box-sizing:border-box}.mobile-result label{display:block;margin:.8rem 0}.mobile-result form{max-width:42rem}.submission-audit{overflow-wrap:anywhere}@media(max-width:700px){.live-columns{grid-template-columns:1fr}.mobile-result .btn{width:100%;margin:.3rem 0}}
+
+/* ---------- Cronômetro da rodada (placar público, Modo TV, Minhas partidas, organizador) ---------- */
+.round-timer{display:inline-flex;align-items:baseline;gap:10px;padding:8px 14px;border:1px solid var(--ui-border,#2a2a35);border-radius:var(--ui-radius,10px);background:var(--ui-card,#111118);font-variant-numeric:tabular-nums}
+.round-timer[hidden]{display:none}
+.round-timer-label{font-size:.75rem;color:var(--ui-fg-subtle,#9a9aae);text-transform:uppercase;letter-spacing:.08em}
+.round-timer-clock{font-size:1.6rem;font-weight:700;line-height:1}
+.round-timer.is-ending .round-timer-clock{color:var(--ui-warning,#fbbf24)}
+.round-timer.is-over .round-timer-clock{color:var(--ui-danger,#f87171);font-size:1.2rem}
+.round-timer-compact{padding:4px 10px;margin:0 0 8px}
+.round-timer-compact .round-timer-clock{font-size:1.1rem}
+.live-board .round-timer{margin-bottom:12px}
+.live-tv .round-timer{display:flex;justify-content:center;margin:0 0 2vw;padding:1vw 2vw}
+.live-tv .round-timer[hidden]{display:none}
+.live-tv .round-timer-label{font-size:clamp(14px,1.2vw,22px)}
+.live-tv .round-timer-clock{font-size:clamp(48px,8vw,160px)}
+.live-tv .round-timer.is-over .round-timer-clock{font-size:clamp(32px,4vw,80px)}

@@ -1,7 +1,7 @@
 @php
     $user = auth()->user();
     $pendingFriends = $user->playerProfile?->friendedBy()->wherePivot('status', 'pending')->count() ?? 0;
-    $unreadNotifications = \App\Models\CommunityNotification::where('user_id', $user->id)->whereNull('read_at')->count();
+    $unreadNotifications = app(\App\Services\Community\NotificationService::class)->unreadCount($user);
     $primary = [
         ['dashboard', 'Painel', 'layout-dashboard', 'dashboard'],
         ['tournaments.index', 'Torneios', 'trophy', 'tournaments.*|clubs.tournaments.*|matches.submissions.queue|tournaments.qr.*'],

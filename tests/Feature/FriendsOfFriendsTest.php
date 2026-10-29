@@ -33,23 +33,23 @@ class FriendsOfFriendsTest extends TestCase
         $this->befriend($bia, $priv);
         $this->befriend($ana, $duda);
 
-        $page = $this->actingAs($ana)->get('/players/'.$bia->playerProfile->id)->assertOk()->assertSee('3 amigos')->assertSee('friends-pop', false)->assertDontSee('Amigos de Bia');
+        $page = $this->actingAs($ana)->get(route('profiles.show', $bia->playerProfile))->assertOk()->assertSee('3 amigos')->assertSee('friends-pop', false)->assertDontSee('Amigos de Bia');
         $page->assertSee('Caio')->assertSee('Amigo em comum')->assertSee(route('friends.store', $caio->playerProfile->friend_code), false)
             ->assertDontSee('Privado');
         $this->assertStringContainsString('Você', $page->getContent());
 
         // amigo de amigo abre o perfil, mas sem a lista de amigos dele e sem decks
-        $this->actingAs($ana)->get('/players/'.$caio->playerProfile->id)->assertOk()->assertSee('Caio')->assertDontSee('friends-pop', false);
+        $this->actingAs($ana)->get(route('profiles.show', $caio->playerProfile))->assertOk()->assertSee('Caio')->assertDontSee('friends-pop', false);
         // perfil "so por codigo" continua fechado; perfis abertos abrem ate para estranhos (sem decks nem lista de amigos)
-        $this->actingAs($ana)->get('/players/'.$priv->playerProfile->id)->assertForbidden();
+        $this->actingAs($ana)->get(route('profiles.show', $priv->playerProfile))->assertForbidden();
         $stranger = $this->user('Zeca');
-        $this->actingAs($stranger)->get('/players/'.$caio->playerProfile->id)->assertOk()->assertDontSee('friends-pop', false);
-        $this->actingAs($caio)->get('/players/'.$duda->playerProfile->id)->assertOk(); // Caio-Bia-Duda
-        $this->actingAs($stranger)->get('/players/'.$bia->playerProfile->id)->assertOk()->assertDontSee('friends-pop', false);
-        $this->actingAs($stranger)->get('/players/'.$priv->playerProfile->id)->assertForbidden();
+        $this->actingAs($stranger)->get(route('profiles.show', $caio->playerProfile))->assertOk()->assertDontSee('friends-pop', false);
+        $this->actingAs($caio)->get(route('profiles.show', $duda->playerProfile))->assertOk(); // Caio-Bia-Duda
+        $this->actingAs($stranger)->get(route('profiles.show', $bia->playerProfile))->assertOk()->assertDontSee('friends-pop', false);
+        $this->actingAs($stranger)->get(route('profiles.show', $priv->playerProfile))->assertForbidden();
 
         $this->actingAs($ana)->post(route('friends.store', $caio->playerProfile->friend_code))->assertRedirect();
-        $this->actingAs($ana)->get('/players/'.$bia->playerProfile->id)->assertSee('Pedido enviado');
+        $this->actingAs($ana)->get(route('profiles.show', $bia->playerProfile))->assertSee('Pedido enviado');
     }
 
     public function test_friends_page_suggests_friends_of_friends_by_mutual_count(): void

@@ -53,7 +53,7 @@ class DashboardService
         $notifications = app(NotificationService::class);
         $unreadList = CommunityNotification::where('user_id', $user->id)->whereNull('read_at')->latest('id')->limit(30)->get()
             ->filter(fn ($n) => $notifications->canRead($user, $n))->values();
-        $unread = $notifications->visible($user)->whereNull('read_at')->count();
+        $unread = $notifications->unreadCount($user);
 
         $activities = app(ActivityService::class)->visible($user, 1, 5);
 

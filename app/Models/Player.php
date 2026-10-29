@@ -13,6 +13,8 @@ class Player extends Model
 
     protected $fillable = ['player_profile_id', 'deck_id', 'name', 'deck_name', 'deck_colors'];
 
+    protected function casts(): array { return ['checked_in_at' => 'datetime']; }
+
     public function profile(): BelongsTo { return $this->belongsTo(PlayerProfile::class, 'player_profile_id'); }
 
     /** Nome no torneio com o emoji do perfil vinculado, quando houver. */

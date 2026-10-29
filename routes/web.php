@@ -85,7 +85,9 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('/me/decks/{deck}/cover', [DeckController::class, 'cover'])->name('decks.cover');
     Route::patch('/me/decks/{deck}/primary', [DeckController::class, 'primary'])->name('decks.primary');
     Route::delete('/me/decks/{deck}', [DeckController::class, 'destroy'])->name('decks.destroy');
-    Route::get('/players/{profile}', [PlayerProfileController::class, 'show'])->name('profiles.show');
+    // Perfil pelo apelido (/p/ana). O endereço antigo por id só redireciona (links já compartilhados), com limite contra varredura.
+    Route::get('/p/{profile:handle}', [PlayerProfileController::class, 'show'])->where('profile', '[a-z0-9-]+')->name('profiles.show');
+    Route::get('/players/{profile}', [PlayerProfileController::class, 'legacy'])->whereNumber('profile')->middleware('throttle:30,1')->name('profiles.legacy');
     Route::patch('/players/{profile}/friend', [PlayerProfileController::class, 'toggleFriend'])->name('profiles.friend');
     Route::post('/players/{profile}/builder', [PlayerProfileController::class, 'builder'])->name('profiles.builder');
     Route::patch('/me/friend-requests/{requester}/accept', [FriendRequestController::class, 'accept'])->name('friends.accept');
