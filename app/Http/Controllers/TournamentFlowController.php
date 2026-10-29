@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Tournament;
 use App\Services\Community\CommunityEvents;
+use App\Services\Decks\BanListService;
 use App\Services\PairingService;
 use Illuminate\Http\RedirectResponse;
 use LogicException;
@@ -13,6 +14,16 @@ class TournamentFlowController extends Controller
     public function start(Tournament $tournament, PairingService $pairings): RedirectResponse
     {
         $this->authorize('update', $tournament);
+
+        // Regras do formato: ninguém começa com carta banida (o deck pode ter mudado depois da inscrição).
+        if ($tournament->status === Tournament::STATUS_SETUP && $tournament->blocksBannedCards()) {
+            $players = $tournament->players()->get(['id', 'name', 'deck_id']);
+            $banned = app(BanListService::class)->bannedByDeck($players->pluck('deck_id'), $tournament->format);
+            $names = $players->filter(fn ($player) => isset($banned[$player->deck_id]))->pluck('name');
+            if ($names->isNotEmpty()) {
+                return back()->withErrors(['tournament' => 'Não dá para começar: '.$names->join(', ', ' e ').($names->count() === 1 ? ' está' : ' estão').' com cartas banidas no '.$tournament->format.'. Peça para trocarem o deck ou remova da lista.']);
+            }
+        }
 
         try {
             $pairings->generateLeague($tournament);

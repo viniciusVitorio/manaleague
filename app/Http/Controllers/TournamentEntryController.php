@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Deck;
 use App\Models\PlayerProfile;
 use App\Models\Tournament;
+use App\Services\Decks\BanListService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,9 @@ class TournamentEntryController extends Controller
         abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'O torneio já começou; o deck não pode mais ser trocado.');
 
         $deck = self::validatedDeck($request, $profile);
+        if ($banned = app(BanListService::class)->blockingCards($tournament, $deck['deck_id'])) {
+            return back()->withErrors(['deck_id' => BanListService::messageForOwner($tournament, $banned)])->withInput();
+        }
 
         $result = DB::transaction(function () use ($tournament, $entry, $deck): string {
             // Lock + releitura do status: a troca nao pode passar depois que o organizador iniciou o torneio.

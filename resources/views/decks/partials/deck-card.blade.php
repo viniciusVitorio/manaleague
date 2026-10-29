@@ -22,7 +22,7 @@
             <a href="{{ route('decks.show', $deck) }}"><strong>{{ $deck->name }}</strong></a>
             @include('partials.color-pips', ['colors' => $deck->colors])
         </div>
-        <p class="deck-card-meta">{{ $deck->format ?: 'Formato livre' }} · {{ $d['cards'] }} {{ $d['cards'] === 1 ? 'carta' : 'cartas' }}</p>
+        <p class="deck-card-meta">{{ $deck->format ?: 'Formato livre' }} · {{ $d['cards'] }} {{ $d['cards'] === 1 ? 'carta' : 'cartas' }}@if($deck->cards_updated_at) · <span title="Lista atualizada em {{ $deck->cards_updated_at->format('d/m/Y H:i') }}">atualizada {{ $deck->cards_updated_at->diffForHumans() }}</span>@endif</p>
         @if($d['single_set'])<span class="single-set-badge" title="Todas as cartas do deck, sem contar os terrenos, são da coleção {{ $d['single_set'] }}">✦ Coleção única · {{ $d['single_set'] }}</span>@endif
         @if($record || $coverage)
             <dl class="deck-card-stats">

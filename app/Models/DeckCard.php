@@ -26,6 +26,15 @@ class DeckCard extends Model
 
     protected function casts(): array { return ['quantity' => 'integer', 'cmc' => 'float']; }
 
+    protected static function booted(): void
+    {
+        // Qualquer carta adicionada, alterada, movida ou removida atualiza a data da lista do deck.
+        // "updated" também dispara no increment/decrement (mover parte das cópias para o sideboard).
+        foreach (['created', 'updated', 'deleted'] as $event) {
+            static::$event(fn (DeckCard $card) => Deck::touchList($card->deck_id));
+        }
+    }
+
     public function deck(): BelongsTo { return $this->belongsTo(Deck::class); }
 
     public function typeGroup(): string

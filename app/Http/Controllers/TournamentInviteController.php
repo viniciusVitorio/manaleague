@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tournament;
+use App\Services\Decks\BanListService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,9 @@ class TournamentInviteController extends Controller
         $profile = $request->user()->ensurePlayerProfile();
 
         $validated = TournamentEntryController::validatedDeck($request, $profile);
+        if ($banned = app(BanListService::class)->blockingCards($tournament, $validated['deck_id'])) {
+            return back()->withErrors(['deck_id' => BanListService::messageForOwner($tournament, $banned)])->withInput();
+        }
 
         // Checagem de status, limite e duplicidade dentro da mesma transacao com lock:
         // dois convidados entrando ao mesmo tempo nao conseguem estourar o max_players.

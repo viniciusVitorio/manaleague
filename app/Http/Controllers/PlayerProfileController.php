@@ -14,8 +14,13 @@ use App\Services\FriendshipService;
 use App\Services\PlayerStatsService;
 use App\Services\Ranked\RankTierResolver;
 use App\Services\Ranked\SeasonService;
+use App\Models\ProfileHandleHold;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class PlayerProfileController extends Controller
@@ -53,12 +58,27 @@ class PlayerProfileController extends Controller
         return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked'));
     }
 
-    /** Endereço antigo /players/{id}: redireciona para /p/{handle} só se quem pede pode ver o perfil. */
+    /**
+     * Endereço antigo /players/{id}: redireciona para /p/{handle} só se quem pede pode ver o perfil.
+     * 302 (e não 301): o endereço pode mudar, e o navegador não deve guardar o destino para sempre.
+     */
     public function legacy(PlayerProfile $profile): RedirectResponse
     {
         $this->authorize('view', $profile);
 
-        return redirect()->route('profiles.show', $profile, 301);
+        return redirect()->route('profiles.show', $profile);
+    }
+
+    /**
+     * /p/{handle} que não existe mais: se for um endereço antigo ainda reservado, leva ao endereço atual.
+     * Para quem não pode ver o perfil a resposta é 404, igual a um endereço que nunca existiu.
+     */
+    public function formerHandle(Request $request): RedirectResponse
+    {
+        $hold = ProfileHandleHold::query()->active()->with('profile')->where('handle', (string) $request->route('profile'))->first();
+        abort_unless($hold?->profile && $request->user()?->can('view', $hold->profile), 404);
+
+        return redirect()->route('profiles.show', $hold->profile);
     }
 
     public function show(Request $request, PlayerProfile $profile): View
@@ -176,6 +196,49 @@ class PlayerProfileController extends Controller
         $profile->update($validated);
 
         return redirect()->route('profiles.index')->with('status', 'Perfil atualizado.');
+    }
+
+    /**
+     * Nome de usuário (handle), separado do nome de exibição: vira o link do perfil (/p/{handle}), como no LinkedIn e no Instagram.
+     * Uma troca a cada 30 dias; o usuário anterior fica reservado por 90 dias e o link antigo redireciona para o novo.
+     */
+    public function updateHandle(Request $request): RedirectResponse
+    {
+        $profile = $this->ownProfile($request);
+        $request->merge(['handle' => Str::lower(ltrim(trim((string) $request->input('handle')), '@'))]);
+        $handle = $request->validate([
+            'handle' => ['required', 'string', 'min:3', 'max:30', 'regex:/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/', 'not_regex:/--/', Rule::notIn(PlayerProfile::RESERVED_HANDLES)],
+        ], [
+            'handle.required' => 'Escolha um nome de usuário.',
+            'handle.min' => 'Use pelo menos 3 caracteres.',
+            'handle.max' => 'Use no máximo 30 caracteres.',
+            'handle.regex' => 'Use só letras minúsculas sem acento, números e hífen (sem hífen no começo ou no fim).',
+            'handle.not_regex' => 'Não use dois hífens seguidos.',
+            'handle.not_in' => 'Esse nome de usuário é reservado. Escolha outro.',
+        ])['handle'];
+
+        if ($handle === $profile->handle) {
+            return back()->with('status', 'Esse já é o seu nome de usuário.');
+        }
+        if ($next = $profile->nextHandleChangeAt()) {
+            return back()->withErrors(['handle' => 'Você poderá trocar o nome de usuário de novo em '.$next->format('d/m/Y').'.'])->withInput();
+        }
+        if (PlayerProfile::handleTaken($handle, $profile)) {
+            return back()->withErrors(['handle' => 'Esse nome de usuário já está em uso. Tente outro.'])->withInput();
+        }
+
+        try {
+            DB::transaction(function () use ($profile, $handle): void {
+                // Reservas vencidas (ou a sua própria, se você voltar a um endereço antigo) liberam o endereço.
+                ProfileHandleHold::query()->whereIn('handle', [$handle, $profile->handle])->delete();
+                $profile->handleHolds()->create(['handle' => $profile->handle, 'expires_at' => now()->addDays(PlayerProfile::HANDLE_HOLD_DAYS)]);
+                $profile->forceFill(['handle' => $handle, 'handle_changed_at' => now()])->save();
+            });
+        } catch (UniqueConstraintViolationException) {
+            return back()->withErrors(['handle' => 'Esse nome de usuário acabou de ser escolhido por outra pessoa. Tente outro.'])->withInput();
+        }
+
+        return redirect()->route('profiles.edit')->with('status', 'Nome de usuário atualizado. Seu perfil agora fica em '.route('profiles.show', $profile).'.');
     }
 
     /** Botao de amizade da pagina de perfil (perfis conhecidos via torneio ou relacao existente). */

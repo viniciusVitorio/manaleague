@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('content')
 <div class="auth-shell"><div class="card auth-card invite-card"><span class="eyebrow">Convite para torneio</span><h1>{{ $tournament->name }}</h1><p class="muted">{{ $tournament->format }} @if($tournament->tournament_date) · {{ $tournament->tournament_date->format('d/m/Y') }} @endif</p>
+@include('tournaments.partials.rules-note')
 @if($tournament->status===\App\Models\Tournament::STATUS_SETUP)
 @if($entry)
 <div class="invite-note">Você já está inscrito como <strong>{{ $entry->name }}</strong> com <strong>{{ $entry->deck_name ?: 'Deck surpresa' }}</strong>. Pode trocar o deck até o torneio começar.</div>

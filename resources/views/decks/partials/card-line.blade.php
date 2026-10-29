@@ -16,6 +16,7 @@
     <span class="card-qty">{{ $card->quantity }}</span>
     <span class="card-name" tabindex="0" title="{{ $card->name }}">
         <span class="card-face">{{ $faces[0] ?? $card->name }}
+            @if(in_array($card->name, $bannedNames ?? [], true))<span class="ban-tag" title="Banida no {{ $deck->format }}">Banido</span>@endif
             @if($ownership)<span class="owned-badge {{ $ownership['class'] }}" title="Na sua coleção: {{ $ownership['have'] }} de {{ $ownership['need'] }} no deck">{{ $ownership['have'] }}/{{ $ownership['need'] }}</span>@endif
         </span>
         @if(count($faces) > 1)<span class="card-back">// {{ implode(' // ', array_slice($faces, 1)) }}</span>@endif

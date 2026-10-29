@@ -227,6 +227,8 @@ jobs:
           sudo docker compose -p manaleague build app
           sudo docker compose -p manaleague up -d --no-build --remove-orphans --wait --wait-timeout 180
           sudo docker compose -p manaleague exec -T app php artisan optimize
+          # Lista de cartas banidas (Scryfall). Se falhar, o deploy segue com a lista anterior.
+          sudo docker compose -p manaleague exec -T app php artisan cards:sync-bans || echo "Aviso: lista de banidas não atualizada."
           curl --fail --retry 10 --retry-delay 3 --retry-all-errors --resolve manaleague.com.br:443:127.0.0.1 https://manaleague.com.br/login >/dev/null
           REMOTE
       - name: Export published GitHub Releases

@@ -58,6 +58,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/me/profile', [PlayerProfileController::class, 'index'])->name('profiles.index');
     Route::get('/me/profile/edit', [PlayerProfileController::class, 'edit'])->name('profiles.edit');
     Route::patch('/me/profile', [PlayerProfileController::class, 'update'])->name('profiles.update');
+    Route::patch('/me/profile/handle', [PlayerProfileController::class, 'updateHandle'])->middleware('throttle:10,1')->name('profiles.handle.update');
     Route::post('/me/profile/photo', [AvatarController::class, 'update'])->middleware('throttle:10,1')->name('profiles.photo.update');
     Route::delete('/me/profile/photo', [AvatarController::class, 'destroy'])->middleware('throttle:10,1')->name('profiles.photo.destroy');
     Route::put('/me/password', [PasswordController::class, 'update'])->middleware('throttle:5,1')->name('password.change');
@@ -76,6 +77,7 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/me/showcase/{slot}', [\App\Http\Controllers\ShowcaseController::class, 'destroy'])->whereIn('slot', ['1', '2', '3'])->name('showcase.destroy');
     Route::post('/me/decks', [DeckController::class, 'store'])->name('decks.store');
     Route::get('/decks/{deck}', [DeckController::class, 'show'])->name('decks.show');
+    Route::get('/decks/{deck}/export', [DeckController::class, 'export'])->middleware('throttle:30,1')->name('decks.export');
     Route::get('/me/decks/{deck}/edit', [DeckController::class, 'edit'])->name('decks.edit');
     Route::post('/me/decks/{deck}/cards', [DeckCardController::class, 'store'])->middleware('throttle:60,1')->name('decks.cards.store');
     Route::patch('/me/decks/{deck}/cards/{card}', [DeckCardController::class, 'update'])->name('decks.cards.update');
@@ -86,7 +88,8 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('/me/decks/{deck}/primary', [DeckController::class, 'primary'])->name('decks.primary');
     Route::delete('/me/decks/{deck}', [DeckController::class, 'destroy'])->name('decks.destroy');
     // Perfil pelo apelido (/p/ana). O endereço antigo por id só redireciona (links já compartilhados), com limite contra varredura.
-    Route::get('/p/{profile:handle}', [PlayerProfileController::class, 'show'])->where('profile', '[a-z0-9-]+')->name('profiles.show');
+    Route::get('/p/{profile:handle}', [PlayerProfileController::class, 'show'])->where('profile', '[a-z0-9-]+')
+        ->missing(fn (\Illuminate\Http\Request $request) => app(PlayerProfileController::class)->formerHandle($request))->name('profiles.show');
     Route::get('/players/{profile}', [PlayerProfileController::class, 'legacy'])->whereNumber('profile')->middleware('throttle:30,1')->name('profiles.legacy');
     Route::patch('/players/{profile}/friend', [PlayerProfileController::class, 'toggleFriend'])->name('profiles.friend');
     Route::post('/players/{profile}/builder', [PlayerProfileController::class, 'builder'])->name('profiles.builder');
@@ -95,6 +98,7 @@ Route::middleware('auth')->group(function (): void {
 
     Route::resource('tournaments', TournamentController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
     Route::post('/tournaments/{tournament}/invite/regenerate', [TournamentController::class, 'regenerateInvite'])->name('tournaments.invite.regenerate');
+    Route::post('/tournaments/{tournament}/repeat', [TournamentController::class, 'repeat'])->middleware('throttle:10,1')->name('tournaments.repeat');
     Route::delete('/tournaments/{tournament}/players/{player}', [PlayerController::class, 'destroy'])->name('players.destroy');
     Route::post('/tournaments/{tournament}/friends/{profile}', [TournamentFriendController::class, 'store'])->name('tournaments.friends.store');
     Route::put('/tournaments/{tournament}/matches/{match}', [MatchController::class, 'update'])->name('matches.update');

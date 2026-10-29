@@ -90,7 +90,10 @@ class DeckBuilderService
         $added = 0;
 
         DB::transaction(function () use ($deck, $parsed, $lookup, $replace, &$missing, &$added): void {
-            if ($replace) $deck->cards()->delete();
+            if ($replace) {
+                $deck->cards()->delete(); // em massa, sem eventos: marca a data da lista aqui
+                Deck::touchList($deck->id);
+            }
 
             foreach ($parsed as $line) {
                 $card = ScryfallClient::pick($lookup['found'], $line['name'], $line['set'] ?? null);
@@ -218,6 +221,23 @@ class DeckBuilderService
         return ($deck->cover_card_id ? $cards->firstWhere('id', $deck->cover_card_id)?->art_url : null)
             ?? $cards->firstWhere('board', DeckCard::BOARD_COMMANDER)?->art_url
             ?? $cards->where('board', DeckCard::BOARD_MAIN)->reject(fn (DeckCard $card) => $card->isLand())->sortByDesc('cmc')->first()?->art_url;
+    }
+
+    /**
+     * Lista em texto no formato do Arena (cabeçalhos Commander / Deck / Sideboard), que o Moxfield,
+     * a LigaMagic e o próprio importador do ManaLeague também aceitam.
+     */
+    public function exportText(Deck $deck): string
+    {
+        $cards = $deck->cards()->get();
+        $sections = ['Commander' => DeckCard::BOARD_COMMANDER, 'Deck' => DeckCard::BOARD_MAIN, 'Sideboard' => DeckCard::BOARD_SIDE];
+        $blocks = [];
+        foreach ($sections as $header => $board) {
+            $lines = $cards->where('board', $board)->map(fn (DeckCard $card) => $card->quantity.' '.$card->name);
+            if ($lines->isNotEmpty()) $blocks[] = $header."\n".$lines->implode("\n");
+        }
+
+        return $blocks === [] ? '' : implode("\n\n", $blocks)."\n";
     }
 
     /** Avisos de construcao por formato (nao bloqueiam: o deck pode estar em montagem). */

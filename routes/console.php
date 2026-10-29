@@ -103,3 +103,13 @@ Artisan::command('patch-notes:sync {file? : Arquivo JSON com as releases (sem el
     }
     return 0;
 })->purpose('Copia as GitHub Releases publicadas (JSON gerado no deploy) para a aba de patch notes');
+
+Artisan::command('cards:sync-bans', function (): int {
+    $result = app(\App\Services\Decks\BanListService::class)->sync(app(\App\Services\ScryfallClient::class));
+    foreach ($result as $format => $count) {
+        $count === null ? $this->warn("{$format}: Scryfall não respondeu, a lista anterior foi mantida.") : $this->info("{$format}: {$count} carta(s) banida(s).");
+    }
+    return in_array(null, $result, true) ? 1 : 0;
+})->purpose('Atualiza a lista de cartas banidas por formato (Scryfall)');
+
+\Illuminate\Support\Facades\Schedule::command('cards:sync-bans')->dailyAt('06:00');

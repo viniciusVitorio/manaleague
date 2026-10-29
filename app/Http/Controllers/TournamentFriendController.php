@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PlayerProfile;
 use App\Models\Tournament;
+use App\Services\Decks\BanListService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,13 @@ class TournamentFriendController extends Controller
         $this->authorize('update', $tournament);
         abort_unless($request->user()->friendProfiles()->whereKey($profile->id)->wherePivot('status', 'accepted')->exists(), 403);
 
-        $result = DB::transaction(function () use ($tournament, $profile): string {
+        // O amigo entra com o deck principal: se ele tem banidas, o próprio jogador entra pelo convite com outro deck.
+        $deckId = $profile->decks()->where('is_primary', true)->value('id');
+        if (app(BanListService::class)->blockingCards($tournament, $deckId)) {
+            return back()->withErrors(['player' => BanListService::messageForOrganizer($tournament, $profile->nickname).' Mande o link de inscrição para escolher outro deck.']);
+        }
+
+        $result = DB::transaction(function () use ($tournament, $profile, $deckId): string {
             $locked = Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
 
             if ($locked->status !== Tournament::STATUS_SETUP) return 'closed';
@@ -25,7 +32,7 @@ class TournamentFriendController extends Controller
 
             $locked->players()->create([
                 'player_profile_id' => $profile->id, 'name' => $profile->nickname,
-                'deck_id' => $profile->decks()->where('is_primary', true)->value('id'),
+                'deck_id' => $deckId,
                 'deck_name' => $profile->preferred_deck_name, 'deck_colors' => $profile->preferred_deck_colors,
             ]);
 
