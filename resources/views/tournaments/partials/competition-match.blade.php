@@ -1,4 +1,4 @@
-<article class="match-card {{ $match->stage!=='league'?'decisive':'' }}">
+<article class="match-card {{ $match->stage!=='league'?'decisive':'' }}" id="match-{{ $match->id }}">
 @php($stageLabel = match($match->bracket) { 'winners' => 'CHAVE PRINCIPAL', 'losers' => 'REPESCAGEM', 'grand_final' => 'GRANDE FINAL', 'reset_final' => 'FINAL DE DESEMPATE', 'swiss' => 'SUÍÇO', 'pod' => 'POD COMMANDER', 'final' => 'FINAL', default => match($match->stage) { 'final' => 'FINAL', 'third_place' => '3º LUGAR', default => $match->status === 'bye' ? 'BYE' : 'LIGA' } })
 <div class="match-stage">{{ $stageLabel }}</div>
 @if($match->pod_player_ids)

@@ -43,6 +43,10 @@ mude a regra aqui primeiro — nao abra excecao escondida na tela.
 - Texto do botao = verbo + objeto curto ("Editar perfil", "Enviar foto"). Nada de "Clique aqui".
 - Botao com icone: icone a esquerda, 14px. Botao so com icone precisa de `aria-label`.
 - Navegar = link (`<a>`); mudar dados = `<form>` com `POST/PATCH/DELETE` + `@csrf`.
+- Formularios POST ja sao enviados sem recarregar a pagina (`js/async-forms.js`); o controller continua com `back()->with('status', ...)`.
+  So use `data-async="off"` com motivo (ex.: download). Itens repetidos que mudam com o envio (partidas, rodadas) levam `id` estavel
+  (`match-{id}`, `round-{n}`) para a tela atualizar no lugar. JS de tela: eventos delegados no `document` (nunca `form.submit()`;
+  use `form.requestSubmit()`).
 
 ## 5. Tipografia
 

@@ -12,7 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: []);
-        $middleware->web(append: [\App\Http\Middleware\SecurityHeaders::class]);
+        // AsyncFormRedirects fica por fora de todo o grupo web: converte tambem os redirects de auth/guest.
+        $middleware->web(
+            prepend: [\App\Http\Middleware\AsyncFormRedirects::class],
+            append: [\App\Http\Middleware\SecurityHeaders::class],
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Central point for future exception reporting.

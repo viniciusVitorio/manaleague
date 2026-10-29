@@ -47,7 +47,7 @@ $leaguePending=$tournament->matches->where('stage','league')->where('status','pe
 @if($rounds->isNotEmpty())
 <section class="rounds-section"><div class="section-heading"><div><span class="eyebrow">Rodadas</span><h2>Confrontos</h2></div><span class="muted">{{ $leaguePending }} partidas pendentes na liga</span></div>
 @foreach($rounds as $roundNumber=>$matches)
-<details class="round card" {{ $loop->first||$matches->contains('status','pending')?'open':'' }}><summary><span>Rodada {{ $roundNumber }}</span><span>{{ $matches->where('status','pending')->count() }} pendentes · {{ $matches->count() }} mesas</span></summary><div class="match-grid">
+<details class="round card" id="round-{{ $roundNumber }}" {{ $loop->first||$matches->contains('status','pending')?'open':'' }}><summary><span>Rodada {{ $roundNumber }}</span><span>{{ $matches->where('status','pending')->count() }} pendentes · {{ $matches->count() }} mesas</span></summary><div class="match-grid">
 @foreach($matches as $match)@include('tournaments.partials.competition-match')@endforeach</div></details>
 @endforeach</section>
 @endif

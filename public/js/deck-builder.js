@@ -27,7 +27,9 @@
                 form.elements.board.value = board;
                 b.disabled = true;
                 b.textContent = 'Adicionando…';
-                form.submit();
+                // A lista de resultados fica na tela (data-async-keep): da para adicionar varias cartas seguidas.
+                document.addEventListener('manaleague:updated', function () { b.disabled = false; b.textContent = label; }, { once: true });
+                if (form.requestSubmit) form.requestSubmit(); else form.submit();
             });
             return b;
         }
@@ -104,8 +106,8 @@
     // Arrastar cartas entre deck e sideboard. Com mais de uma cópia, um mini menu pergunta quantas mover.
     // Os botões "↓ side" / "↑ deck" continuam como alternativa (teclado e celular, onde arrastar não funciona).
     function initBoardDrag() {
-        var zones = document.querySelectorAll('[data-drop-board]');
-        if (!zones.length) return;
+        if (!document.querySelector('[data-drop-board]')) return;
+        function zones() { return document.querySelectorAll('[data-drop-board]'); }
 
         var token = document.querySelector('meta[name="csrf-token"]');
         var dragged = null;
@@ -126,7 +128,10 @@
                 body: body
             }).then(function (response) {
                 if (!response.ok) throw new Error();
+                if (window.ManaLeague && window.ManaLeague.refresh) return window.ManaLeague.refresh();
                 window.location.reload();
+            }).then(function () {
+                line.classList.remove('is-moving');
             }).catch(function () {
                 line.classList.remove('is-moving');
                 window.alert('Não foi possível mover a carta. Recarregue a página e tente de novo.');
@@ -177,44 +182,48 @@
         document.addEventListener('mousedown', function (event) { if (chooser && !chooser.contains(event.target)) closeChooser(); });
         window.addEventListener('scroll', closeChooser, { passive: true });
 
-        document.querySelectorAll('[data-move-url]').forEach(function (line) {
-            line.addEventListener('dragstart', function (event) {
-                closeChooser();
-                dragged = line;
-                line.classList.add('is-dragging');
-                document.body.classList.add('is-dragging-card');
-                event.dataTransfer.effectAllowed = 'move';
-                event.dataTransfer.setData('text/plain', line.dataset.name || '');
-            });
-            line.addEventListener('dragend', function () {
-                line.classList.remove('is-dragging');
-                document.body.classList.remove('is-dragging-card');
-                zones.forEach(function (zone) { zone.classList.remove('is-drop-target'); });
-                dragged = null;
-            });
+        // Delegado no document: cartas e zonas que chegam numa atualizacao sem recarregar continuam arrastaveis.
+        function lineOf(event) { return event.target.closest && event.target.closest('[data-move-url]'); }
+        function zoneOf(event) { return event.target.closest && event.target.closest('[data-drop-board]'); }
+        function accepts(zone) { return zone && dragged && dragged.dataset.board !== zone.dataset.dropBoard; }
+
+        document.addEventListener('dragstart', function (event) {
+            var line = lineOf(event);
+            if (!line) return;
+            closeChooser();
+            dragged = line;
+            line.classList.add('is-dragging');
+            document.body.classList.add('is-dragging-card');
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', line.dataset.name || '');
         });
-
-        zones.forEach(function (zone) {
-            function accepts() { return dragged && dragged.dataset.board !== zone.dataset.dropBoard; }
-
-            zone.addEventListener('dragover', function (event) {
-                if (!accepts()) return;
-                event.preventDefault();
-                event.dataTransfer.dropEffect = 'move';
-                zone.classList.add('is-drop-target');
-            });
-            zone.addEventListener('dragleave', function (event) {
-                if (!zone.contains(event.relatedTarget)) zone.classList.remove('is-drop-target');
-            });
-            zone.addEventListener('drop', function (event) {
-                if (!accepts()) return;
-                event.preventDefault();
-                zone.classList.remove('is-drop-target');
-                var line = dragged;
-                var board = zone.dataset.dropBoard;
-                if ((parseInt(line.dataset.qty, 10) || 1) > 1) choose(line, board, event.clientX, event.clientY);
-                else move(line, board, 1);
-            });
+        document.addEventListener('dragend', function (event) {
+            var line = lineOf(event);
+            if (line) line.classList.remove('is-dragging');
+            document.body.classList.remove('is-dragging-card');
+            zones().forEach(function (zone) { zone.classList.remove('is-drop-target'); });
+            dragged = null;
+        });
+        document.addEventListener('dragover', function (event) {
+            var zone = zoneOf(event);
+            if (!accepts(zone)) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            zone.classList.add('is-drop-target');
+        });
+        document.addEventListener('dragleave', function (event) {
+            var zone = zoneOf(event);
+            if (zone && !zone.contains(event.relatedTarget)) zone.classList.remove('is-drop-target');
+        });
+        document.addEventListener('drop', function (event) {
+            var zone = zoneOf(event);
+            if (!accepts(zone)) return;
+            event.preventDefault();
+            zone.classList.remove('is-drop-target');
+            var line = dragged;
+            var board = zone.dataset.dropBoard;
+            if ((parseInt(line.dataset.qty, 10) || 1) > 1) choose(line, board, event.clientX, event.clientY);
+            else move(line, board, 1);
         });
     }
 

@@ -110,10 +110,10 @@
     @if($isOwner)
     <section class="card section-card" id="add-card">
         <span class="eyebrow">Adicionar cartas</span><h2>Buscar no Scryfall</h2>
-        <input type="search" id="card-search" placeholder="Nome da carta, ex.: Lightning Bolt" autocomplete="off" maxlength="100"
+        <input type="search" id="card-search" data-async-keep placeholder="Nome da carta, ex.: Lightning Bolt" autocomplete="off" maxlength="100"
                data-endpoint="{{ route('cards.search') }}" data-commander="{{ $deck->isCommander() ? '1' : '0' }}" aria-label="Buscar carta">
-        <p class="muted small-note" id="card-search-status">Digite ao menos 2 letras. Aceita nomes em português. Para uma edição específica, use <code>e:</code> com o código da coleção, ex.: <code>Forest e:ltr</code>.</p>
-        <div id="card-results" class="card-results" role="list"></div>
+        <p class="muted small-note" id="card-search-status" data-async-keep>Digite ao menos 2 letras. Aceita nomes em português. Para uma edição específica, use <code>e:</code> com o código da coleção, ex.: <code>Forest e:ltr</code>.</p>
+        <div id="card-results" class="card-results" role="list" data-async-keep></div>
         <form method="POST" action="{{ route('decks.cards.store', $deck) }}" id="add-card-form" hidden>@csrf
             <input type="hidden" name="scryfall_id"><input type="hidden" name="board" value="main"><input type="hidden" name="quantity" value="1">
         </form>
