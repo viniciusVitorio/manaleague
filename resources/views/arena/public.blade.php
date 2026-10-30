@@ -16,7 +16,7 @@
 @auth<a class="btn btn-ghost" href="{{ route('matches.mine') }}">Minhas partidas</a>@endauth
 @include('arena.live-panel')
 @php($statusLabel=match($tournament->status){'setup'=>'Preparação','league'=>'Liga em andamento','finals'=>'Finais','finished'=>'Encerrado',default=>$tournament->status})
-<header class="public-hero"><span class="eyebrow">Placar oficial</span><div class="title-line"><span class="format-badge">{{ $tournament->format }}</span><span class="status status-{{ $tournament->status }}">{{ $statusLabel }}</span></div><h1>{{ $tournament->name }}</h1><p class="public-date">{{ $tournament->tournament_date?->format('d/m/Y') }}</p><p>Classificação e resultados atualizados pelo organizador.</p></header>
+<header class="public-hero"><span class="eyebrow">Placar oficial</span><div class="title-line"><span class="format-badge">{{ $tournament->format }}</span><span class="status status-{{ $tournament->status }}">{{ $statusLabel }}</span></div><h1>{{ $tournament->name }}</h1><p class="public-date">{{ $tournament->tournament_date?->format('d/m/Y') }}</p>@include('tournaments.partials.rules-note')<p>Classificação e resultados atualizados pelo organizador.</p></header>
 @include('partials.podium')
 @include('partials.retrospective')
 @include('tournaments.partials.my-entry')

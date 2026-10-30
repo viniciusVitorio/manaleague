@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@push('head')<script src="{{ \App\Support\VersionedAsset::url('js/deck-builder.js') }}" defer></script>@endpush
+@push('head')<script src="{{ \App\Support\VersionedAsset::url('js/deck-builder.js') }}" defer></script><script src="{{ \App\Support\VersionedAsset::url('js/copy-link.js') }}" defer></script>@endpush
 @section('content')
 @php
     $boardLabel = ['main' => 'Deck', 'side' => 'Sideboard', 'commander' => 'Comandante'];
@@ -16,6 +16,7 @@
             <span><b>{{ $summary['lands'] }}</b> terrenos</span>
             <span>CMC médio <b>{{ number_format($summary['avg_cmc'], 2, ',', '') }}</b></span>
             @unless($isOwner)<span>por <b><x-profile-link :of="$deck->profile">{{ $deck->profile->nickname }}</x-profile-link></b></span>@endunless
+            @if($deck->cards_updated_at)<span title="{{ $deck->cards_updated_at->format('d/m/Y H:i') }}">Lista atualizada <time datetime="{{ $deck->cards_updated_at->toIso8601String() }}">{{ $deck->cards_updated_at->diffForHumans() }}</time></span>@endif
         </div>
     </div>
     @if($isOwner)
@@ -45,6 +46,9 @@
 </section>
 @endif
 
+@if($bannedNames)
+<div class="alert alert-danger ban-alert" role="status"><strong>{{ count($bannedNames) === 1 ? '1 carta banida' : count($bannedNames).' cartas banidas' }} no {{ $deck->format }}.</strong> Torneios com as regras padrão do formato não aceitam este deck até a troca{{ count($bannedNames) === 1 ? ' dela' : ' delas' }}. Elas estão marcadas com <span class="ban-tag">Banido</span> na lista.</div>
+@endif
 @if($summary['warnings'])
 <div class="alert alert-warning"><strong>Construção:</strong><ul>@foreach($summary['warnings'] as $warning)<li>{{ $warning }}</li>@endforeach</ul></div>
 @endif
@@ -58,7 +62,7 @@
         @foreach($summary['commanders'] as $card)
             <figure class="commander-card">
                 @if($card->image_url)<img src="{{ $card->image_url }}" alt="{{ $card->name }}" loading="lazy" width="244" height="340">@endif
-                <figcaption>{{ $card->name }}
+                <figcaption>{{ $card->name }} @if(in_array($card->name, $bannedNames, true))<span class="ban-tag" title="Banida no {{ $deck->format }}">Banido</span>@endif
                     @if($isOwner)<form method="POST" action="{{ route('decks.cards.destroy', [$deck, $card]) }}">@csrf @method('DELETE')<button class="btn btn-small btn-ghost">Remover</button></form>@endif
                 </figcaption>
             </figure>
@@ -129,6 +133,20 @@
                 <p class="muted small-note">Formatos aceitos: Arena, MTGO, Moxfield e LigaMagic (quantidade + nome, um por linha). Para escolher a edição, coloque o código da coleção entre parênteses: <code>20 Forest (LTR)</code>.</p>
             </form>
         </details>
+    </section>
+    @endif
+
+    @if($exportText !== '')
+    <section class="card section-card deck-export">
+        <span class="eyebrow">Exportar lista</span><h2>Levar para outro site</h2>
+        <label for="deck-export-text" class="sr-only">Lista do deck em texto</label>
+        <textarea id="deck-export-text" rows="7" readonly spellcheck="false">{{ $exportText }}</textarea>
+        <div class="deck-export-actions">
+            <button type="button" class="btn btn-secondary btn-small" data-copy-target="#deck-export-text" data-copy-done="Lista copiada">Copiar lista</button>
+            <a class="btn btn-ghost btn-small" href="{{ route('decks.export', $deck) }}" download>Baixar .txt</a>
+            <span class="muted small-note" data-copy-status role="status"></span>
+        </div>
+        <p class="muted small-note">Formato do Arena. Funciona também no Moxfield, na LigaMagic e no importador do ManaLeague.</p>
     </section>
     @endif
 

@@ -15,7 +15,13 @@ class Deck extends Model
 
     // cover_card_id fica fora do $fillable de proposito: so muda pela rota propria (DeckController::cover),
     // que valida se a carta pertence a este deck.
-    protected function casts(): array { return ['is_primary' => 'boolean', 'is_visible_to_friends' => 'boolean', 'cover_card_id' => 'integer', 'showcase_position' => 'integer']; }
+    protected function casts(): array { return ['is_primary' => 'boolean', 'is_visible_to_friends' => 'boolean', 'cover_card_id' => 'integer', 'showcase_position' => 'integer', 'cards_updated_at' => 'datetime']; }
+
+    /** Marca que a lista de cartas mudou agora (só cartas; capa, nome e principal não contam). */
+    public static function touchList(int $deckId): void
+    {
+        static::query()->whereKey($deckId)->toBase()->update(['cards_updated_at' => now()]);
+    }
 
     /** Quantos decks cabem na vitrine do perfil. showcase_position (1..N) só muda por ShowcaseController. */
     public const SHOWCASE_SLOTS = 3;

@@ -23,6 +23,7 @@
                     <button type="button" class="ui-icon-btn profile-copy-link" data-copy-link="{{ route('profiles.show', $profile) }}" aria-label="Copiar link do perfil" title="Copiar link do perfil"><x-icon name="link" /></button>
                     <span class="profile-copy-status" data-copy-status role="status" aria-live="polite"></span>
                 </div>
+                <p class="profile-handle">{{ '@'.$profile->handle }}</p>
                 @if($ranked && $ranked['ratings']->isNotEmpty())<p><a href="#ranque">@include('ranked.partials.tier', ['rating' => $ranked['ratings']->first()->rating, 'tiers' => $ranked['tiers']])</a> <span class="muted">{{ $ranked['ratings']->first()->format }} · {{ $ranked['ratings']->first()->rating }} ELO</span></p>@endif
 
                 @if($showPreferredDeck)<p>{{ $profile->preferred_deck_name ?: 'Deck principal não informado' }} @if($profile->preferred_deck_colors) · @include('partials.color-pips', ['colors' => $profile->preferred_deck_colors]) @endif</p>@endif

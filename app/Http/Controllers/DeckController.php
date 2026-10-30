@@ -7,6 +7,8 @@ use App\Services\DeckBuilderService;
 use App\Services\FriendshipService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -79,7 +81,23 @@ class DeckController extends Controller
             $needed = $deck->cards()->get()->groupBy(fn ($c) => mb_strtolower($c->name))->map(fn ($c) => (int) $c->sum('quantity'));
         }
 
-        return view('decks.show', compact('deck', 'summary', 'isOwner', 'owned', 'needed', 'hasCollection', 'showOwnership'));
+        $exportText = $this->builder->exportText($deck);
+        // Cartas banidas no formato do deck (tag "Banido" na lista).
+        $bannedNames = app(\App\Services\Decks\BanListService::class)->bannedInDeck($deck->id, $deck->format);
+
+        return view('decks.show', compact('deck', 'summary', 'isOwner', 'owned', 'needed', 'hasCollection', 'showOwnership', 'exportText', 'bannedNames'));
+    }
+
+    /** Baixa a lista em .txt (formato Arena/Moxfield). Mesma regra de acesso da página do deck. */
+    public function export(Request $request, Deck $deck): Response
+    {
+        $this->authorize('view', $deck);
+        $filename = (Str::slug($deck->name) ?: 'deck').'.txt';
+
+        return response($this->builder->exportText($deck), 200, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
     }
 
 

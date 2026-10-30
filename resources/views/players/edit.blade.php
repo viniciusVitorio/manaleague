@@ -25,9 +25,28 @@
 
     <section class="card section-card"><h2>Dados pessoais</h2>
         <form method="POST" action="{{ route('profiles.update') }}">@csrf @method('PATCH')
-            <label>Apelido<input name="nickname" value="{{ old('nickname', $profile->nickname) }}" maxlength="80" required></label>
+            <label>Nome de exibição <small>Aparece no perfil, nos torneios e no ranking. Pode ter espaços e acentos.</small><input name="nickname" value="{{ old('nickname', $profile->nickname) }}" maxlength="80" required></label>
             <label>Avatar <small>Use um emoji</small><input name="avatar" value="{{ old('avatar', $profile->avatar) }}" maxlength="20" placeholder="🧙"></label>
             <button class="btn btn-primary">Salvar perfil</button>
+        </form>
+    </section>
+
+    <section class="card section-card" id="endereco"><h2>Nome de usuário</h2>
+        @php($nextHandleChange = $profile->nextHandleChangeAt())
+        <form method="POST" action="{{ route('profiles.handle.update') }}">@csrf @method('PATCH')
+            <label for="handle">Usuário <small>É o link do seu perfil. 3 a 30 caracteres: letras minúsculas, números e hífen.</small></label>
+            <div class="handle-input">
+                <span aria-hidden="true">{{ request()->getHost() }}/p/</span>
+                <input id="handle" name="handle" value="{{ old('handle', $profile->handle) }}" minlength="3" maxlength="30" pattern="[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?" autocomplete="off" autocapitalize="none" spellcheck="false" required @disabled($nextHandleChange) aria-describedby="handle-help">
+            </div>
+            <button class="btn btn-secondary" @disabled($nextHandleChange)>Salvar usuário</button>
+            <p class="muted small-note" id="handle-help">
+                @if($nextHandleChange)
+                    Você trocou o nome de usuário recentemente. Poderá trocar de novo em {{ $nextHandleChange->format('d/m/Y') }}.
+                @else
+                    Trocar o nome de exibição não muda o usuário. Você pode trocar o usuário uma vez a cada {{ \App\Models\PlayerProfile::HANDLE_COOLDOWN_DAYS }} dias; o link antigo continua levando ao seu perfil por {{ \App\Models\PlayerProfile::HANDLE_HOLD_DAYS }} dias.
+                @endif
+            </p>
         </form>
     </section>
 

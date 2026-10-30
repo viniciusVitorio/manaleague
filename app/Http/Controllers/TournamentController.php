@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\GameMatch;
 use App\Models\Tournament;
+use App\Services\Community\NotificationService;
+use App\Services\Decks\BanListService;
 use App\Services\StandingsService;
 use App\Services\TournamentRecapService;
 use Illuminate\Http\RedirectResponse;
@@ -54,10 +56,12 @@ class TournamentController extends Controller
         $enrolledProfileIds = $tournament->players->pluck('player_profile_id')->filter();
         $friends = $tournament->user->friendProfiles()->wherePivot('status', 'accepted')->whereNotIn('player_profiles.id', $enrolledProfileIds)->orderBy('nickname')->get();
         $recap = $recaps->for($tournament);
+        // Inscritos cujo deck tem banidas (só nos torneios que barram): o organizador vê a marca, sem a lista de cartas.
+        $bannedDecks = $tournament->blocksBannedCards() ? app(BanListService::class)->bannedByDeck($tournament->players->pluck('deck_id'), $tournament->format) : [];
         // O organizador tambem pode jogar: mostra o card de troca de deck da propria inscricao.
         $profile = auth()->user()->playerProfile()->with('decks')->first();
         $entry = $profile ? $tournament->players->firstWhere('player_profile_id', $profile->id) : null;
-        return view('tournaments.show', compact('tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'friends', 'recap', 'profile', 'entry'));
+        return view('tournaments.show', compact('tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'friends', 'recap', 'profile', 'entry', 'bannedDecks'));
     }
 
     public function edit(Tournament $tournament): View
@@ -77,7 +81,70 @@ class TournamentController extends Controller
             return back()->withErrors(['max_players' => 'O limite não pode ser menor que o total de inscritos.'])->withInput();
         }
         $tournament->update($validated);
-        return redirect()->route('tournaments.show', $tournament)->with('status', 'Torneio atualizado.');
+        return redirect()->route('tournaments.show', $tournament)->with('status', 'Torneio atualizado.'.$this->bannedWarning($tournament));
+    }
+
+    /**
+     * Repetir torneio: cria o próximo com o mesmo formato, sistema e regras (e, se marcado, os mesmos jogadores).
+     * Sai em preparação, com links novos; o clube continua o mesmo se quem repete ainda organiza o clube.
+     */
+    public function repeat(Request $request, Tournament $tournament): RedirectResponse
+    {
+        $this->authorize('update', $tournament);
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'tournament_date' => ['required', 'date'],
+            'copy_players' => ['sometimes', 'boolean'],
+        ]);
+        $user = $request->user();
+        $club = $tournament->club_id ? $tournament->club : null;
+        $club = $club && $user->can('manage', $club) ? $club : null;
+
+        $copy = DB::transaction(function () use ($tournament, $validated, $user, $club): Tournament {
+            $copy = new Tournament([
+                ...array_filter($tournament->only(['format', 'system', 'ranked', 'round_limit', 'max_players', 'rules', 'allow_banned', 'house_rules']), fn ($value) => $value !== null),
+                'name' => $validated['name'], 'tournament_date' => $validated['tournament_date'], 'status' => Tournament::STATUS_SETUP,
+                'public_token' => Str::random(40), 'public_slug' => Str::limit(Str::slug($validated['name']), 60, '').'-'.Str::lower(Str::random(16)),
+                'invite_token' => Str::random(40),
+            ]);
+            $copy->user_id = $user->id;
+            $copy->club_id = $club?->id;
+            $copy->round_minutes = $tournament->round_minutes;
+            $copy->save();
+
+            if ($validated['copy_players'] ?? false) {
+                // Mesma inscrição (nome, perfil e deck); check-in e resultados começam do zero.
+                foreach ($tournament->players()->get(['name', 'player_profile_id', 'deck_id', 'deck_name', 'deck_colors']) as $player) {
+                    $copy->players()->create($player->only(['name', 'player_profile_id', 'deck_id', 'deck_name', 'deck_colors']));
+                }
+            }
+
+            return $copy;
+        });
+
+        if ($club) {
+            foreach ($club->members()->where('users.id', '!=', $user->id)->get() as $member) {
+                app(NotificationService::class)->send($member, 'club.tournament', "Novo torneio no {$club->name}: {$copy->name}", '/clubs/'.$club->id, "club:{$club->id}:tournament:{$copy->id}:{$member->id}", ['club_id' => $club->id]);
+            }
+        }
+
+        $players = $copy->players()->count();
+
+        return redirect()->route('tournaments.show', $copy)->with('status', ($players
+            ? "Torneio criado a partir de \"{$tournament->name}\" com {$players} jogadores. Confira a lista antes de começar."
+            : "Torneio criado a partir de \"{$tournament->name}\". Agora chame a galera!").$this->bannedWarning($copy));
+    }
+
+    /** Aviso quando as regras barram o deck de quem já está inscrito. */
+    private function bannedWarning(Tournament $tournament): string
+    {
+        if (! $tournament->blocksBannedCards()) return '';
+        $count = count(app(BanListService::class)->bannedByDeck($tournament->players()->pluck('deck_id'), $tournament->format));
+        if ($count === 0) return '';
+
+        return $count === 1
+            ? ' Atenção: 1 inscrito está com cartas banidas no deck e só pode fazer check-in depois de trocar.'
+            : " Atenção: {$count} inscritos estão com cartas banidas no deck e só podem fazer check-in depois de trocar.";
     }
 
     public function regenerateInvite(Tournament $tournament): RedirectResponse
@@ -97,7 +164,7 @@ class TournamentController extends Controller
 
     private function validateTournament(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'format' => ['required', Rule::in(self::FORMATS)],
             'system' => ['sometimes', 'required', Rule::in(array_keys(Tournament::SYSTEMS)), function ($attribute,$value,$fail) use ($request) { if ($value==='commander_pods' && $request->input('format')!=='Commander') $fail('Selecione o formato Commander para pods.'); }],
@@ -105,6 +172,17 @@ class TournamentController extends Controller
             'round_limit' => ['nullable','integer','min:1','max:20'],
             'tournament_date' => ['required', 'date'],
             'max_players' => ['nullable', 'integer', 'min:4', 'max:128'],
+            'rules' => ['sometimes', 'required', Rule::in([Tournament::RULES_STANDARD, Tournament::RULES_CUSTOM])],
+            'allow_banned' => ['sometimes', 'boolean', function ($attribute, $value, $fail) use ($request) { if ($value && $request->input('rules') === Tournament::RULES_CUSTOM && $request->boolean('ranked')) $fail('Torneios ranqueados não aceitam cartas banidas.'); }],
+            'house_rules' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        // Regras padrão do formato: banidas nunca entram e não há regras da casa.
+        $custom = ($validated['rules'] ?? Tournament::RULES_STANDARD) === Tournament::RULES_CUSTOM;
+        $validated['rules'] = $custom ? Tournament::RULES_CUSTOM : Tournament::RULES_STANDARD;
+        $validated['allow_banned'] = $custom && ($validated['allow_banned'] ?? false);
+        $validated['house_rules'] = $custom ? (trim((string) ($validated['house_rules'] ?? '')) ?: null) : null;
+
+        return $validated;
     }
 }

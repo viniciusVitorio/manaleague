@@ -56,6 +56,41 @@ class ScryfallClient
         return $cards;
     }
 
+    /**
+     * Nomes das cartas banidas num formato do Scryfall (ex.: "pauper"), percorrendo todas as páginas.
+     * Devolve null se alguma página falhar: quem chama mantém a lista que já tinha.
+     *
+     * @return list<string>|null
+     */
+    public function bannedIn(string $format): ?array
+    {
+        $names = [];
+        $url = self::BASE.'/cards/search';
+        $query = ['q' => 'banned:'.$format, 'unique' => 'cards', 'order' => 'name'];
+
+        for ($page = 0; $page < 20; $page++) {
+            // next_page já traz a busca na URL: passar query (mesmo vazia) apagaria esses parâmetros.
+            $response = $this->send(fn (PendingRequest $http) => $query === null ? $http->get($url) : $http->get($url, $query));
+            if (! $response) {
+                return null;
+            }
+            // Busca sem resultado volta 404 ("nenhuma carta"): lista vazia, não é falha.
+            foreach ($response['data'] ?? [] as $card) {
+                if (isset($card['name'])) $names[] = (string) $card['name'];
+            }
+
+            $next = $response['next_page'] ?? null;
+            if (! ($response['has_more'] ?? false) || ! is_string($next) || ! str_starts_with($next, self::BASE.'/')) {
+                return array_values(array_unique($names));
+            }
+            $url = $next;
+            $query = null;
+            usleep(100_000); // o Scryfall pede um intervalo entre chamadas
+        }
+
+        return null;
+    }
+
     /** @return array<string, mixed>|null */
     public function card(string $id): ?array
     {

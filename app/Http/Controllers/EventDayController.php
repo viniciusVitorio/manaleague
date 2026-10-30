@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Player;
 use App\Models\Tournament;
+use App\Services\Decks\BanListService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -36,6 +37,9 @@ class EventDayController extends Controller
     {
         abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'O check-in fecha quando o torneio começa.');
         $entry = $tournament->players()->whereHas('profile', fn ($q) => $q->where('account_user_id', $request->user()->id))->firstOrFail();
+        if ($entry->checked_in_at === null && ($banned = app(BanListService::class)->blockingCards($tournament, $entry->deck_id))) {
+            return back()->withErrors(['check_in' => BanListService::messageForOwner($tournament, $banned).' Depois é só fazer o check-in.']);
+        }
 
         return $this->toggle($entry, 'Presença confirmada. Boa sorte!', 'Check-in desfeito.');
     }
@@ -46,6 +50,9 @@ class EventDayController extends Controller
         $this->authorize('update', $tournament);
         abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'O check-in fecha quando o torneio começa.');
         abort_unless($player->tournament_id === $tournament->id, 404);
+        if ($player->checked_in_at === null && app(BanListService::class)->blockingCards($tournament, $player->deck_id)) {
+            return back()->withErrors(['check_in' => BanListService::messageForOrganizer($tournament, $player->name).' A presença só pode ser marcada depois que a pessoa trocar as cartas ou o deck.']);
+        }
 
         return $this->toggle($player, $player->name.' marcado como presente.', 'Presença de '.$player->name.' desmarcada.');
     }

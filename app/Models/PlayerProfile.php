@@ -15,20 +15,46 @@ class PlayerProfile extends Model
 
     protected $fillable = ['user_id', 'account_user_id', 'nickname', 'avatar', 'preferred_deck_name', 'preferred_deck_colors', 'is_friend', 'discoverable', 'ranked_public'];
 
-    protected function casts(): array { return ['is_friend' => 'boolean', 'discoverable' => 'boolean', 'ranked_public' => 'boolean', 'ranked_suspended_until' => 'datetime']; }
+    protected function casts(): array { return ['is_friend' => 'boolean', 'discoverable' => 'boolean', 'ranked_public' => 'boolean', 'ranked_suspended_until' => 'datetime', 'handle_changed_at' => 'datetime']; }
+
+    /** Intervalo mínimo entre trocas de endereço e por quanto tempo o endereço antigo fica reservado (e redireciona). */
+    public const HANDLE_COOLDOWN_DAYS = 30;
+
+    public const HANDLE_HOLD_DAYS = 90;
+
+    /** Endereços que ninguém pode escolher (rotas, equipe, termos que confundem). */
+    public const RESERVED_HANDLES = ['admin', 'administrador', 'adm', 'root', 'staff', 'suporte', 'support', 'ajuda', 'help', 'moderador', 'mod',
+        'manaleague', 'mana-league', 'oficial', 'official', 'sistema', 'system', 'api', 'me', 'eu', 'p', 'perfil', 'profile', 'login', 'logout',
+        'register', 'cadastro', 'settings', 'config', 'configuracoes', 'edit', 'editar', 'new', 'novo', 'null', 'undefined', 'jogador'];
 
     protected static function booted(): void
     {
         static::creating(function (PlayerProfile $profile): void {
             $profile->friend_code ??= static::generateFriendCode();
         });
-        // Endereço do perfil (/p/{handle}) acompanha o apelido; colisões ganham -2, -3...
+        // Endereço do perfil (/p/{handle}): gerado do apelido uma vez só; depois só muda quando o jogador escolhe outro.
         static::saving(function (PlayerProfile $profile): void {
-            if ($profile->handle === null || $profile->isDirty('nickname')) {
-                $profile->handle = static::uniqueHandle((string) $profile->nickname,
-                    fn (string $h) => static::query()->where('handle', $h)->when($profile->exists, fn ($q) => $q->whereKeyNot($profile->id))->exists());
+            if ($profile->handle === null) {
+                $profile->handle = static::uniqueHandle((string) $profile->nickname, fn (string $h) => static::handleTaken($h, $profile));
             }
         });
+    }
+
+    /** O endereço está com outro perfil ou reservado (endereço antigo de outro jogador, ainda redirecionando). */
+    public static function handleTaken(string $handle, ?PlayerProfile $except = null): bool
+    {
+        $mine = fn ($query) => $except?->exists ? $query->where('player_profile_id', '!=', $except->id) : $query;
+
+        return static::query()->where('handle', $handle)->when($except?->exists, fn ($q) => $q->whereKeyNot($except->id))->exists()
+            || ProfileHandleHold::query()->active()->where('handle', $handle)->tap($mine)->exists();
+    }
+
+    /** Quando o jogador pode trocar o endereço de novo (null = já pode). */
+    public function nextHandleChangeAt(): ?\Illuminate\Support\Carbon
+    {
+        $next = $this->handle_changed_at?->copy()->addDays(self::HANDLE_COOLDOWN_DAYS);
+
+        return $next && $next->isFuture() ? $next : null;
     }
 
     /** "Ana Lúcia" → "ana-lucia"; sem letras/números vira "jogador". $taken diz se um handle já está em uso. */
@@ -95,5 +121,6 @@ class PlayerProfile extends Model
     public function entries(): HasMany { return $this->hasMany(Player::class); }
     public function decks(): HasMany { return $this->hasMany(Deck::class); }
     public function achievements(): HasMany { return $this->hasMany(ProfileAchievement::class); }
+    public function handleHolds(): HasMany { return $this->hasMany(ProfileHandleHold::class); }
     public function friendedBy(): BelongsToMany { return $this->belongsToMany(User::class)->withPivot('status')->withTimestamps(); }
 }

@@ -3,6 +3,8 @@
 <section class="card section-card my-entry">
     <div class="section-heading"><div><span class="eyebrow">Sua inscrição</span><h2>{{ $entry->deck_name ?: 'Deck surpresa' }} @if($entry->deck_colors)@include('partials.color-pips', ['colors' => $entry->deck_colors])@endif</h2></div>
         <button type="button" class="btn btn-ghost btn-small" data-toggle="my-entry-form" aria-controls="my-entry-form" aria-expanded="{{ $errors->any() ? 'true' : 'false' }}">Trocar deck</button></div>
+    @php($entryBanned = app(\App\Services\Decks\BanListService::class)->blockingCards($tournament, $entry->deck_id))
+    @if($entryBanned)<div class="alert alert-danger" role="status">{{ \App\Services\Decks\BanListService::messageForOwner($tournament, $entryBanned) }}</div>@endif
     <div class="check-in-box @if($entry->checked_in_at) is-done @endif">
         @if($entry->checked_in_at)
             <p><strong>✓ Presença confirmada</strong> às {{ $entry->checked_in_at->timezone(config('app.timezone'))->format('H:i') }}. É só esperar as rodadas.</p>

@@ -39,12 +39,12 @@ class EventDayTest extends TestCase
 
         $visitor = $this->account('Bia');
         $this->actingAs($visitor)->get('/p/ana-lucia')->assertOk()->assertSee('Ana Lúcia');
-        $this->actingAs($visitor)->get('/players/'.$ana->playerProfile->id)->assertRedirect('/p/ana-lucia')->assertStatus(301);
+        $this->actingAs($visitor)->get('/players/'.$ana->playerProfile->id)->assertRedirect('/p/ana-lucia')->assertStatus(302);
 
-        // trocar o apelido muda o endereço
+        // trocar o apelido não muda mais o endereço
         $ana->playerProfile->update(['nickname' => 'Liliana']);
-        $this->assertSame('liliana', $ana->playerProfile->fresh()->handle);
-        $this->actingAs($visitor)->get('/p/ana-lucia')->assertNotFound();
+        $this->assertSame('ana-lucia', $ana->playerProfile->fresh()->handle);
+        $this->actingAs($visitor)->get('/p/ana-lucia')->assertOk()->assertSee('Liliana');
 
         // perfil "Só com código": o endereço antigo não revela o novo para estranhos
         $private = $this->account('Fechado', false);
