@@ -7,7 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'ManaLeague' }}</title>
     {{-- Prévia de link (WhatsApp, Telegram, redes): páginas podem definir $og = ['title' => ..., 'description' => ...]. --}}
-    @php($og = ($og ?? []) + ['title' => $title ?? 'ManaLeague', 'description' => 'Torneios de Magic sem planilhas: rodadas, placar ao vivo, decks e ranking entre amigos.'])
+    @php($og = ($og ?? []) + ['title' => $title ?? 'ManaLeague', 'description' => 'Decks, coleção, desafios valendo ELO e torneios de Magic. Seu Magic inteiro num lugar só.'])
     <meta name="description" content="{{ $og['description'] }}">
     <meta property="og:site_name" content="ManaLeague">
     <meta property="og:type" content="website">
@@ -55,6 +55,6 @@
     @endif
     @yield('content')
 </main>
-<footer class="footer">ManaLeague &middot; Gestao simples e segura de torneios.</footer>
+<footer class="footer">ManaLeague &middot; Decks, coleção, partidas e torneios de Magic.</footer>
 </body>
 </html>
