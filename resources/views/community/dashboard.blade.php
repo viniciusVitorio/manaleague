@@ -66,6 +66,9 @@
             @if($actionCount)
             <x-ui.card title="Precisa de você" icon="alert" :meta="$actionCount.' '.($actionCount === 1 ? 'pendência' : 'pendências')">
                 <ul class="ui-list">
+                    @foreach($needDeck as $tournament)
+                        <li><a class="ui-row" href="{{ route('arena.public', $tournament->public_slug) }}"><span class="ui-row-icon"><x-icon name="alert" /></span><span class="ui-row-main"><span class="ui-row-title">Cadastre seu deck para o torneio</span><span class="ui-row-sub">{{ $tournament->name }} · escolha um deck de {{ $tournament->format }} da sua conta para fazer o check-in</span></span><x-icon name="chevron-right" class="ui-chevron" /></a></li>
+                    @endforeach
                     @foreach($rankedNeedsMe as $rm)
                         <li><a class="ui-row" href="{{ route('ranked.matches.show', $rm) }}"><span class="ui-row-icon"><x-icon name="chart" /></span><span class="ui-row-main"><span class="ui-row-title">{{ $rm->status === 'reported' ? 'Confirmar placar ranqueado' : 'Enviar resultado ranqueado' }}</span><span class="ui-row-sub">{{ $rm->format }} · {{ $rm->playerOne->displayName() }} @if($rm->status === 'reported'){{ $rm->score_one }}×{{ $rm->score_two }}@else×@endif {{ $rm->playerTwo->displayName() }}</span></span><x-icon name="chevron-right" class="ui-chevron" /></a></li>
                     @endforeach

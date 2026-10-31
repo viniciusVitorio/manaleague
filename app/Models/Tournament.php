@@ -41,6 +41,26 @@ class Tournament extends Model
         return ! $this->allow_banned && \App\Services\Decks\BanListService::covers($this->format);
     }
 
+    /** No Draft o deck é montado na mesa; nos outros formatos quem tem conta entra com um deck salvo. */
+    public function requiresDeck(): bool
+    {
+        return $this->format !== 'Draft';
+    }
+
+    /** Deck salvo aceito na inscrição: do formato do torneio ou sem formato definido. "Outro" aceita qualquer deck. */
+    public function acceptsDeck(Deck $deck): bool
+    {
+        return $this->format === 'Outro' || blank($deck->format) || $deck->format === $this->format;
+    }
+
+    /** Inscritos com conta que ainda não escolheram um deck: ficam sem check-in e o torneio não começa. */
+    public function playersWithoutDeck(): HasMany
+    {
+        return $this->players()->whereNull('deck_id')
+            ->whereHas('profile', fn ($query) => $query->whereNotNull('account_user_id'))
+            ->when(! $this->requiresDeck(), fn ($query) => $query->whereRaw('1 = 0'));
+    }
+
     /** Resumo das regras para as páginas do torneio. */
     public function rulesLabel(): string
     {

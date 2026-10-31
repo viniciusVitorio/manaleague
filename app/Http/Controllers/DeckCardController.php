@@ -33,6 +33,7 @@ class DeckCardController extends Controller
             'scryfall_id' => ['required', 'uuid'],
             'quantity' => ['nullable', 'integer', 'min:1', 'max:'.DeckBuilderService::MAX_COPIES],
             'board' => ['nullable', Rule::in(DeckCard::BOARDS)],
+            'foil' => ['nullable', 'boolean'],
         ]);
 
         $card = $this->scryfall->card($validated['scryfall_id']);
@@ -45,9 +46,10 @@ class DeckCardController extends Controller
             return back()->withErrors(['card' => "{$card['name']} não pode ser comandante (precisa ser criatura lendária ou ter o texto de comandante)."]);
         }
 
-        $this->builder->add($deck, $card, (int) ($validated['quantity'] ?? 1), $board);
+        $foil = (bool) ($validated['foil'] ?? false);
+        $this->builder->add($deck, $card, (int) ($validated['quantity'] ?? 1), $board, $foil);
 
-        return back()->with('status', "{$card['name']} adicionada.");
+        return back()->with('status', "{$card['name']}".($foil ? ' (foil)' : '').' adicionada.');
     }
 
     public function update(Request $request, Deck $deck, DeckCard $card): RedirectResponse|JsonResponse
@@ -79,7 +81,7 @@ class DeckCardController extends Controller
         }
 
         if (isset($validated['board']) && $validated['board'] !== $card->board) {
-            $existing = $deck->cards()->where('scryfall_id', $card->scryfall_id)->where('board', $validated['board'])->first();
+            $existing = $deck->cards()->where('scryfall_id', $card->scryfall_id)->where('board', $validated['board'])->where('foil', $card->foil)->first();
             if ($existing) {
                 $existing->update(['quantity' => min(DeckBuilderService::MAX_COPIES, $existing->quantity + $quantity)]);
                 $card->delete();

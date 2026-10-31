@@ -19,7 +19,8 @@ class TournamentManagementTest extends TestCase
   $this->assertNotNull($tournament->public_slug);
   $this->assertNotNull($tournament->invite_token);
   $this->actingAs($user)->get(route('tournaments.show',$tournament))->assertOk();
-  $this->post(route('tournaments.invite.store',$tournament->invite_token),['name'=>'Jace','deck_name'=>'Mono Blue','deck_colors'=>'U'])->assertRedirect();
+  $deck=$user->ensurePlayerProfile()->decks()->create(['name'=>'Mono Blue','colors'=>'U','format'=>'Pauper']);
+  $this->post(route('tournaments.invite.store',$tournament->invite_token),['deck_id'=>$deck->id])->assertRedirect();
   $player=$tournament->players()->sole();
   $this->actingAs($user)->delete(route('players.destroy',[$tournament,$player]))->assertRedirect();
   $this->assertDatabaseMissing('players',['id'=>$player->id]);

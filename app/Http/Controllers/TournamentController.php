@@ -48,7 +48,7 @@ class TournamentController extends Controller
     public function show(Tournament $tournament, StandingsService $standings, TournamentRecapService $recaps): View
     {
         $this->authorize('view', $tournament);
-        $tournament->load(['players.profile', 'matches' => fn ($query) => $query->orderBy('round')->orderBy('id'), 'matches.playerOne.profile', 'matches.playerTwo.profile']);
+        $tournament->load(['players.profile', 'players.deck', 'matches' => fn ($query) => $query->orderBy('round')->orderBy('id'), 'matches.playerOne.profile', 'matches.playerTwo.profile']);
         $ranking = $standings->for($tournament);
         $rounds = $tournament->matches->groupBy('round');
         $final = $tournament->matches->firstWhere('stage', GameMatch::STAGE_FINAL);
@@ -135,16 +135,25 @@ class TournamentController extends Controller
             : "Torneio criado a partir de \"{$tournament->name}\". Agora chame a galera!").$this->bannedWarning($copy));
     }
 
-    /** Aviso quando as regras barram o deck de quem já está inscrito. */
+    /** Aviso quando as regras barram quem já está inscrito: deck com banidas ou nenhum deck escolhido. */
     private function bannedWarning(Tournament $tournament): string
     {
-        if (! $tournament->blocksBannedCards()) return '';
-        $count = count(app(BanListService::class)->bannedByDeck($tournament->players()->pluck('deck_id'), $tournament->format));
-        if ($count === 0) return '';
+        $warning = '';
+        $count = $tournament->blocksBannedCards() ? count(app(BanListService::class)->bannedByDeck($tournament->players()->pluck('deck_id'), $tournament->format)) : 0;
+        if ($count > 0) {
+            $warning .= $count === 1
+                ? ' Atenção: 1 inscrito está com cartas banidas no deck e só pode fazer check-in depois de trocar.'
+                : " Atenção: {$count} inscritos estão com cartas banidas no deck e só podem fazer check-in depois de trocar.";
+        }
 
-        return $count === 1
-            ? ' Atenção: 1 inscrito está com cartas banidas no deck e só pode fazer check-in depois de trocar.'
-            : " Atenção: {$count} inscritos estão com cartas banidas no deck e só podem fazer check-in depois de trocar.";
+        $missing = $tournament->playersWithoutDeck()->count();
+        if ($missing > 0) {
+            $warning .= $missing === 1
+                ? ' 1 inscrito ainda não escolheu um deck e só pode fazer check-in depois de escolher.'
+                : " {$missing} inscritos ainda não escolheram um deck e só podem fazer check-in depois de escolher.";
+        }
+
+        return $warning;
     }
 
     public function regenerateInvite(Tournament $tournament): RedirectResponse

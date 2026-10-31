@@ -28,7 +28,9 @@ class ModuleIntegrationTest extends TestCase
         $users = [];
         foreach (range(1, $accounts) as $i) {
             $users[$i] = User::factory()->create();
-            $t->players()->create(['name' => "Jogador {$i}", 'player_profile_id' => $users[$i]->ensurePlayerProfile()->id]);
+            $profile = $users[$i]->ensurePlayerProfile();
+            $deck = $profile->decks()->create(['name' => "Deck {$i}", 'format' => $t->format]);
+            $t->players()->create(['name' => "Jogador {$i}", 'player_profile_id' => $profile->id, 'deck_id' => $deck->id]);
         }
         return [$t, $owner, $users];
     }

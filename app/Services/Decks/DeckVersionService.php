@@ -11,7 +11,7 @@ class DeckVersionService {
             $payload = ['name' => $deck->name, 'format' => $deck->format, 'colors' => $deck->colors,
                 'cover_art' => app(DeckBuilderService::class)->summary($deck)['cover'],
                 'cover_scryfall_id' => $cards->firstWhere('id', $deck->cover_card_id)?->scryfall_id,
-                'cards' => $cards->map(fn ($c) => $c->only(['scryfall_id','name','board','quantity','mana_cost','cmc','type_line','color_identity','set_code','image_url','art_url']))->all()];
+                'cards' => $cards->map(fn ($c) => $c->only(['scryfall_id','name','board','foil','quantity','mana_cost','cmc','type_line','color_identity','set_code','image_url','art_url']))->all()];
             $hash = hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
             $last = DeckVersion::where('source_deck_id', $deck->id)->orderByDesc('number')->first();
             if ($last && $last->fingerprint === $hash) return $last;

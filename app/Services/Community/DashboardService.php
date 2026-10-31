@@ -40,6 +40,10 @@ class DashboardService
         $playing = Tournament::query()->whereIn('status', ['setup', 'league', 'finals'])
             ->whereHas('players', $mine)->latest('id')->limit(10)->get();
 
+        // Inscrições sem deck salvo em torneios que ainda não começaram: sem deck não há check-in.
+        $needDeck = $playing->filter(fn (Tournament $t) => $t->status === Tournament::STATUS_SETUP && $t->requiresDeck())
+            ->filter(fn (Tournament $t) => $t->players()->where($mine)->whereNull('deck_id')->exists())->values();
+
         $clubs = Club::whereHas('members', fn ($q) => $q->where('users.id', $user->id))->orderBy('name')->get();
 
         $organizing = Tournament::query()->where(fn ($q) => $q->where(fn ($q) => $q->whereNull('club_id')->where('user_id', $user->id))->orWhereIn('club_id', $clubs->pluck('id')))
@@ -86,6 +90,7 @@ class DashboardService
             'toReport' => $toReport,
             'challenges' => $challenges,
             'playing' => $playing,
+            'needDeck' => $needDeck,
             'organizing' => $organizing,
             'awaitingReview' => $awaitingReview,
             'clubs' => $clubs,
@@ -99,7 +104,7 @@ class DashboardService
             'pendingMatches' => $openTournamentMatches->count() + $rankedOpen->count() + $openCasual->count(),
             'stats' => $stats,
             'recentNotifications' => $recentNotifications,
-            'actionCount' => $rankedNeedsMe->count() + $toConfirm->count() + $toReport->count() + $challenges->filter(fn ($c) => $this->challengeNeedsMe($c, $user))->count() + $awaitingReview->sum(),
+            'actionCount' => $needDeck->count() + $rankedNeedsMe->count() +$toConfirm->count() + $toReport->count() + $challenges->filter(fn ($c) => $this->challengeNeedsMe($c, $user))->count() + $awaitingReview->sum(),
         ];
     }
 
@@ -129,9 +134,9 @@ class DashboardService
                 'context' => $m->tournament->name,
                 'detail' => trim(($m->pod_player_ids ? 'Mesa Commander' : 'Rodada '.$m->round).' · '.$m->tournament->format),
                 'me' => $me?->name ?? $user->name,
-                'myDeck' => $me ? ($me->deck?->name ?: $me->deck_name) : null,
+                'myDeck' => $me ? $me->deckLabel() : null,
                 'opponent' => $opponents->pluck('name')->join(', ') ?: 'A definir',
-                'opponentDeck' => $opponents->count() === 1 ? ($opponents->first()->deck?->name ?: $opponents->first()->deck_name) : null,
+                'opponentDeck' => $opponents->count() === 1 ? $opponents->first()->deckLabel() : null,
                 'opponentLabel' => $opponents->count() > 1 ? 'Adversários' : 'Adversário',
                 'status' => $status,
                 'statusLabel' => $label,

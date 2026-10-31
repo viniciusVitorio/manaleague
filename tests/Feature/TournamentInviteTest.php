@@ -25,8 +25,9 @@ class TournamentInviteTest extends TestCase
         $player = User::factory()->create(['name' => 'Convidado']);
         $this->actingAs($player)->get(route('tournaments.invite.show', $tournament->invite_token))
             ->assertOk()->assertSee($tournament->name)->assertSee('Convidado');
+        $deck = $player->ensurePlayerProfile()->decks()->create(['name' => 'Mono Red', 'colors' => 'R', 'format' => 'Pauper']);
         $this->actingAs($player)->post(route('tournaments.invite.store', $tournament->invite_token), [
-            'deck_name' => 'Mono Red', 'deck_colors' => 'R',
+            'deck_id' => $deck->id,
         ])->assertRedirect(route('arena.public', $tournament->public_slug));
         $profile = $player->playerProfile()->sole();
         $this->assertDatabaseHas('players', [

@@ -26,7 +26,7 @@ class TournamentInviteController extends Controller
         abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'As inscrições deste torneio foram encerradas.');
         $profile = $request->user()->ensurePlayerProfile();
 
-        $validated = TournamentEntryController::validatedDeck($request, $profile);
+        $validated = TournamentEntryController::validatedDeck($request, $profile, $tournament);
         if ($banned = app(BanListService::class)->blockingCards($tournament, $validated['deck_id'])) {
             return back()->withErrors(['deck_id' => BanListService::messageForOwner($tournament, $banned)])->withInput();
         }
@@ -42,9 +42,7 @@ class TournamentInviteController extends Controller
             if ($locked->max_players && $locked->players()->count() >= $locked->max_players) return 'full';
 
             $locked->players()->create([
-                'player_profile_id' => $profile->id, 'name' => $profile->nickname, 'deck_id' => $validated['deck_id'],
-                'deck_name' => $validated['deck_name'] ?: $profile->preferred_deck_name,
-                'deck_colors' => $validated['deck_colors'] ?: $profile->preferred_deck_colors,
+                'player_profile_id' => $profile->id, 'name' => $profile->nickname, ...$validated,
             ]);
 
             return 'joined';

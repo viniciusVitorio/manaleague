@@ -276,3 +276,4 @@ details.deck-showcase-more summary{cursor:pointer;color:var(--ui-fg-muted);margi
 @media(max-width:900px){.showcase-slots{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.showcase-slots{grid-template-columns:1fr}.showcase-empty{min-height:0;flex-direction:row;gap:10px;padding:var(--s4)}.showcase-empty-icon{margin:0;width:32px;height:32px}}
 .dash-stats.dash-stats-3{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:640px){.dash-stats.dash-stats-3{grid-template-columns:1fr}}
+.add-bulk-col{display:grid;gap:var(--s5);align-content:start}

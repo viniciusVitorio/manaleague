@@ -68,15 +68,48 @@ class TournamentIntegrityTest extends TestCase
             ->assertStatus(409);
     }
 
-    public function test_invite_without_deck_fields_uses_profile_defaults(): void
+    public function test_invite_requires_a_saved_deck_of_the_tournament_format(): void
     {
         $tournament = $this->tournament(User::factory()->create());
         $player = User::factory()->create(['name' => 'Sem Deck']);
-        $player->ensurePlayerProfile()->update(['preferred_deck_name' => 'Burn', 'preferred_deck_colors' => 'R']);
+        $profile = $player->ensurePlayerProfile();
+        $profile->update(['preferred_deck_name' => 'Burn', 'preferred_deck_colors' => 'R']);
+
+        // sem deck salvo: a página avisa e o envio é recusado (nome digitado não vale mais)
+        $this->actingAs($player)->get(route('tournaments.invite.show', $tournament->invite_token))
+            ->assertSee('você precisa de um deck de Pauper salvo na sua conta')->assertDontSee('name="deck_name"', false);
+        $this->actingAs($player)->post(route('tournaments.invite.store', $tournament->invite_token), ['deck_name' => 'Teste 1'])
+            ->assertSessionHasErrors(['deck_id' => 'Escolha um dos seus decks para o torneio.']);
+
+        // deck de outro formato não entra; o do formato entra com o nome e as cores do deck
+        $modern = $profile->decks()->create(['name' => 'Murktide', 'colors' => 'UR', 'format' => 'Modern']);
+        $burn = $profile->decks()->create(['name' => 'Mono Red Burn', 'colors' => 'R', 'format' => 'Pauper']);
+        $this->actingAs($player)->get(route('tournaments.invite.show', $tournament->invite_token))
+            ->assertSee('Mono Red Burn')->assertDontSee('Murktide')->assertSee('Aparecem só os decks de Pauper');
+        $this->actingAs($player)->post(route('tournaments.invite.store', $tournament->invite_token), ['deck_id' => $modern->id])
+            ->assertSessionHasErrors(['deck_id' => 'Esse deck é de Modern. Escolha um deck de Pauper.']);
+        $this->assertSame(0, $tournament->players()->count());
+
+        $this->actingAs($player)->post(route('tournaments.invite.store', $tournament->invite_token), ['deck_id' => $burn->id, 'deck_name' => 'Apelido'])
+            ->assertRedirect(route('arena.public', $tournament->public_slug));
+        $this->assertDatabaseHas('players', ['tournament_id' => $tournament->id, 'name' => 'Sem Deck', 'deck_id' => $burn->id, 'deck_name' => 'Mono Red Burn', 'deck_colors' => 'R']);
+
+        // a troca também exige um deck: não dá para tirar o deck da inscrição
+        $this->actingAs($player)->patch(route('tournaments.entry.update', $tournament), ['deck_id' => ''])->assertSessionHasErrors('deck_id');
+        $this->assertSame($burn->id, $tournament->players()->value('deck_id'));
+    }
+
+    public function test_draft_entries_do_not_need_a_saved_deck(): void
+    {
+        $tournament = $this->tournament(User::factory()->create(), ['format' => 'Draft']);
+        $player = User::factory()->create(['name' => 'Drafter']);
 
         $this->actingAs($player)->post(route('tournaments.invite.store', $tournament->invite_token))
             ->assertRedirect(route('arena.public', $tournament->public_slug));
-        $this->assertDatabaseHas('players', ['tournament_id' => $tournament->id, 'name' => 'Sem Deck', 'deck_name' => 'Burn', 'deck_colors' => 'R']);
+        $entry = $tournament->players()->sole();
+        $this->assertNull($entry->deck_id);
+        $this->assertFalse($entry->needsDeck($tournament));
+        $this->actingAs($player)->post(route('tournaments.check-in', $tournament))->assertSessionHas('status', 'Presença confirmada. Boa sorte!');
     }
 
     public function test_invite_with_duplicate_nickname_returns_friendly_error(): void
@@ -85,8 +118,8 @@ class TournamentIntegrityTest extends TestCase
         $first = User::factory()->create(['name' => 'Jace']);
         $second = User::factory()->create(['name' => 'Jace']);
 
-        $this->actingAs($first)->post(route('tournaments.invite.store', $tournament->invite_token))->assertRedirect();
-        $this->actingAs($second)->post(route('tournaments.invite.store', $tournament->invite_token))->assertSessionHasErrors('nickname');
+        $this->actingAs($first)->post(route('tournaments.invite.store', $tournament->invite_token), ['deck_id' => $this->deckOf($first)])->assertRedirect();
+        $this->actingAs($second)->post(route('tournaments.invite.store', $tournament->invite_token), ['deck_id' => $this->deckOf($second)])->assertSessionHasErrors('nickname');
         $this->assertSame(1, $tournament->players()->count());
     }
 
@@ -97,10 +130,35 @@ class TournamentIntegrityTest extends TestCase
             $tournament->players()->create(['name' => $name]);
         }
 
-        $this->actingAs(User::factory()->create())
-            ->post(route('tournaments.invite.store', $tournament->invite_token))
+        $late = User::factory()->create();
+        $this->actingAs($late)
+            ->post(route('tournaments.invite.store', $tournament->invite_token), ['deck_id' => $this->deckOf($late)])
             ->assertStatus(409);
         $this->assertSame(4, $tournament->players()->count());
+    }
+
+    public function test_friend_is_added_only_with_a_main_deck_of_the_format(): void
+    {
+        $organizer = User::factory()->create();
+        $tournament = $this->tournament($organizer);
+        $friend = User::factory()->create(['name' => 'Bia'])->ensurePlayerProfile();
+        $organizer->friendProfiles()->attach($friend, ['status' => 'accepted']);
+
+        $this->actingAs($organizer)->post(route('tournaments.friends.store', [$tournament, $friend]))
+            ->assertSessionHasErrors(['player' => 'Bia não tem um deck principal de Pauper. Mande o link de inscrição para escolher o deck.']);
+        $friend->decks()->create(['name' => 'Murktide', 'format' => 'Modern', 'is_primary' => true]);
+        $this->actingAs($organizer)->post(route('tournaments.friends.store', [$tournament, $friend]))->assertSessionHasErrors('player');
+        $this->assertSame(0, $tournament->players()->count());
+
+        $friend->decks()->update(['is_primary' => false]);
+        $faeries = $friend->decks()->create(['name' => 'Faeries', 'colors' => 'U', 'format' => 'Pauper', 'is_primary' => true]);
+        $this->actingAs($organizer)->post(route('tournaments.friends.store', [$tournament, $friend]))->assertSessionHas('status', 'Amigo adicionado ao torneio.');
+        $this->assertDatabaseHas('players', ['tournament_id' => $tournament->id, 'deck_id' => $faeries->id, 'deck_name' => 'Faeries', 'deck_colors' => 'U']);
+    }
+
+    private function deckOf(User $user): int
+    {
+        return $user->ensurePlayerProfile()->decks()->create(['name' => 'Burn', 'format' => 'Pauper'])->id;
     }
 
     public function test_update_without_max_players_field_is_accepted(): void

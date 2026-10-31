@@ -153,6 +153,7 @@
                 <button class="ui-btn ui-btn-primary" id="collection-add-btn" disabled>Adicionar à coleção</button>
                 <details class="small muted"><summary>Tenho o ID da impressão do Scryfall</summary><input name="scryfall_id_manual" placeholder="xxxxxxxx-xxxx-…" maxlength="36" data-manual-id aria-label="ID da impressão"></details>
             </form>
+            <div class="add-bulk-col">
             <form method="POST" action="{{ route('collection.import') }}" class="add-bulk">@csrf
                 <p class="ui-card-meta">Colar uma lista</p>
                 <textarea name="list" rows="9" maxlength="20000" placeholder="4 Counterspell&#10;1 Brainstorm (MH3)&#10;2x Ponder" aria-label="Lista de cartas">{{ old('list') }}</textarea>
@@ -163,6 +164,13 @@
                 <button class="ui-btn ui-btn-outline"><x-icon name="upload" />Importar lista</button>
                 <p class="muted small">Aceita o formato do Arena, MTGO, Moxfield e LigaMagic (uma carta por linha). Até {{ \App\Services\Decks\CollectionService::MAX_IMPORT_LINES }} linhas.</p>
             </form>
+            <form method="POST" action="{{ route('collection.import.csv') }}" class="add-csv" enctype="multipart/form-data">@csrf
+                <p class="ui-card-meta">Importar CSV do ManaBox</p>
+                <input type="file" name="file" accept=".csv,text/csv" required aria-label="Arquivo CSV do ManaBox">
+                <button class="ui-btn ui-btn-outline"><x-icon name="upload" />Importar CSV</button>
+                <p class="muted small">Traz a edição, o foil e a condição de cada carta. Aceita o .csv exportado pelo ManaBox e o .csv de um deck baixado aqui. Até {{ number_format(\App\Services\Decks\CollectionService::MAX_CSV_ROWS, 0, ',', '.') }} linhas.</p>
+            </form>
+            </div>
         </div>
         <p class="muted small">Condição: NM nova · LP pouco jogada · MP moderada · HP muito jogada · DMG danificada. O valor usa o preço de referência do Scryfall em dólar.</p>
     </x-ui.card>

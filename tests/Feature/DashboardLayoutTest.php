@@ -34,8 +34,11 @@ class DashboardLayoutTest extends TestCase
         $rival = User::factory()->create(['name' => 'Lucas']);
         $t = $owner->tournaments()->create(['name' => 'Copa da Loja', 'format' => 'Pauper', 'system' => 'swiss', 'round_limit' => 3, 'tournament_date' => '2026-10-24',
             'public_token' => Str::random(40), 'public_slug' => 'copa-'.Str::random(20), 'invite_token' => Str::random(40)]);
-        $t->players()->create(['name' => 'Vini', 'deck_name' => 'Affinity', 'player_profile_id' => $me->ensurePlayerProfile()->id]);
-        $t->players()->create(['name' => 'Lucas', 'deck_name' => 'Elfos', 'player_profile_id' => $rival->ensurePlayerProfile()->id]);
+        foreach ([[$me, 'Vini', 'Affinity'], [$rival, 'Lucas', 'Elfos']] as [$account, $name, $deckName]) {
+            $profile = $account->ensurePlayerProfile();
+            $deck = $profile->decks()->create(['name' => $deckName, 'format' => 'Pauper']);
+            $t->players()->create(['name' => $name, 'deck_id' => $deck->id, 'deck_name' => $deckName, 'player_profile_id' => $profile->id]);
+        }
         foreach (['C', 'D'] as $n) {
             $t->players()->create(['name' => $n]);
         }
