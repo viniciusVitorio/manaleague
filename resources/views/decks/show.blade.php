@@ -113,13 +113,22 @@
 <aside class="deck-sidebar">
     @if($isOwner)
     <section class="card section-card" id="add-card">
-        <span class="eyebrow">Adicionar cartas</span><h2>Buscar no Scryfall</h2>
+        <span class="eyebrow">Adicionar cartas</span><h2>Buscar cartas</h2>
+        @if($hasCollection)
+        <div class="search-source" role="group" aria-label="Onde buscar" data-async-keep>
+            <button type="button" class="btn btn-small btn-secondary" aria-pressed="true" data-source="scryfall" data-search-source="{{ route('cards.search') }}"
+                    data-placeholder="Nome da carta, ex.: Lightning Bolt" data-hint="Digite ao menos 2 letras. Busca todas as cartas do Scryfall, também pelo nome em português.">Scryfall</button>
+            <button type="button" class="btn btn-small btn-ghost" aria-pressed="false" data-source="collection" data-search-source="{{ route('collection.search') }}"
+                    data-placeholder="Nome da carta na sua coleção" data-hint="Digite ao menos 2 letras. Busca pelo nome em inglês entre as cartas da sua coleção.">Minha coleção</button>
+        </div>
+        @endif
         <input type="search" id="card-search" data-async-keep placeholder="Nome da carta, ex.: Lightning Bolt" autocomplete="off" maxlength="100"
                data-endpoint="{{ route('cards.search') }}" data-commander="{{ $deck->isCommander() ? '1' : '0' }}" aria-label="Buscar carta">
+        <label class="check-label foil-pick" data-async-keep><input type="checkbox" id="add-foil"> Adicionar como foil</label>
         <p class="muted small-note" id="card-search-status" data-async-keep>Digite ao menos 2 letras. Aceita nomes em português. Para uma edição específica, use <code>e:</code> com o código da coleção, ex.: <code>Forest e:ltr</code>.</p>
         <div id="card-results" class="card-results" role="list" data-async-keep></div>
         <form method="POST" action="{{ route('decks.cards.store', $deck) }}" id="add-card-form" hidden>@csrf
-            <input type="hidden" name="scryfall_id"><input type="hidden" name="board" value="main"><input type="hidden" name="quantity" value="1">
+            <input type="hidden" name="scryfall_id"><input type="hidden" name="board" value="main"><input type="hidden" name="quantity" value="1"><input type="hidden" name="foil" value="0">
         </form>
     </section>
 
@@ -143,10 +152,10 @@
         <textarea id="deck-export-text" rows="7" readonly spellcheck="false">{{ $exportText }}</textarea>
         <div class="deck-export-actions">
             <button type="button" class="btn btn-secondary btn-small" data-copy-target="#deck-export-text" data-copy-done="Lista copiada">Copiar lista</button>
-            <a class="btn btn-ghost btn-small" href="{{ route('decks.export', $deck) }}" download>Baixar .txt</a>
+            <a class="btn btn-ghost btn-small" href="{{ route('decks.export', $deck) }}" download>Baixar .csv</a>
             <span class="muted small-note" data-copy-status role="status"></span>
         </div>
-        <p class="muted small-note">Formato do Arena. Funciona também no Moxfield, na LigaMagic e no importador do ManaLeague.</p>
+        <p class="muted small-note">A lista copiada funciona na LigaMagic, no Moxfield, no Arena e no importador do ManaLeague. O .csv segue o padrão do ManaBox, com coleção, número e idioma de cada carta.</p>
     </section>
     @endif
 

@@ -19,12 +19,14 @@ class DeckCard extends Model
         'Enchantment' => 'Encantamentos', 'Land' => 'Terrenos',
     ];
 
+    protected $attributes = ['foil' => false];
+
     protected $fillable = [
-        'scryfall_id', 'board', 'quantity', 'name', 'mana_cost', 'cmc', 'type_line',
+        'scryfall_id', 'board', 'foil', 'quantity', 'name', 'mana_cost', 'cmc', 'type_line',
         'color_identity', 'rarity', 'set_code', 'image_url', 'art_url',
     ];
 
-    protected function casts(): array { return ['quantity' => 'integer', 'cmc' => 'float']; }
+    protected function casts(): array { return ['quantity' => 'integer', 'cmc' => 'float', 'foil' => 'boolean']; }
 
     protected static function booted(): void
     {

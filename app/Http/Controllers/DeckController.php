@@ -88,14 +88,14 @@ class DeckController extends Controller
         return view('decks.show', compact('deck', 'summary', 'isOwner', 'owned', 'needed', 'hasCollection', 'showOwnership', 'exportText', 'bannedNames'));
     }
 
-    /** Baixa a lista em .txt (formato Arena/Moxfield). Mesma regra de acesso da página do deck. */
+    /** Baixa o deck em .csv no padrão do ManaBox. Mesma regra de acesso da página do deck. */
     public function export(Request $request, Deck $deck): Response
     {
         $this->authorize('view', $deck);
-        $filename = (Str::slug($deck->name) ?: 'deck').'.txt';
+        $filename = (Str::slug($deck->name) ?: 'deck').'.csv';
 
-        return response($this->builder->exportText($deck), 200, [
-            'Content-Type' => 'text/plain; charset=UTF-8',
+        return response($this->builder->exportCsv($deck), 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }

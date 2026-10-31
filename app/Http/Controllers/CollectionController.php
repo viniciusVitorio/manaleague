@@ -9,6 +9,7 @@ use App\Services\Decks\DeckAccessService;
 use App\Services\ScryfallClient;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\File;
 
 class CollectionController extends Controller
 {
@@ -67,6 +68,31 @@ class CollectionController extends Controller
         ]);
     }
 
+    /**
+     * Busca na coleção para o construtor de deck: mesmo JSON da busca no Scryfall, mais "owned" (cópias na coleção) e "foil".
+     * Foil e normal da mesma edição saem separados (o deck guarda o acabamento); condições diferentes somam.
+     * Ao adicionar, o deck busca a carta no Scryfall pelo ID.
+     */
+    public function search(Request $request)
+    {
+        $validated = $request->validate(['q' => ['required', 'string', 'min:2', 'max:100']]);
+        $term = mb_strtolower(str_replace(['%', '_'], '', trim($validated['q'])));
+
+        $cards = CollectionItem::where('user_id', $request->user()->id)
+            ->where('name', 'like', '%'.$term.'%')
+            ->selectRaw('lower(scryfall_id) as card_id, max(name) as card_name, max(set_code) as set_code, max(type_line) as type_line, max(image_url) as image_url, foil, sum(quantity) as owned')
+            ->groupByRaw('lower(scryfall_id), foil')
+            ->orderBy('card_name')->limit(24)->get()
+            // Relevância: nomes que começam com o termo primeiro, depois o resto em ordem alfabética.
+            ->sortBy(fn ($item) => [str_starts_with(mb_strtolower($item->card_name), $term) ? 0 : 1, $item->card_name, (int) $item->foil])
+            ->map(fn ($item) => [
+                'scryfall_id' => $item->card_id, 'name' => $item->card_name, 'type_line' => $item->type_line,
+                'set_code' => $item->set_code, 'image_url' => $item->image_url, 'foil' => (bool) $item->foil, 'owned' => (int) $item->owned,
+            ])->values();
+
+        return response()->json(['data' => $cards]);
+    }
+
     public function store(Request $request, ScryfallClient $scryfall, CollectionService $service)
     {
         $data = $request->validate(['scryfall_id' => ['required', 'uuid'], 'quantity' => ['required', 'integer', 'min:1', 'max:9999'], 'foil' => ['nullable', 'boolean'], 'condition' => ['required', Rule::in(CollectionItem::CONDITIONS)]]);
@@ -89,6 +115,19 @@ class CollectionController extends Controller
         $back = back()->with('status', "{$result['added']} cartas importadas.");
 
         return $result['missing'] ? $back->withErrors(['list' => 'Não encontradas: '.implode(', ', array_slice($result['missing'], 0, 15)).(count($result['missing']) > 15 ? '…' : '')]) : $back;
+    }
+
+    /** Importa o .csv do ManaBox (edição, foil e condição de cada linha). */
+    public function importCsv(Request $request, CollectionService $service)
+    {
+        $request->validate(['file' => ['required', File::types(['csv', 'txt'])->max(2 * 1024)]], [], ['file' => 'arquivo']);
+        $result = $service->importCsv($request->user(), (string) $request->file('file')->get());
+        if ($result['error']) {
+            return back()->withErrors(['file' => $result['error']]);
+        }
+        $back = back()->with('status', "{$result['added']} cartas importadas do CSV.");
+
+        return $result['missing'] ? $back->withErrors(['file' => 'Não encontradas: '.implode(', ', array_slice($result['missing'], 0, 15)).(count($result['missing']) > 15 ? '…' : '')]) : $back;
     }
 
     public function update(Request $request, CollectionItem $item)

@@ -155,7 +155,8 @@ class ScryfallClient
     public function byIds(array $ids): array
     {
         $cards = [];
-        foreach (array_chunk(array_values(array_unique(array_map('strtolower', $ids))), 75) as $chunk) {
+        foreach (array_chunk(array_values(array_unique(array_map('strtolower', $ids))), 75) as $batch => $chunk) {
+            if ($batch > 0) usleep(100_000); // o Scryfall pede um intervalo entre chamadas
             $identifiers = array_map(fn (string $id) => ['id' => $id], $chunk);
             $response = $this->send(fn (PendingRequest $http) => $http->post(self::BASE.'/cards/collection', ['identifiers' => $identifiers]));
             foreach ($response['data'] ?? [] as $card) {
@@ -232,6 +233,9 @@ class ScryfallClient
             'color_identity' => implode('', $card['color_identity'] ?? []) ?: null,
             'rarity' => $card['rarity'] ?? null,
             'set_code' => isset($card['set']) ? strtoupper($card['set']) : null,
+            'set_name' => $card['set_name'] ?? null,
+            'collector_number' => isset($card['collector_number']) ? (string) $card['collector_number'] : null,
+            'lang' => $card['lang'] ?? null,
             'image_url' => $this->safeImage($images['normal'] ?? null),
             'art_url' => $this->safeImage($images['art_crop'] ?? null),
             'legal_commander' => ($card['legalities']['commander'] ?? null) === 'legal',

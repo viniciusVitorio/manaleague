@@ -17,10 +17,10 @@ class DeckBuilderService
     public function __construct(private readonly ScryfallClient $scryfall) {}
 
     /** Adiciona (ou soma) uma carta usando dados oficiais do Scryfall. */
-    public function add(Deck $deck, array $card, int $quantity, string $board): DeckCard
+    public function add(Deck $deck, array $card, int $quantity, string $board, bool $foil = false): DeckCard
     {
-        return DB::transaction(function () use ($deck, $card, $quantity, $board): DeckCard {
-            $existing = $deck->cards()->where('scryfall_id', $card['scryfall_id'])->where('board', $board)->lockForUpdate()->first();
+        return DB::transaction(function () use ($deck, $card, $quantity, $board, $foil): DeckCard {
+            $existing = $deck->cards()->where('scryfall_id', $card['scryfall_id'])->where('board', $board)->where('foil', $foil)->lockForUpdate()->first();
 
             if ($existing) {
                 $existing->update(['quantity' => min(self::MAX_COPIES, $existing->quantity + $quantity)]);
@@ -29,6 +29,7 @@ class DeckBuilderService
                 $result = $deck->cards()->create([
                     ...collect($card)->only(['scryfall_id', 'name', 'mana_cost', 'cmc', 'type_line', 'color_identity', 'rarity', 'set_code', 'image_url', 'art_url'])->all(),
                     'board' => $board,
+                    'foil' => $foil,
                     'quantity' => min(self::MAX_COPIES, $quantity),
                 ]);
             }
@@ -52,7 +53,7 @@ class DeckBuilderService
         return DB::transaction(function () use ($deck, $card, $board, $copies): int {
             $card = DeckCard::query()->lockForUpdate()->findOrFail($card->id);
             $copies = min($copies, $card->quantity);
-            $target = $deck->cards()->where('scryfall_id', $card->scryfall_id)->where('board', $board)->lockForUpdate()->first();
+            $target = $deck->cards()->where('scryfall_id', $card->scryfall_id)->where('board', $board)->where('foil', $card->foil)->lockForUpdate()->first();
 
             if ($target) {
                 $target->update(['quantity' => min(self::MAX_COPIES, $target->quantity + $copies)]);
@@ -102,7 +103,7 @@ class DeckBuilderService
                     continue;
                 }
 
-                $this->add($deck, $card, $line['quantity'], $line['board']);
+                $this->add($deck, $card, $line['quantity'], $line['board'], $line['foil'] ?? false);
                 $added += $line['quantity'];
             }
 
@@ -141,6 +142,8 @@ class DeckBuilderService
             if ($board === 'skip') continue;
 
             // Separa "(SET) 123" do nome e remove "*F*" e marcadores de foil. O set indicado é respeitado na importação.
+            // "*F*" (foil) e "*E*" (etched) do Moxfield viram carta foil.
+            $foil = (bool) preg_match('/\s+\*[FE]\*$/i', $match[3]);
             $set = preg_match('/\s+\(([A-Z0-9]{2,6})\)(\s+[\w-]+)?(\s+\*[A-Z]+\*)?$/i', $match[3], $setMatch) ? strtoupper($setMatch[1]) : null;
             $name = trim(preg_replace('/\s+\([A-Z0-9]{2,6}\)(\s+[\w-]+)?(\s+\*[A-Z]+\*)?$/i', '', $match[3]));
             $name = trim(preg_replace('/\s+\*[A-Z]+\*$/i', '', $name));
@@ -151,6 +154,7 @@ class DeckBuilderService
                 'name' => $name,
                 'board' => $match[1] ? DeckCard::BOARD_SIDE : $board,
                 ...($set ? ['set' => $set] : []),
+                ...($foil ? ['foil' => true] : []),
             ];
 
             if (count($lines) >= self::MAX_IMPORT_LINES) break;
@@ -238,6 +242,41 @@ class DeckBuilderService
         }
 
         return $blocks === [] ? '' : implode("\n\n", $blocks)."\n";
+    }
+
+    /** Colunas do CSV do ManaBox, na mesma ordem, mais "Board" no fim para separar comandante, deck e sideboard. */
+    public const CSV_COLUMNS = [
+        'Name', 'Set code', 'Set name', 'Collector number', 'Foil', 'Rarity', 'Quantity', 'ManaBox ID', 'Scryfall ID',
+        'Purchase price', 'Misprint', 'Altered', 'Condition', 'Language', 'Purchase price currency', 'Board',
+    ];
+
+    /**
+     * Deck em CSV no padrão do ManaBox. Nome da coleção, número e idioma vêm do Scryfall pela edição salva no deck;
+     * se o Scryfall não responder, essas colunas ficam vazias e o resto sai normalmente.
+     */
+    public function exportCsv(Deck $deck): string
+    {
+        $cards = $deck->cards()->get();
+        $details = $cards->isEmpty() ? [] : $this->scryfall->byIds($cards->pluck('scryfall_id')->all());
+        $boards = [DeckCard::BOARD_COMMANDER => 'Commander', DeckCard::BOARD_MAIN => 'Deck', DeckCard::BOARD_SIDE => 'Sideboard'];
+
+        $out = fopen('php://temp', 'r+');
+        fputcsv($out, self::CSV_COLUMNS, ',', '"', '');
+        foreach ($boards as $board => $label) {
+            foreach ($cards->where('board', $board) as $card) {
+                $info = $details[strtolower($card->scryfall_id)] ?? [];
+                fputcsv($out, [
+                    $card->name, strtoupper((string) (($info['set_code'] ?? null) ?: $card->set_code)), $info['set_name'] ?? '',
+                    $info['collector_number'] ?? '', $card->foil ? 'foil' : 'normal', $card->rarity ?: ($info['rarity'] ?? ''), $card->quantity, '', $card->scryfall_id,
+                    '', 'false', 'false', 'near_mint', $info['lang'] ?? 'en', '', $label,
+                ], ',', '"', '');
+            }
+        }
+        rewind($out);
+        $csv = (string) stream_get_contents($out);
+        fclose($out);
+
+        return $csv;
     }
 
     /** Avisos de construcao por formato (nao bloqueiam: o deck pode estar em montagem). */

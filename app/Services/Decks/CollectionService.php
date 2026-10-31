@@ -17,6 +17,14 @@ class CollectionService
 {
     public const MAX_IMPORT_LINES = 400;
 
+    public const MAX_CSV_ROWS = 2000;
+
+    /** Condições do ManaBox (escala europeia) convertidas para as da coleção. */
+    private const MANABOX_CONDITIONS = [
+        'mint' => 'NM', 'near_mint' => 'NM', 'excellent' => 'LP', 'good' => 'MP',
+        'light_played' => 'MP', 'played' => 'HP', 'poor' => 'DMG',
+    ];
+
     public function __construct(private readonly ScryfallClient $scryfall, private readonly DeckBuilderService $parser) {}
 
     public function add(User $user, array $card, array $data): CollectionItem
@@ -65,7 +73,7 @@ class CollectionService
             $this->add($user, [
                 'scryfall_id' => $card->scryfall_id, 'name' => $card->name, 'set_code' => $card->set_code, 'image_url' => $card->image_url,
                 'type_line' => $card->type_line, 'rarity' => $card->rarity, 'color_identity' => $card->color_identity,
-            ], ['quantity' => $row['missing'], 'foil' => $foil, 'condition' => $condition]);
+            ], ['quantity' => $row['missing'], 'foil' => $foil || $card->foil, 'condition' => $condition]);
             $added += $row['missing'];
         }
 
@@ -123,7 +131,7 @@ class CollectionService
 
                 continue;
             }
-            $this->add($user, $card, ['quantity' => $line['quantity'], 'foil' => $foil, 'condition' => $condition]);
+            $this->add($user, $card, ['quantity' => $line['quantity'], 'foil' => $foil || ($line['foil'] ?? false), 'condition' => $condition]);
             $added += $line['quantity'];
         }
 
@@ -131,6 +139,98 @@ class CollectionService
     }
 
     /** @return array{cards:int, unique:int, foils:int, value:float, trade:int, priced:int} */
+    /**
+     * Importa o CSV exportado pelo ManaBox (ou o .csv de um deck baixado no ManaLeague), linha a linha com edição,
+     * foil e condição. A carta é buscada no Scryfall pelo "Scryfall ID"; sem ele, pelo nome e pela edição.
+     *
+     * @return array{added:int, lines:int, missing:list<string>, error:?string}
+     */
+    public function importCsv(User $user, string $csv): array
+    {
+        $rows = $this->readCsv($csv);
+        if (is_string($rows)) {
+            return ['added' => 0, 'lines' => 0, 'missing' => [], 'error' => $rows];
+        }
+
+        $found = $this->scryfall->byIds(array_values(array_filter(array_column($rows, 'scryfall_id'))));
+        $byName = array_values(array_filter($rows, fn (array $row) => ! isset($found[$row['scryfall_id'] ?? ''])));
+        $lookup = $byName ? $this->scryfall->collection(array_map(fn (array $row) => ['name' => $row['name'], 'set' => $row['set']], $byName)) : ['found' => []];
+
+        $added = 0;
+        $missing = [];
+        foreach ($rows as $row) {
+            $card = $found[$row['scryfall_id'] ?? ''] ?? ScryfallClient::pick($lookup['found'], $row['name'], $row['set']);
+            if (! $card) {
+                $missing[] = $row['name'];
+
+                continue;
+            }
+            $this->add($user, $card, ['quantity' => $row['quantity'], 'foil' => $row['foil'], 'condition' => $row['condition']]);
+            $added += $row['quantity'];
+        }
+
+        return ['added' => $added, 'lines' => count($rows), 'missing' => array_values(array_unique($missing)), 'error' => null];
+    }
+
+    /**
+     * Lê o CSV pelas colunas do cabeçalho (a ordem não importa; colunas extras são ignoradas).
+     * Aceita vírgula ou ponto e vírgula (Excel em português) e arquivos em UTF-8 ou Windows-1252.
+     *
+     * @return list<array{name:string, set:?string, scryfall_id:?string, quantity:int, foil:bool, condition:string}>|string mensagem de erro
+     */
+    private function readCsv(string $csv): array|string
+    {
+        $csv = preg_replace('/^\xEF\xBB\xBF/', '', $csv);
+        if (! mb_check_encoding($csv, 'UTF-8')) {
+            $csv = mb_convert_encoding($csv, 'UTF-8', 'Windows-1252');
+        }
+        $firstLine = strtok($csv, "\r\n") ?: '';
+        $delimiter = substr_count($firstLine, ';') > substr_count($firstLine, ',') ? ';' : ',';
+
+        $handle = fopen('php://temp', 'r+');
+        fwrite($handle, $csv);
+        rewind($handle);
+        $columns = array_map(fn ($title) => mb_strtolower(trim((string) $title)), fgetcsv($handle, null, $delimiter, '"', '') ?: []);
+        $col = fn (string $title) => ($index = array_search($title, $columns, true)) === false ? null : $index;
+        if ($col('name') === null) {
+            fclose($handle);
+
+            return 'O arquivo não parece um CSV do ManaBox: falta a coluna "Name".';
+        }
+
+        $rows = [];
+        while (($line = fgetcsv($handle, null, $delimiter, '"', '')) !== false) {
+            $value = fn (string $title) => ($index = $col($title)) === null ? '' : trim((string) ($line[$index] ?? ''));
+            $name = mb_substr($value('name'), 0, 200);
+            if ($name === '') {
+                continue;
+            }
+            if (count($rows) >= self::MAX_CSV_ROWS) {
+                fclose($handle);
+
+                return 'O arquivo tem mais de '.number_format(self::MAX_CSV_ROWS, 0, ',', '.').' linhas de cartas. Divida em partes e importe uma de cada vez.';
+            }
+            $quantity = $col('quantity') === null ? 1 : (int) $value('quantity');
+            if ($quantity < 1) {
+                continue;
+            }
+            $id = strtolower($value('scryfall id'));
+            $set = strtoupper($value('set code'));
+            $condition = mb_strtolower($value('condition'));
+            $rows[] = [
+                'name' => $name,
+                'set' => preg_match('/^[A-Z0-9]{2,6}$/', $set) ? $set : null,
+                'scryfall_id' => preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $id) ? $id : null,
+                'quantity' => min(9999, $quantity),
+                'foil' => in_array(mb_strtolower($value('foil')), ['foil', 'etched', 'true', '1', 'yes', 'sim'], true),
+                'condition' => self::MANABOX_CONDITIONS[$condition] ?? (in_array(strtoupper($condition), CollectionItem::CONDITIONS, true) ? strtoupper($condition) : 'NM'),
+            ];
+        }
+        fclose($handle);
+
+        return $rows === [] ? 'Nenhuma carta encontrada no arquivo.' : $rows;
+    }
+
     public function stats(User $user): array
     {
         $row = CollectionItem::where('user_id', $user->id)->selectRaw('COALESCE(SUM(quantity),0) cards, COUNT(DISTINCT lower(name)) uniq, COALESCE(SUM(CASE WHEN foil THEN quantity ELSE 0 END),0) foils, COALESCE(SUM(quantity * price_usd),0) value, COALESCE(SUM(for_trade),0) trade, COALESCE(SUM(CASE WHEN price_usd IS NOT NULL THEN quantity ELSE 0 END),0) priced')->first();
@@ -140,7 +240,8 @@ class CollectionService
 
     public function missing(User $user, Deck $deck, bool $exact): array
     {
-        $key = fn ($card) => $exact ? strtolower($card->scryfall_id) : mb_strtolower($card->name);
+        // Modo exato: mesma edição e mesmo acabamento (um Bolt normal não completa o Bolt foil do deck).
+        $key = fn ($card) => $exact ? strtolower($card->scryfall_id).'|'.($card->foil ? 'foil' : 'normal') : mb_strtolower($card->name);
         $owned = CollectionItem::where('user_id', $user->id)->get()->groupBy($key)->map(fn ($cards) => (int) $cards->sum('quantity'));
 
         return $deck->cards()->get()->groupBy($key)->map(function ($cards, $key) use ($owned) {

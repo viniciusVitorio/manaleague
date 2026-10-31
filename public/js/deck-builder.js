@@ -11,6 +11,7 @@
         var results = document.getElementById('card-results');
         var status = document.getElementById('card-search-status');
         var form = document.getElementById('add-card-form');
+        var foilBox = document.getElementById('add-foil');
         var isCommander = input.dataset.commander === '1';
         var timer = null;
         var controller = null;
@@ -25,6 +26,9 @@
             b.addEventListener('click', function () {
                 form.elements.scryfall_id.value = card.scryfall_id;
                 form.elements.board.value = board;
+                // Da coleção, o resultado já diz se é foil; no Scryfall vale a caixa "Adicionar como foil".
+                var foil = typeof card.foil === 'boolean' ? card.foil : !!(foilBox && foilBox.checked);
+                if (form.elements.foil) form.elements.foil.value = foil ? '1' : '0';
                 b.disabled = true;
                 b.textContent = 'Adicionando…';
                 // A lista de resultados fica na tela (data-async-keep): da para adicionar varias cartas seguidas.
@@ -58,7 +62,7 @@
                 var name = document.createElement('strong');
                 name.textContent = card.printed_name && card.printed_name !== card.name ? card.printed_name + ' (' + card.name + ')' : card.name;
                 var meta = document.createElement('small');
-                meta.textContent = [card.type_line, card.mana_cost, card.set_code].filter(Boolean).join(' · ');
+                meta.textContent = [card.type_line, card.mana_cost, card.set_code, card.foil ? 'Foil' : null, card.owned ? 'Você tem ' + card.owned : null].filter(Boolean).join(' · ');
                 info.appendChild(name);
                 info.appendChild(meta);
 
@@ -100,6 +104,28 @@
             var term = input.value.trim();
             if (term.length < 2) { results.replaceChildren(); setStatus('Digite ao menos 2 letras.'); return; }
             timer = setTimeout(function () { search(term); }, 350);
+        });
+
+        // Onde buscar: Scryfall ou a coleção da pessoa (os botões só aparecem para quem tem coleção).
+        var sources = document.querySelectorAll('[data-search-source]');
+        sources.forEach(function (source) {
+            source.addEventListener('click', function () {
+                if (source.getAttribute('aria-pressed') === 'true') return;
+                sources.forEach(function (other) {
+                    var on = other === source;
+                    other.setAttribute('aria-pressed', on ? 'true' : 'false');
+                    other.classList.toggle('btn-secondary', on);
+                    other.classList.toggle('btn-ghost', !on);
+                });
+                input.dataset.endpoint = source.dataset.searchSource;
+                if (foilBox) foilBox.closest('label').hidden = source.dataset.source === 'collection';
+                input.placeholder = source.dataset.placeholder;
+                clearTimeout(timer);
+                var term = input.value.trim();
+                if (term.length >= 2) search(term);
+                else { results.replaceChildren(); setStatus(source.dataset.hint); }
+                input.focus();
+            });
         });
     }
 

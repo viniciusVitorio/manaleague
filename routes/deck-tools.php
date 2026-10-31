@@ -13,7 +13,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/me/collection', [CollectionController::class, 'index'])->name('collection.index');
     Route::post('/me/collection', [CollectionController::class, 'store'])->middleware('throttle:10,1')->name('collection.store');
     Route::post('/me/collection/import', [CollectionController::class, 'import'])->middleware('throttle:3,1')->name('collection.import');
+    Route::post('/me/collection/import-csv', [CollectionController::class, 'importCsv'])->middleware('throttle:3,1')->name('collection.import.csv');
     Route::get('/me/collection/export', [CollectionController::class, 'export'])->middleware('throttle:10,1')->name('collection.export');
+    Route::get('/me/collection/search', [CollectionController::class, 'search'])->middleware('throttle:60,1')->name('collection.search');
     Route::patch('/me/collection/{item}', [CollectionController::class, 'update'])->name('collection.update');
     Route::delete('/me/collection/{item}', [CollectionController::class, 'destroy'])->name('collection.destroy');
     Route::get('/me/collection/missing/{deck}', [CollectionController::class, 'missing'])->name('collection.missing');
