@@ -25,6 +25,31 @@ class Player extends Model
         return ($avatar ? $avatar.' ' : '').$this->name;
     }
 
+    /**
+     * Nome do deck vinculado (o atual, se foi renomeado). Sem deck vinculado, quem tem conta fica sem nome:
+     * o que foi digitado na inscrição não é um deck. Só o jogador sem conta mantém o nome digitado.
+     */
+    public function deckLabel(): ?string
+    {
+        if ($this->deck) return $this->deck->name;
+
+        return $this->profile?->account_user_id ? null : $this->deck_name;
+    }
+
+    /** Cores do deck, com a mesma regra do nome (sem deck vinculado, quem tem conta fica sem cores). */
+    public function deckColors(): ?string
+    {
+        if ($this->deck) return $this->deck->colors ?: $this->deck_colors;
+
+        return $this->profile?->account_user_id ? null : $this->deck_colors;
+    }
+
+    /** Quem tem conta precisa escolher um deck salvo (menos no Draft). Jogador sem conta não tem decks. */
+    public function needsDeck(Tournament $tournament): bool
+    {
+        return $this->deck_id === null && $tournament->requiresDeck() && $this->profile?->account_user_id !== null;
+    }
+
     public function deck(): BelongsTo { return $this->belongsTo(Deck::class); }
     public function tournament(): BelongsTo { return $this->belongsTo(Tournament::class); }
     public function matchesAsPlayerOne(): HasMany { return $this->hasMany(GameMatch::class, 'player_one_id'); }

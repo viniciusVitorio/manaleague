@@ -15,6 +15,11 @@ class TournamentFlowController extends Controller
     {
         $this->authorize('update', $tournament);
 
+        // Quem tem conta joga com um deck salvo (menos no Draft).
+        if ($tournament->status === Tournament::STATUS_SETUP && ($names = $tournament->playersWithoutDeck()->pluck('name'))->isNotEmpty()) {
+            return back()->withErrors(['tournament' => 'Não dá para começar: '.$names->join(', ', ' e ').($names->count() === 1 ? ' ainda não escolheu' : ' ainda não escolheram').' um deck. Peça para escolherem pelo link de inscrição ou remova da lista.']);
+        }
+
         // Regras do formato: ninguém começa com carta banida (o deck pode ter mudado depois da inscrição).
         if ($tournament->status === Tournament::STATUS_SETUP && $tournament->blocksBannedCards()) {
             $players = $tournament->players()->get(['id', 'name', 'deck_id']);

@@ -177,10 +177,10 @@ class BannedCardsTest extends TestCase
         $this->actingAs($org)->post(route('tournaments.friends.store', [$t, $ana->playerProfile]))->assertSessionHasErrors('player');
         $this->assertSame(0, $t->players()->count());
 
-        // mudar o formato para Draft (sem lista de banidas) libera
-        $draft = $this->tournament($org, ['format' => 'Draft']);
-        $this->actingAs($org)->post(route('tournaments.friends.store', [$draft, $ana->playerProfile]))->assertSessionHas('status', 'Amigo adicionado ao torneio.');
-        $this->assertSame($deck->id, $draft->players()->first()->deck_id);
+        // formato "Outro" (sem lista de banidas) libera
+        $other = $this->tournament($org, ['format' => 'Outro']);
+        $this->actingAs($org)->post(route('tournaments.friends.store', [$other, $ana->playerProfile]))->assertSessionHas('status', 'Amigo adicionado ao torneio.');
+        $this->assertSame($deck->id, $other->players()->first()->deck_id);
 
         // editar o torneio para as regras padrão avisa sobre inscritos com banidas
         $loose = $this->tournament($org, ['rules' => 'custom', 'allow_banned' => true]);

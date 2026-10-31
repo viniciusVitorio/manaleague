@@ -1,24 +1,30 @@
-{{-- Escolha de deck para inscricao/troca em torneio. Espera: $profile (com decks), opcional $current (Player). --}}
+{{-- Escolha do deck para inscricao/troca em torneio: so decks salvos na conta e do formato do torneio.
+     Espera: $profile (com decks), $tournament, opcional $current (Player). --}}
 @php
-    $currentDeckId = old('deck_id', $current?->deck_id ?? ($current ? null : $profile->decks->firstWhere('is_primary', true)?->id));
-    $currentName = old('deck_name', $current ? $current->deck_name : $profile->preferred_deck_name);
-    $currentColors = old('deck_colors', $current ? $current->deck_colors : $profile->preferred_deck_colors);
     $uid = $pickerId ?? 'deck';
-    $bannedPicker = isset($tournament) && $tournament->blocksBannedCards()
-        ? app(\App\Services\Decks\BanListService::class)->bannedByDeck($profile->decks->pluck('id'), $tournament->format) : [];
-    $colorOptions = collect(['W','U','B','R','G','WU','UB','BR','RG','GW','WB','UR','BG','RW','GU','WUB','UBR','BRG','RGW','GWU','WUBRG','C'])
-        ->merge($profile->decks->pluck('colors'))->push($currentColors)->filter()->unique()->values();
+    $usable = $profile->decks->filter(fn ($deck) => $tournament->acceptsDeck($deck))->values();
+    $currentDeckId = old('deck_id', $current ? $current->deck_id : $usable->firstWhere('is_primary', true)?->id);
+    $bannedPicker = $tournament->blocksBannedCards()
+        ? app(\App\Services\Decks\BanListService::class)->bannedByDeck($usable->pluck('id'), $tournament->format) : [];
+    $hiddenDecks = $profile->decks->count() - $usable->count();
 @endphp
-@if($profile->decks->isNotEmpty())
-<label>Escolha um deck salvo
-    <select name="deck_id" id="{{ $uid }}-saved" onchange="const o=this.options[this.selectedIndex];if(o.value){document.getElementById('{{ $uid }}-name').value=o.dataset.name||'';document.getElementById('{{ $uid }}-colors').value=o.dataset.colors||''}">
-        <option value="">Outro (digitar abaixo)</option>
-        @foreach($profile->decks as $deck)
-            <option value="{{ $deck->id }}" data-name="{{ $deck->name }}" data-colors="{{ $deck->colors }}" @selected((string) $currentDeckId === (string) $deck->id)>{{ $deck->name }}{{ $deck->colors ? ' · '.$deck->colors : '' }}{{ $deck->is_primary ? ' ★' : '' }}{{ isset($bannedPicker[$deck->id]) ? ' · tem cartas banidas' : '' }}</option>
+@if($usable->isNotEmpty())
+<label>Deck
+    <select name="deck_id" id="{{ $uid }}-deck" @if($tournament->requiresDeck()) required @endif>
+        @if(! $tournament->requiresDeck())
+            <option value="">Sem deck salvo (montado no draft)</option>
+        @elseif(! $currentDeckId)
+            <option value="" disabled selected>Escolha um deck</option>
+        @endif
+        @foreach($usable as $deck)
+            <option value="{{ $deck->id }}" @selected((string) $currentDeckId === (string) $deck->id)>{{ $deck->name }}{{ $deck->colors ? ' · '.$deck->colors : '' }}{{ $deck->is_primary ? ' ★' : '' }}{{ isset($bannedPicker[$deck->id]) ? ' · tem cartas banidas' : '' }}</option>
         @endforeach
     </select>
 </label>
 @if($bannedPicker)<p class="muted small-note">Decks com cartas banidas no {{ $tournament->format }} não podem ser usados neste torneio.</p>@endif
+@if($hiddenDecks > 0)<p class="muted small-note">Aparecem só os decks de {{ $tournament->format }} e os decks sem formato definido.</p>@endif
+@elseif($tournament->requiresDeck())
+<div class="alert alert-warning" role="status">Para entrar neste torneio você precisa de um deck de {{ $tournament->format }} salvo na sua conta. <a href="{{ route('decks.index') }}">Criar um deck</a></div>
+@else
+<p class="muted small-note">Neste draft o deck é montado na mesa: não precisa escolher um deck salvo.</p>
 @endif
-<label>Deck usado<input id="{{ $uid }}-name" name="deck_name" value="{{ $currentName }}" maxlength="100" oninput="const s=document.getElementById('{{ $uid }}-saved');if(s&&s.value&&this.value!==s.options[s.selectedIndex].dataset.name)s.value=''"></label>
-<label>Cores<select id="{{ $uid }}-colors" name="deck_colors"><option value="">Não informar</option>@foreach($colorOptions as $color)<option value="{{ $color }}" @selected($currentColors === $color)>{{ $color }}</option>@endforeach</select></label>

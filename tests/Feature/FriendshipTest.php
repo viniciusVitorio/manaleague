@@ -26,6 +26,7 @@ class FriendshipTest extends TestCase
         // O jogador agora consegue abrir o perfil do organizador e convida-lo para o proprio torneio.
         $this->actingAs($player)->get(route('profiles.show', $organizerProfile))->assertOk()->assertSee('Remover amizade');
         $ownTournament = $this->tournament($player, 'Liga do Jogador');
+        $organizerProfile->decks()->create(['name' => 'Elves', 'format' => 'Pauper', 'is_primary' => true]);
         $this->actingAs($player)->post(route('tournaments.friends.store', [$ownTournament, $organizerProfile]))->assertRedirect();
         $this->assertDatabaseHas('players', ['tournament_id' => $ownTournament->id, 'player_profile_id' => $organizerProfile->id]);
     }
@@ -78,7 +79,8 @@ class FriendshipTest extends TestCase
         $organizer->ensurePlayerProfile();
         $player = User::factory()->create(['name' => 'Jogador']);
         $tournament = $this->tournament($organizer, 'Liga');
-        $this->actingAs($player)->post(route('tournaments.invite.store', $tournament->invite_token));
+        $deck = $player->ensurePlayerProfile()->decks()->create(['name' => 'Burn', 'format' => 'Pauper']);
+        $this->actingAs($player)->post(route('tournaments.invite.store', $tournament->invite_token), ['deck_id' => $deck->id]);
 
         return [$organizer, $player, $player->playerProfile()->sole()];
     }

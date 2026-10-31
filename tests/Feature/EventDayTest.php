@@ -144,9 +144,26 @@ class EventDayTest extends TestCase
         $owner = $this->account('Org');
         $ana = $this->account('Ana');
         $t = $this->tournament($owner);
-        $mine = $t->players()->create(['name' => 'Ana', 'player_profile_id' => $ana->playerProfile->id]);
+        // inscrição antiga: o nome foi só digitado, não existe deck salvo
+        $mine = $t->players()->create(['name' => 'Ana', 'player_profile_id' => $ana->playerProfile->id, 'deck_name' => 'Mono Red Blitz', 'deck_colors' => 'R']);
         $guest = $t->players()->create(['name' => 'Convidado']);
         $absent = $t->players()->create(['name' => 'Faltou']);
+
+        // quem tem conta e não escolheu deck aparece como "Deck não informado" e fica sem check-in
+        $this->actingAs($owner)->get(route('tournaments.show', $t))->assertSee('class="ban-tag is-neutral"', false)->assertSee('Sem deck</span>', false)
+            ->assertSee('Deck não informado </small>', false)->assertDontSee('Mono Red Blitz')->assertDontSee('Cadastre seu deck para este torneio');
+        $this->actingAs($ana)->get(route('arena.public', $t->public_slug))->assertSee('Cadastre seu deck para este torneio')
+            ->assertSee('"Mono Red Blitz" foi só digitado na inscrição', false)->assertSee('criar um deck')->assertSee('Escolher deck');
+        $this->actingAs($ana)->get('/dashboard')->assertSee('Cadastre seu deck para o torneio')->assertSee('escolha um deck de Pauper da sua conta');
+        $this->actingAs($owner)->get('/dashboard')->assertDontSee('Cadastre seu deck para o torneio');
+        $this->actingAs($ana)->post(route('tournaments.check-in', $t))->assertSessionHasErrors(['check_in' => 'Escolha um deck de Pauper para a sua inscrição. Depois é só fazer o check-in.']);
+        $this->actingAs($owner)->patch(route('tournaments.players.check-in', [$t, $mine]))->assertSessionHasErrors('check_in');
+        $this->actingAs($owner)->post(route('tournaments.start', $t))->assertSessionHasErrors(['tournament' => 'Não dá para começar: Ana ainda não escolheu um deck. Peça para escolherem pelo link de inscrição ou remova da lista.']);
+        $this->assertNull($mine->fresh()->checked_in_at);
+        $deck = $ana->playerProfile->decks()->create(['name' => 'Burn', 'format' => 'Pauper']);
+        $this->actingAs($ana)->patch(route('tournaments.entry.update', $t), ['deck_id' => $deck->id])->assertSessionHasNoErrors();
+        $this->actingAs($owner)->get(route('tournaments.show', $t))->assertDontSee('Sem deck</span>', false)->assertSee('Burn');
+        $this->actingAs($ana)->get('/dashboard')->assertDontSee('Cadastre seu deck para o torneio');
 
         // organizador não consegue remover ausentes sem nenhuma presença confirmada
         $this->actingAs($owner)->delete(route('tournaments.absent.destroy', $t))->assertSessionHasErrors('check_in');

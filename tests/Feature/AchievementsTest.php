@@ -78,8 +78,9 @@ class AchievementsTest extends TestCase
         $organizer = User::factory()->create();
         $tournament = $this->tournament($organizer);
         $players = collect(['Ajani', 'Chandra', 'Jace', 'Liliana'])->map(function (string $name) use ($tournament) {
-            $user = User::factory()->create(['name' => $name]);
-            return $tournament->players()->create(['name' => $name, 'player_profile_id' => $user->ensurePlayerProfile()->id]);
+            $profile = User::factory()->create(['name' => $name])->ensurePlayerProfile();
+            $deck = $profile->decks()->create(['name' => $name.' Deck', 'format' => $tournament->format]);
+            return $tournament->players()->create(['name' => $name, 'player_profile_id' => $profile->id, 'deck_id' => $deck->id]);
         });
         $this->actingAs($organizer)->post(route('tournaments.start', $tournament));
         $match = $tournament->matches()->where('status', GameMatch::STATUS_PENDING)->firstOrFail();

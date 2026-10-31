@@ -94,10 +94,10 @@ class DemoSeeder extends Seeder
                 ['name' => $name, 'password' => 'manaleague123'],
             );
             $profile = $user->ensurePlayerProfile();
-            $profile->decks()->firstOrCreate(['name' => $deck], ['colors' => $colors, 'is_primary' => true]);
+            $saved = $profile->decks()->firstOrCreate(['name' => $deck], ['colors' => $colors, 'is_primary' => true]);
             $profile->update(['preferred_deck_name' => $deck, 'preferred_deck_colors' => $colors]);
 
-            $tournament->players()->create(['name' => $name, 'player_profile_id' => $profile->id, 'deck_name' => $deck, 'deck_colors' => $colors]);
+            $tournament->players()->create(['name' => $name, 'player_profile_id' => $profile->id, 'deck_id' => $saved->id, 'deck_name' => $deck, 'deck_colors' => $colors]);
         }
     }
 
