@@ -43,7 +43,8 @@ class SecurityHeaders
             'X-Frame-Options' => 'SAMEORIGIN',
             'X-Content-Type-Options' => 'nosniff',
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
-            'Permissions-Policy' => 'geolocation=(), microphone=(), camera=()',
+            // camera=(self): o scanner de cartas usa a camera na propria origem; nada de terceiros (iframe) pode usa-la.
+            'Permissions-Policy' => 'geolocation=(), microphone=(), camera=(self)',
             'Cross-Origin-Opener-Policy' => 'same-origin',
         ];
 

@@ -16,6 +16,8 @@ class SecurityHeadersTest extends TestCase
         $response->assertHeader('X-Frame-Options', 'SAMEORIGIN');
         $response->assertHeader('X-Content-Type-Options', 'nosniff');
         $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        // A camera e liberada so para a propria origem (scanner de cartas); microfone e localizacao, nunca.
+        $response->assertHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(self)');
         $this->assertStringContainsString("frame-ancestors 'self'", $response->headers->get('Content-Security-Policy'));
         $this->assertStringContainsString("object-src 'none'", $response->headers->get('Content-Security-Policy'));
         $response->assertHeaderMissing('Strict-Transport-Security');

@@ -9,6 +9,7 @@
 | Caddy | porta publica (80/443), TLS automatico (Let's Encrypt), IP real via `CF-Connecting-IP`, compressao, headers e proxy reverso para o WAF |
 | WAF: Nginx + ModSecurity v3 + OWASP CRS v4 | imagem oficial `owasp/modsecurity-crs` (tag LTS fixa, sem porta publicada): inspeciona toda requisicao com o **OWASP Core Rule Set**, serve o `public/` e passa so o `index.php` para o PHP-FPM |
 | Laravel/PHP-FPM | autenticacao, autorizacao, round-robin, ranking, finais e headers de seguranca (`SecurityHeaders`) |
+| Scanner de cartas (FastAPI + OpenCV) | microsservico interno que identifica a carta em um frame da camera e devolve **apenas o ID do Scryfall**; sem porta publicada, sem banco, exige segredo compartilhado |
 | SQLite | usuarios, torneios, jogadores, partidas e sessoes |
 | Amazon S3 (privado) | fotos de perfil (`avatars/<uuid>.webp`), lidas pelo navegador via URL assinada |
 | GitHub Actions | CI, scanners, quality gate e CD |
@@ -21,6 +22,12 @@
 Internet → Cloudflare (DDoS, Free Managed Ruleset, rate limit) → Security Group :80/:443 (so faixas da Cloudflare)
          → Caddy (TLS, IP real) → Nginx + ModSecurity/OWASP CRS (WAF) → PHP-FPM/Laravel → SQLite
                 ↘ headers                  ↘ 403 "Requisicao bloqueada"      ↘ CSP/HSTS/XFO (middleware)
+<<<<<<< Updated upstream
+=======
+                                                                             ↘ POST /cards/scan
+                                                                               → scanner (rede interna) → ID
+                                                                               → Scryfall → dados da carta
+>>>>>>> Stashed changes
 ```
 
 ## Fluxo de entrega
@@ -41,6 +48,23 @@ Commit → PHPUnit → Composer Audit/Trivy → Sonar → Quality Gate
 - **WAF em duas camadas:** a Cloudflare Free segura volume (DDoS, rate limit, regras gerenciadas basicas); o OWASP CRS completo roda na origem com a **ModSecurity v3** (servico `waf` do `docker-compose.yml`, imagem oficial `owasp/modsecurity-crs`), porque o CRS da Cloudflare so existe no plano Pro. Configuracao do CRS por variavel de ambiente da imagem: paranoia 1, limiar de anomalia 5, metodos `PUT/PATCH/DELETE` liberados, limites de corpo (8 MB com arquivo, 256 KB sem) e respostas fora da inspecao. Excecoes do projeto em `deploy/modsecurity/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf` (senhas, token CSRF e cookies do Laravel fora da inspecao; nunca uma regra inteira desligada). Nginx do WAF em `deploy/modsecurity/nginx/` e pagina de bloqueio em `deploy/modsecurity/blocked.html` (resposta 403 com `X-WAF-Block`). `WAF_MODE=DetectionOnly` (variavel do GitHub) vira `MODSEC_RULE_ENGINE` e so registra, para investigar falso positivo sem deploy de codigo. Regras disparadas aparecem em `docker compose logs waf` (error log com id/mensagem e audit log JSON com partes `AHZ`, sem corpo nem cookies). A CI (job `WAF`) sobe a stack inteira e roda `docker/waf/waf-smoke.sh`: trafego legitimo do app nao pode ser bloqueado e ataques classicos (SQLi, XSS, LFI, RCE, PHP injection, scanner, Log4Shell, TRACE) precisam ser.
 - **IP real atras do proxy:** o Caddy so aceita `CF-Connecting-IP` vindo das faixas da Cloudflare (`deploy/caddy/cloudflare-trusted-proxies.caddy`, conferido pela CI) e repassa em `X-Real-IP`; o Nginx do WAF so confia nesse cabecalho vindo da rede interna e entrega o IP como `REMOTE_ADDR` ao PHP. A ModSecurity registra e o throttle do Laravel conta por visitante (a CI confere que `CF-Connecting-IP`/`X-Real-IP` forjados sao ignorados).
 - **Formularios sem recarregar a pagina:** `public/js/async-forms.js` (no layout principal) envia todo `<form method="POST">` com `fetch()` e o cabecalho `X-ManaLeague-Async: 1`. Os controllers nao mudam: o middleware `AsyncFormRedirects` (primeiro do grupo `web`) troca o redirect por `200 {"redirect": url}`, entao a mensagem flash e os erros de validacao continuam na sessao. Se a URL final e a mesma pagina, o script busca a pagina e atualiza o `<body>` no lugar com Idiomorph (`public/js/vendor/idiomorph.min.js`, 0BSD): rolagem, foco, `<details>` abertos e ouvintes ficam. Outra URL (criar torneio, login, excluir) navega normalmente. Mensagens fora da tela viram aviso no canto; 419/403/429/erro de rede tambem. Fica de fora: GET, `target="_blank"` e `data-async="off"`; `data-async-keep` protege um elemento da atualizacao (ex.: resultados da busca de cartas). Scripts de tela usam eventos delegados ou o evento `manaleague:updated`, e `window.ManaLeague.refresh()` atualiza a tela depois de um `fetch` proprio.
+<<<<<<< Updated upstream
+=======
+- **Scanner de cartas em microsservico separado:** o reconhecimento e visao computacional (OpenCV + hash
+  perceptual sobre um indice de ~70 mil artes), para o que nao existe equivalente razoavel em PHP. O algoritmo
+  e o do [ManaMesh](https://github.com/KarimLeexz/ManaMesh), vendorizado sem alteracao em `scanner/vendor/`
+  (veja `scanner/NOTICE.md`); o que e nosso fica em `scanner/app/`. Decisoes de borda:
+  o servico **so devolve IDs** (nome, tipo e imagem continuam vindo do Scryfall pelo ID, mantendo o RS17),
+  nao tem porta publicada, exige `CARD_SCANNER_TOKEN`, roda `read_only` e so sobe com o perfil `scanner`
+  do Compose — sem o segredo o recurso simplesmente nao aparece na tela e a rota responde 503.
+  O frame da camera nao e gravado em lugar nenhum. O indice (`scanner/card_index.npz`, ~5 MB, so hashes)
+  e versionado: o deploy nao reconstroi nada; `python scanner/build_card_index.py` atualiza quando sair colecao nova.
+  Ficou de fora, de proposito, o resto do ManaMesh (mesa com video, Socket.IO, LiveKit): o contador de vida
+  do ManaLeague continua sendo a fonte de verdade da partida e um servidor de video nao cabe na t3.micro.
+- **Camera liberada so para a propria origem:** `Permissions-Policy: camera=(self)` na aplicacao e no Caddy
+  (antes era `camera=()`). A imagem sai do navegador por `fetch` para a mesma origem; a CSP nao muda, porque
+  `MediaStream` e `canvas` nao passam por ela.
+>>>>>>> Stashed changes
 - **Headers na aplicacao e no proxy:** defesa em profundidade; trocar o proxy nao remove as protecoes.
 - **Volumes nomeados:** preservam banco e dados entre releases.
 - **Releases imutaveis:** cada commit e extraido em uma pasta e um symlink `current` e trocado.
@@ -72,6 +96,7 @@ Cada modulo registra as proprias rotas (com middleware explicito) e e carregado 
 | Dia de evento (cronometro da rodada, check-in, remover ausentes) | `routes/competition.php` | `EventDayController`; o cronometro guarda so `round_ends_at` e o navegador conta (`js/round-timer.js`, corrigido pelo horario do servidor) |
 | Regras do torneio e cartas banidas (padrao ou personalizadas, tag "Banido" no deck, repetir torneio) | `routes/web.php` (`tournaments.repeat`), `routes/console.php` (`cards:sync-bans`) | `Decks\BanListService`, `TournamentController::repeat` |
 | Decks (versoes imutaveis, simulador de mao, colecao, comparador) | `routes/deck-tools.php` | `Decks\DeckVersionService`, `Decks\DeckAccessService` |
+| Scanner de cartas (camera no construtor de deck e no contador de vida) | `POST /cards/scan` em `routes/web.php` | `Cards\CardScannerClient` + `ScryfallClient`; microsservico em `scanner/` |
 | Comunidade (painel, feed, notificacoes, clubes) | `routes/community.php` | `Community\DashboardService`, `ActivityService`, `NotificationService`, `ClubService`, `CommunityAccess` |
 | Desafios e conquistas (1v1 casual, rivalidades, conquistas secretas, compartilhamento) | `routes/challenges.php` | `ChallengeService`, `AchievementService` |
 | Ranked ELO/PDL (temporadas, ledger, desafios ranqueados, ranque no perfil, moderação) — ver [ranked.md](ranked.md) | `routes/ranked.php` | `Ranked\RatingLedgerService`, `RankedMatchService`, `SeasonService` |

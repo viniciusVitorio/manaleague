@@ -20,6 +20,7 @@ Requisitos levantados antes da implementacao (fase de Requisitos do SSDLC). Cada
 | RF12 | Recuperacao de senha por e-mail e troca de senha autenticada, com aviso por e-mail. |
 | RF13 | Decks com cartas reais (Scryfall): busca, importacao de lista, comandante, sideboard, curva de mana e avisos por formato. |
 | RF14 | Conquistas com progresso, data de desbloqueio e raridade. |
+| RF15 | Escanear carta pela camera: o jogador aponta a camera para a mesa e toca na carta; o sistema identifica a carta (visao computacional) e permite adiciona-la ao deck ou consulta-la durante a partida. Quando a identificacao e incerta, o sistema oferece ate 3 palpites para confirmacao em vez de escolher sozinho. |
 
 ## Seguranca
 
@@ -43,3 +44,6 @@ Requisitos levantados antes da implementacao (fase de Requisitos do SSDLC). Cada
 | RS16 | Envio de e-mail sem segredo estatico e com menor privilegio | IAM Role na EC2 restrita a `ses:Send*` + `ses:FromAddress`; DKIM/SPF/DMARC | `terraform/ses.tf` |
 | RS17 | Dados de carta nao podem ser forjados pelo cliente; imagens so do CDN oficial | servidor busca a carta pelo ID no Scryfall; URLs validadas; CSP `img-src` restrito a `cards.scryfall.io` | `DeckCardsTest` |
 | RS18 | Busca de jogadores respeita privacidade e evita spam de pedidos | perfis "so com codigo", minimo de 3 letras, rate limit, maximo de 30 pedidos pendentes | `FriendsPageTest` |
+| RS19 | Carta reconhecida pela camera nao pode ser forjada nem pelo cliente nem pelo microsservico de visao | o scanner devolve **apenas IDs**; o ID e validado como UUID e os dados vem do Scryfall (mesmo caminho do RS17); imagem nunca e gravada | `CardScanTest` |
+| RS20 | O microsservico de visao nao e alcancavel de fora nem sem autenticacao | sem porta publicada (so a rede interna do Docker), segredo compartilhado `CARD_SCANNER_TOKEN` comparado em tempo constante, container `read_only`, sem privilegios e com limite de memoria | `pipeline.yml` (job WAF), `docker-compose.yml` |
+| RS21 | Upload de imagem nao vira execucao, consumo de CPU ou memoria sem limite | `mimetypes` + 4 MB no Laravel, 6 MB e reducao para 1920 px no scanner, `throttle:20,1` na rota e no maximo 2 reconhecimentos simultaneos | `CardScanTest`, `scanner/app/main.py` |

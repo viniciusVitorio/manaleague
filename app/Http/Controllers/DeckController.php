@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Deck;
+use App\Services\Cards\CardScannerClient;
 use App\Services\DeckBuilderService;
 use App\Services\FriendshipService;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +21,10 @@ class DeckController extends Controller
 
 
 
-    public function __construct(private readonly DeckBuilderService $builder) {}
+    public function __construct(
+        private readonly DeckBuilderService $builder,
+        private readonly CardScannerClient $scanner,
+    ) {}
 
     /** Página "Decks": todos os decks do jogador, com estatísticas, filtro por formato e criação de deck. */
     public function index(Request $request): View
@@ -70,6 +74,7 @@ class DeckController extends Controller
         $deck->load('profile');
         $summary = $this->builder->summary($deck);
 
+<<<<<<< Updated upstream
         // Dono: quantas cópias de cada carta ele tem na coleção, contra o total pedido no deck (main + side + comandante).
         // Só para quem usa a coleção (tem algum item) e não desligou a opção.
         $owned = collect();
@@ -98,6 +103,12 @@ class DeckController extends Controller
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
+=======
+        // Escanear carta pela camera: so para o dono do deck e so se o microsservico estiver configurado.
+        $canScan = $isOwner && $this->scanner->enabled();
+
+        return view('decks.show', compact('deck', 'summary', 'isOwner', 'canScan'));
+>>>>>>> Stashed changes
     }
 
 

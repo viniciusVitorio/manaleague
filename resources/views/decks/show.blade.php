@@ -1,5 +1,14 @@
 @extends('layouts.app')
+<<<<<<< Updated upstream
 @push('head')<script src="{{ \App\Support\VersionedAsset::url('js/deck-builder.js') }}" defer></script><script src="{{ \App\Support\VersionedAsset::url('js/copy-link.js') }}" defer></script>@endpush
+=======
+@push('head')<script src="{{ \App\Support\VersionedAsset::url('js/deck-builder.js') }}" defer></script>
+@if($canScan)
+<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/scanner.css') }}">
+<script src="{{ \App\Support\VersionedAsset::url('js/card-scanner.js') }}" defer></script>
+@endif
+@endpush
+>>>>>>> Stashed changes
 @section('content')
 @php
     $boardLabel = ['main' => 'Deck', 'side' => 'Sideboard', 'commander' => 'Comandante'];
@@ -113,6 +122,7 @@
 <aside class="deck-sidebar">
     @if($isOwner)
     <section class="card section-card" id="add-card">
+<<<<<<< Updated upstream
         <span class="eyebrow">Adicionar cartas</span><h2>Buscar cartas</h2>
         @if($hasCollection)
         <div class="search-source" role="group" aria-label="Onde buscar" data-async-keep>
@@ -126,6 +136,18 @@
                data-endpoint="{{ route('cards.search') }}" data-commander="{{ $deck->isCommander() ? '1' : '0' }}" aria-label="Buscar carta">
         <label class="check-label foil-pick" data-async-keep><input type="checkbox" id="add-foil"> Adicionar como foil</label>
         <p class="muted small-note" id="card-search-status" data-async-keep>Digite ao menos 2 letras. Aceita nomes em português. Para uma edição específica, use <code>e:</code> com o código da coleção, ex.: <code>Forest e:ltr</code>.</p>
+=======
+        <span class="eyebrow">Adicionar cartas</span><h2>Buscar no Scryfall</h2>
+        <input type="search" id="card-search" data-async-keep placeholder="Nome da carta, ex.: Lightning Bolt" autocomplete="off" maxlength="100"
+               data-endpoint="{{ route('cards.search') }}" data-commander="{{ $deck->isCommander() ? '1' : '0' }}" aria-label="Buscar carta">
+        <p class="muted small-note" id="card-search-status" data-async-keep>Digite ao menos 2 letras. Aceita nomes em português. Para uma edição específica, use <code>e:</code> com o código da coleção, ex.: <code>Forest e:ltr</code>.</p>
+        @if($canScan)
+        {{-- Camera: a foto fica no navegador; so um quadro vai ao servidor, que responde com a carta. --}}
+        <button type="button" class="btn btn-ghost btn-small scan-trigger" data-async-keep
+                data-card-scanner data-mode="deck" data-endpoint="{{ route('cards.scan') }}"
+                data-commander="{{ $deck->isCommander() ? '1' : '0' }}">📷 Escanear carta pela câmera</button>
+        @endif
+>>>>>>> Stashed changes
         <div id="card-results" class="card-results" role="list" data-async-keep></div>
         <form method="POST" action="{{ route('decks.cards.store', $deck) }}" id="add-card-form" hidden>@csrf
             <input type="hidden" name="scryfall_id"><input type="hidden" name="board" value="main"><input type="hidden" name="quantity" value="1"><input type="hidden" name="foil" value="0">

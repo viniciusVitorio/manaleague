@@ -7,7 +7,11 @@
 @if(app(\App\Services\MatchResultService::class)->editable($tournament,$match))<button class="btn btn-small btn-secondary">{{ $match->status==='finished'?'Corrigir posições':'Salvar posições' }}</button>@if($match->status==='pending') <a class="btn btn-small btn-ghost" href="{{ route('life.tournament',[$tournament,$match]) }}">❤ Contador</a>@endif @else<p class="bye-note">Resultado travado.</p>@endif
 </form>
 @else
+<<<<<<< Updated upstream
 <div class="versus"><span><x-profile-link :of="$match->playerOne">{{ $match->playerOne->displayName() }}</x-profile-link></span><b>{{ $match->player_one_games??'–' }} × {{ $match->player_two_games??'–' }}</b><span><x-profile-link :of="$match->playerTwo">{{ $match->playerTwo?->displayName()??'Folga' }}</x-profile-link></span></div>
+=======
+<div class="versus"><span>{{ $match->playerOne->displayName() }}</span><b>{{ $match->player_one_games??'–' }} × {{ $match->player_two_games??'–' }}</b><span>{{ $match->playerTwo?->displayName()??'Folga' }}</span></div>
+>>>>>>> Stashed changes
 @if($match->status==='bye')<p class="bye-note">Vitória automática por 2×0.</p>@elseif(app(\App\Services\MatchResultService::class)->editable($tournament,$match))<form class="score-form" method="POST" action="{{ route('matches.update',[$tournament,$match]) }}">@csrf @method('PUT')<input type="number" name="player_one_games" min="0" max="3" value="{{ $match->player_one_games??0 }}" aria-label="Games de {{ $match->playerOne->displayName() }}"><span>×</span><input type="number" name="player_two_games" min="0" max="3" value="{{ $match->player_two_games??0 }}" aria-label="Games de {{ $match->playerTwo?->displayName() }}"><button class="btn btn-small btn-secondary">{{ $match->status==='finished'?'Corrigir':'Salvar' }}</button></form>@if($match->status==='pending' && $match->player_two_id)<a class="btn btn-small btn-ghost" href="{{ route('life.tournament',[$tournament,$match]) }}">❤ Contador de vida</a>@endif @else<p class="bye-note">Resultado travado: uma fase dependente foi gerada ou o torneio encerrado.</p>@endif
 @endif
 </article>

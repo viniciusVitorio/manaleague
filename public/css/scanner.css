@@ -1,0 +1,37 @@
+/* Escanear carta pela camera (construtor de deck e contador de vida).
+   Usa fallback em cada variavel porque o contador de vida carrega so life.css, sem os tokens de app.css. */
+.scan-overlay{position:fixed;inset:0;z-index:300;display:grid;place-items:center;padding:12px;background:rgba(0,0,0,.82);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.scan-overlay[hidden]{display:none}
+body.scan-open{overflow:hidden}
+.scan-panel{display:flex;flex-direction:column;gap:10px;width:min(560px,100%);max-height:calc(100vh - 24px);padding:14px;border:1px solid var(--line,#27272a);border-radius:var(--radius,10px);background:var(--surface,#0c0c0f);color:var(--text,#fafafa);box-shadow:0 20px 60px rgba(0,0,0,.6);overflow:auto}
+.scan-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.95rem}
+.scan-close{flex:0 0 auto}
+/* O visor encolhe ate o tamanho do proprio video: a camera do celular vem em retrato e a do
+   notebook em paisagem, entao qualquer proporcao fixa aqui deixaria tarja preta de um dos lados.
+   min-height so evita o pulo enquanto a camera nao devolveu o primeiro quadro. */
+.scan-stage{position:relative;width:fit-content;max-width:100%;min-height:200px;margin-inline:auto;border-radius:8px;overflow:hidden;background:#000;line-height:0;cursor:crosshair;touch-action:manipulation}
+.scan-video{display:block;width:auto;height:auto;max-width:100%;max-height:min(70vh,720px)}
+.scan-outline{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.scan-outline polygon{fill:rgba(74,222,128,.14);stroke:#4ade80;stroke-width:.6;vector-effect:non-scaling-stroke}
+.scan-overlay.is-busy .scan-stage{cursor:progress}
+.scan-overlay.is-busy .scan-stage:after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.35)}
+.scan-status{margin:0;font-size:.85rem;color:var(--muted,#a1a1aa);min-height:1.4em}
+.scan-status.is-ok{color:#4ade80}
+.scan-status.is-warn{color:#fbbf24}
+.scan-status.is-error{color:#fca5a5}
+.scan-result{display:block}
+.scan-result[hidden]{display:none}
+.scan-card{display:flex;gap:12px;align-items:flex-start}
+.scan-card img{width:146px;height:auto;border-radius:8px;flex:0 0 auto}
+.scan-card-info{display:flex;flex-direction:column;gap:6px;min-width:0}
+.scan-card-info strong{font-size:.95rem;line-height:1.3}
+.scan-card-info small{color:var(--muted,#a1a1aa);font-size:.78rem}
+.scan-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.scan-suggestions{display:flex;gap:8px;flex-wrap:wrap}
+.scan-pick{display:flex;flex-direction:column;align-items:center;gap:4px;width:94px;padding:6px;border:1px solid var(--line,#27272a);border-radius:8px;background:var(--surface-2,#18181b);color:inherit;font:inherit;font-size:.72rem;text-align:center;cursor:pointer}
+.scan-pick:hover{border-color:#52525b}
+.scan-pick img{width:82px;height:auto;border-radius:5px}
+/* O contador de vida nao carrega os botoes do app.css: o botao de escanear se veste sozinho. */
+.life-scan{position:fixed;left:12px;bottom:12px;z-index:60;display:inline-flex;align-items:center;gap:6px;padding:9px 13px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:rgba(0,0,0,.55);color:#fafafa;font:inherit;font-size:.8rem;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.life-scan:hover{background:rgba(0,0,0,.75)}
+@media(max-width:520px){.scan-card img{width:104px}.scan-panel{padding:11px;gap:8px;width:100%;max-height:100vh;border-radius:0;border:0}.scan-overlay{padding:0}.scan-video{max-height:74vh}}

@@ -25,6 +25,10 @@ services:
       MAIL_FROM_NAME: "${MAIL_FROM_NAME:-ManaLeague}"
       AWS_SES_REGION: "${AWS_SES_REGION:-us-east-1}"
       AWS_SES_CONFIGURATION_SET: "${AWS_SES_CONFIGURATION_SET:-}"
+      # Scanner de cartas: microsservico interno (servico "scanner"), alcancado so pela rede do Docker.
+      # Sem CARD_SCANNER_TOKEN no .env o recurso fica desligado e o botao nao aparece.
+      CARD_SCANNER_URL: "${CARD_SCANNER_URL:-http://scanner:8001}"
+      CARD_SCANNER_TOKEN: "${CARD_SCANNER_TOKEN:-}"
       # Foto de perfil: local em dev; s3 em producao (bucket privado, credenciais da IAM Role da EC2).
       AVATAR_DISK: "${AVATAR_DISK:-local}"
       AWS_BUCKET: "${AWS_BUCKET:-}"
@@ -37,6 +41,39 @@ services:
       timeout: 10s
       retries: 3
 
+<<<<<<< Updated upstream
+=======
+  scanner:
+    # Reconhecimento de cartas por visao computacional (FastAPI + OpenCV, pasta scanner/).
+    # Sem porta publicada: so o servico "app" (rede interna do Docker) alcanca. Sem banco,
+    # sem escrita em disco (read_only) e exige o segredo compartilhado em cada requisicao.
+    build: ./scanner
+    restart: unless-stopped
+    # Perfil: a stack padrao nao sobe o scanner. Habilite com `docker compose --profile scanner up`
+    # (e CARD_SCANNER_TOKEN no .env). Sem ele o app esconde o botao e a rota responde 503.
+    profiles: ["scanner"]
+    environment:
+      # O container recusa subir sem o segredo: melhor falhar alto que abrir um endpoint de CPU.
+      SCANNER_TOKEN: "${CARD_SCANNER_TOKEN:-}"
+      # Distancia de Hamming maxima aceita (de 256 bits); menor = mais rigoroso.
+      MAX_HASH_DISTANCE: "${CARD_SCANNER_MAX_DISTANCE:-78}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # O indice ocupa ~110 MB em memoria; o teto evita que um pico derrube o PHP na t3.micro.
+    mem_limit: 420m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://127.0.0.1:8001/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+>>>>>>> Stashed changes
   waf:
     # WAF: imagem oficial da OWASP = Nginx + ModSecurity v3 + OWASP Core Rule Set v4 (tag LTS fixa;
     # atualizar aqui de proposito e rodar o job "WAF" da CI). Serve o public/ e passa o PHP para o app.

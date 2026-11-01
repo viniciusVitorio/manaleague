@@ -77,7 +77,19 @@ mude a regra aqui primeiro — nao abra excecao escondida na tela.
 - Sem dados: `<x-ui.empty>` com texto verdadeiro (nada de placeholder de funcao que nao existe).
 - Carregamento externo (Scryfall, S3) falha "macio": a tela abre e mostra o fallback.
 
-## 9. Checklist antes de entregar uma tela
+## 9. Camera (escanear carta)
+
+- A camera so abre depois de um toque explicito no botao "Escanear carta" — nunca ao abrir a tela.
+- A janela diz o que fazer em uma linha ("Toque na carta para identificar") e tem um "Fechar" visivel;
+  `Esc` tambem fecha, e fechar **encerra a captura** (`track.stop()`), sem camera ligada em segundo plano.
+- Cada estado tem uma frase em portugues que diz o proximo passo: permissao negada, sem HTTPS,
+  carta nao reconhecida, limite de uso. Nada de codigo de erro na tela.
+- Identificacao incerta nunca vira carta escolhida sozinha: mostre ate 3 palpites com imagem para
+  a pessoa tocar. Errar baixinho custa mais caro que perguntar.
+- O resultado reaproveita o fluxo existente da tela (no construtor de deck, os mesmos "+ Deck" / "+ Side"
+  da busca por nome) em vez de criar um caminho paralelo de adicionar carta.
+
+## 10. Checklist antes de entregar uma tela
 
 1. Todos os blocos alinhados na mesma coluna? Link de voltar fora do card?
 2. No maximo 1 botao primario na pagina? Card de identidade com no maximo 1 acao, no canto?

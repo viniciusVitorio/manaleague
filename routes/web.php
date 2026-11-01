@@ -72,9 +72,14 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/me/friends/{code}', [FriendController::class, 'destroy'])->name('friends.destroy');
 
     Route::get('/cards/search', [DeckCardController::class, 'search'])->middleware('throttle:40,1')->name('cards.search');
+<<<<<<< Updated upstream
     Route::get('/me/decks', [DeckController::class, 'index'])->name('decks.index');
     Route::put('/me/showcase/{slot}', [\App\Http\Controllers\ShowcaseController::class, 'update'])->whereIn('slot', ['1', '2', '3'])->name('showcase.update');
     Route::delete('/me/showcase/{slot}', [\App\Http\Controllers\ShowcaseController::class, 'destroy'])->whereIn('slot', ['1', '2', '3'])->name('showcase.destroy');
+=======
+    // Escanear carta pela camera: cada chamada custa CPU no microsservico de visao, por isso o limite baixo.
+    Route::post('/cards/scan', [\App\Http\Controllers\CardScanController::class, 'store'])->middleware('throttle:20,1')->name('cards.scan');
+>>>>>>> Stashed changes
     Route::post('/me/decks', [DeckController::class, 'store'])->name('decks.store');
     Route::get('/decks/{deck}', [DeckController::class, 'show'])->name('decks.show');
     Route::get('/decks/{deck}/export', [DeckController::class, 'export'])->middleware('throttle:30,1')->name('decks.export');

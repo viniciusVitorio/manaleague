@@ -6,13 +6,17 @@ use App\Models\Challenge;
 use App\Models\GameMatch;
 use App\Models\RankedMatch;
 use App\Models\Tournament;
+use App\Services\Cards\CardScannerClient;
 use App\Services\LifeCounterService;
 use Illuminate\Http\Request;
 
 /** Contador de vida em tela cheia vinculado a uma partida (torneio, ranqueada ou desafio). */
 class LifeCounterController extends Controller
 {
-    public function __construct(private readonly LifeCounterService $service) {}
+    public function __construct(
+        private readonly LifeCounterService $service,
+        private readonly CardScannerClient $scanner,
+    ) {}
 
     public function tournament(Request $request, Tournament $tournament, GameMatch $match)
     {
@@ -42,6 +46,10 @@ class LifeCounterController extends Controller
             return redirect($config['resultUrl'])->with('status', 'Esta partida não está aberta para o contador de vida.');
         }
 
-        return response()->view('life.counter', ['config' => $config])->header('Cache-Control', 'private, no-store');
+        // Consultar uma carta pela camera durante a partida; a vida continua sendo do contador.
+        $canScan = $this->scanner->enabled();
+
+        return response()->view('life.counter', ['config' => $config, 'canScan' => $canScan])
+            ->header('Cache-Control', 'private, no-store');
     }
 }

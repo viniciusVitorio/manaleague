@@ -42,6 +42,11 @@
 | Information Disclosure | bucket S3 publico / enumerar fotos | Medio | Block Public Access + `BucketOwnerEnforced`, leitura so por URL assinada (ate ~2h), nome do objeto e UUID aleatorio, policy nega acesso sem TLS |
 | Elevation of Privilege | credencial da EC2 usada para mexer no bucket inteiro | Medio | IAM Role so com `Put/Get/DeleteObject` em `avatars/*` (sem listar, sem ACL/policy) |
 | Denial of Service | imagem gigante ("bomba de descompressao") ou upload em massa | Medio | limite de 5 MB e 16 MP checado antes de decodificar, `throttle:10,1` nas rotas de foto |
+| Tampering | microsservico de visao (ou alguem no lugar dele) devolver uma carta falsa | Medio | o scanner so devolve ID; o ID e validado como UUID e os dados oficiais vem do Scryfall — o mesmo caminho do deck builder |
+| Spoofing / Elevation of Privilege | alguem na rede interna usar o scanner diretamente | Medio | segredo compartilhado obrigatorio (`X-Scanner-Token`, comparacao em tempo constante), sem porta publicada, container sem privilegios e `read_only`; a CI confere que a porta nao esta exposta e que sem token a resposta e 401 |
+| Denial of Service | frames seguidos esgotarem a CPU da t3.micro | Medio | `throttle:20,1` por usuario, no maximo 2 reconhecimentos simultaneos no scanner, imagem reduzida para 1920 px, limite de memoria do container (420 MB) |
+| Information Disclosure | a foto da mesa (rosto, ambiente) ficar guardada | Medio | o frame nao e gravado em disco nem no banco: e lido do arquivo temporario, enviado ao scanner e descartado; o scanner nao escreve nada (`read_only`, `SAVE_SCANS_DIR` desligado) |
+| Elevation of Privilege | camera acessada por um site/iframe de terceiros | Baixo | `Permissions-Policy: camera=(self)` na aplicacao e no Caddy; `frame-ancestors 'self'` |
 
 ## Abusos testados
 

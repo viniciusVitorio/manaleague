@@ -12,6 +12,17 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: []);
+<<<<<<< Updated upstream
+=======
+        // Proxy confiavel apenas em desenvolvimento, para testar a camera atras de um tunel HTTPS:
+        //   TRUSTED_PROXIES='*' php artisan serve
+        // Precisa ser variavel de ambiente de verdade (aqui o .env ainda nao foi lido). Em producao
+        // ela nao existe: o IP real chega pelo WAF (X-Real-IP -> REMOTE_ADDR) e confiar em proxy
+        // sem necessidade enfraqueceria o throttle por visitante.
+        if ($proxies = env('TRUSTED_PROXIES')) {
+            $middleware->trustProxies(at: $proxies === '*' ? '*' : explode(',', $proxies));
+        }
+>>>>>>> Stashed changes
         // AsyncFormRedirects fica por fora de todo o grupo web: converte tambem os redirects de auth/guest.
         $middleware->web(
             prepend: [\App\Http\Middleware\AsyncFormRedirects::class],

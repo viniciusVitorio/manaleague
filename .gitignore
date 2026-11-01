@@ -24,6 +24,20 @@
 !.gitignore
 # Fotos de perfil e outros arquivos enviados no disco local (dev)
 /storage/app/private/
+<<<<<<< Updated upstream
 
 # Export local das GitHub Releases (docs/patch-notes.md)
 /patch-notes.json
+=======
+# Scanner de cartas: ambiente Python local e arquivos temporarios da construcao do indice
+# (card_index.npz E versionado de proposito: o deploy nao reconstroi o indice)
+/scanner/.venv
+/scanner/__pycache__
+/scanner/**/__pycache__
+/scanner/*.checkpoint.jsonl
+/scanner/scryfall-cache/
+# Atalhos locais para testar no celular (caminhos da maquina do dev, nao fazem parte do projeto)
+/Testar no celular.bat
+/testar-no-celular.ps1
+/setup_teste_scanner.php
+>>>>>>> Stashed changes

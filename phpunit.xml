@@ -6,6 +6,13 @@
     <source><include><directory>app</directory></include></source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- URL fixa: os testes de cabecalho (HSTS so em HTTPS) nao podem depender do APP_URL
+             do .env da maquina, que muda ao testar atras de um tunel HTTPS. -->
+        <env name="APP_URL" value="http://localhost"/>
+        <!-- Scanner de cartas desligado por padrao; cada teste liga o que precisa via config(). -->
+        <env name="CARD_SCANNER_URL" value=""/>
+        <env name="CARD_SCANNER_TOKEN" value=""/>
+        <env name="TRUSTED_PROXIES" value=""/>
         <env name="APP_KEY" value="base64:Zwg8Vi58yyja0i2uMfYZRw0klTp/PKUmMTUpo/EppbY="/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="RANKED_AUTO_YEARLY_SEASON" value="false"/>

@@ -9,10 +9,20 @@
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
     <link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/life.css') }}">
     <script src="{{ \App\Support\VersionedAsset::url('js/life-counter.js') }}" defer></script>
+    @if($canScan)
+    <link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/scanner.css') }}">
+    <script src="{{ \App\Support\VersionedAsset::url('js/card-scanner.js') }}" defer></script>
+    @endif
 </head>
 <body class="life-body">
 <main id="life-counter" class="life-counter life-{{ $config['mode'] }}" data-config="{{ json_encode($config, JSON_THROW_ON_ERROR) }}" aria-label="Contador de vida">
     <noscript><div class="life-noscript">O contador de vida precisa de JavaScript. <a href="{{ $config['resultUrl'] }}">Voltar para a partida</a></div></noscript>
 </main>
+@if($canScan)
+{{-- Consulta de carta durante a partida: identifica pela camera e mostra os dados oficiais do Scryfall.
+     Fica fora do #life-counter de proposito — o contador continua dono do estado da partida. --}}
+<button type="button" class="life-scan" data-card-scanner data-mode="view" data-endpoint="{{ route('cards.scan') }}"
+        aria-label="Identificar uma carta pela câmera">📷 Carta</button>
+@endif
 </body>
 </html>

@@ -1,0 +1,14 @@
+# Microsservico de reconhecimento de cartas (scanner/). Versoes fixas: o Trivy audita este
+# arquivo na CI e a imagem precisa ser reproduzivel.
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+python-multipart==0.0.18
+
+# Visao computacional. A variante "headless" nao traz GUI/GTK: imagem menor e menos
+# superficie de ataque (o servico nunca abre janela).
+opencv-python-headless==4.10.0.84
+numpy==2.1.3
+
+# Usados apenas por scanner/build_index.py (construcao do indice, fora do runtime).
+requests==2.32.3
+tqdm==4.66.5
