@@ -1,4 +1,6 @@
 @extends('layouts.app')
+{{-- Tela ao vivo: atualiza sozinha quando algo muda (live-refresh.js). --}}
+@section('live-scope', 'arena:'.$tournament->public_slug.(auth()->check() ? ',me' : ''))
 @php
     // Prévia do link no WhatsApp: formato, data, jogadores e líder (ou campeão).
     $leader = $ranking->first();

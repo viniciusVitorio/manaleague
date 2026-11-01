@@ -1,4 +1,6 @@
 @extends('layouts.app')
+{{-- Tela ao vivo: atualiza sozinha quando algo muda (live-refresh.js). --}}
+@section('live-scope', 'me')
 @section('content')
 @php
     $me = auth()->user();

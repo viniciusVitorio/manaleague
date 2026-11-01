@@ -2,6 +2,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MatchResultSubmissionController;
 Route::get('/t/{slug}/live',[\App\Http\Controllers\LiveDisplayController::class,'data'])->middleware('throttle:60,1')->name('arena.live');
+// Versão atual de uma tela ao vivo (live-refresh.js). Cada escopo confere a permissão de quem pergunta.
+Route::get('/live/version',\App\Http\Controllers\LiveVersionController::class)->middleware('throttle:120,1')->name('live.version');
 Route::get('/t/{slug}/tv',[\App\Http\Controllers\LiveDisplayController::class,'tv'])->middleware('throttle:60,1')->name('arena.tv');
 Route::middleware(['auth','throttle:60,1'])->group(function() {
  Route::get('/tournaments/{tournament}/registration-qr.png',[\App\Http\Controllers\RegistrationQrController::class,'png'])->name('tournaments.qr.png');

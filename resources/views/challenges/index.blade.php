@@ -1,4 +1,6 @@
 @extends('layouts.app')
+{{-- Tela ao vivo: atualiza sozinha quando algo muda (live-refresh.js). --}}
+@section('live-scope', 'me')
 @section('content')
 <header class="section-heading"><div><span class="eyebrow">Mesa casual</span><h1>Desafios 1v1</h1><p>Resultados separados dos torneios. Só contam após confirmação dos dois jogadores.</p></div><a class="btn btn-secondary" href="{{ route('challenges.rivalries') }}">Rivalidades</a></header>
 <section class="card section-card"><h2>Desafiar um amigo</h2>

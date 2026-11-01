@@ -1,4 +1,6 @@
 @extends('layouts.app')
+{{-- Tela ao vivo: atualiza sozinha quando algo muda (live-refresh.js). --}}
+@section('live-scope', 'me')
 @push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/live.css') }}"><script defer src="{{ \App\Support\VersionedAsset::url('js/round-timer.js') }}"></script>@endpush
 @section('content')
 <h1>Minhas partidas</h1>
