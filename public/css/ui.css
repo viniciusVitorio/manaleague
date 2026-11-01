@@ -415,3 +415,8 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 #stat-tournament:focus-visible ~ .stat-tab-list label[for="stat-tournament"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}
 #stat-casual:focus-visible ~ .stat-tab-list label[for="stat-casual"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}
 #stat-ranked:focus-visible ~ .stat-tab-list label[for="stat-ranked"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}
+
+/* ---------- Confirmar todos os placares pendentes ---------- */
+.confirm-all{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin:0 0 12px;padding:12px 14px;border:1px solid var(--ui-border-strong);border-radius:10px;background:var(--ui-muted)}
+.confirm-all p{margin:0;font-size:.88rem}.confirm-all p span{display:block;color:var(--ui-fg-subtle);font-size:.78rem}
+.confirm-all form{margin:0}

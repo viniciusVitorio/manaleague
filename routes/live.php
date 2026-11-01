@@ -10,5 +10,7 @@ Route::middleware(['auth','throttle:60,1'])->group(function() {
  Route::post('/match-submissions/{submission}/respond',[MatchResultSubmissionController::class,'respond'])->name('matches.submissions.respond');
  Route::post('/match-submissions/{submission}/resolve',[MatchResultSubmissionController::class,'resolve'])->name('matches.submissions.resolve');
  Route::get('/me/matches',[MatchResultSubmissionController::class,'index'])->name('matches.mine');
+ // Confirma de uma vez os placares enviados pelos adversários (torneio, desafio e Ranked).
+ Route::post('/me/results/confirm-all',[\App\Http\Controllers\PendingResultsController::class,'confirmAll'])->middleware('throttle:10,1')->name('results.confirm-all');
  Route::post('/tournaments/{tournament}/matches/{match}/submissions',[MatchResultSubmissionController::class,'store'])->middleware('throttle:20,1')->name('matches.submissions.store');
 });
