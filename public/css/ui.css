@@ -262,7 +262,7 @@ input[type=radio]:checked::before{transform:scale(1)}
 /* Cabecalho do perfil como card: foto, nome e acoes ficam dentro do mesmo grid dos cards de baixo */
 .profile-hero.card { align-items: center; padding: 20px; margin-bottom: 12px; }
 .profile-hero.card .profile-title { align-items: center; gap: 20px; }
-.profile-hero.card + .stat-grid, .profile-hero.card + .unlock-banner { margin-top: 0; }
+.profile-hero.card + .stat-grid, .profile-hero.card + .stat-tabs, .profile-hero.card + .unlock-banner { margin-top: 0; }
 @media (max-width: 780px) { .profile-hero.card { align-items: stretch; padding: 16px; } .profile-hero.card .profile-title { gap: 14px; } }
 @media (max-width: 780px) { .profile-hero.card .profile-title { align-items: flex-start; } .profile-hero.card .deck-actions { justify-content: flex-start; } }
 /* Acao unica do card de perfil: canto superior direito, nunca centralizada ao lado do conteudo */
@@ -393,3 +393,25 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 /* ---------- Foil no deck ---------- */
 .foil-tag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;border:1px solid rgba(196,181,253,.5);background:linear-gradient(120deg,rgba(125,211,252,.18),rgba(216,180,254,.22),rgba(253,224,71,.18));color:var(--ui-fg);font-size:.72rem;font-weight:600;line-height:1.5;vertical-align:1px}
 .foil-pick{margin:8px 0 0;font-size:.85rem;color:var(--ui-fg-soft)}
+
+/* ---------- Estatísticas por tipo de partida (abas sem JS: rádio + label) ---------- */
+.stat-tabs{margin-bottom:20px}
+.stat-tab-input{position:absolute;opacity:0;pointer-events:none}
+.stat-tab-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.stat-tab{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid var(--ui-border);border-radius:999px;color:var(--ui-fg-muted);font-size:.82rem;cursor:pointer;user-select:none}
+.stat-tab:hover{color:var(--ui-fg);border-color:var(--ui-border-strong)}
+.stat-tab .count{color:var(--ui-fg-subtle);font-size:.74rem}
+.stat-tabs .stat-panel{display:none;margin-bottom:0}
+.stat-empty{grid-column:1/-1;margin:0}
+#stat-all:checked ~ .stat-tab-list label[for="stat-all"]{background:var(--ui-accent);border-color:var(--ui-border-strong);color:var(--ui-fg)}
+#stat-all:checked ~ .stat-panel[data-kind="all"]{display:grid}
+#stat-tournament:checked ~ .stat-tab-list label[for="stat-tournament"]{background:var(--ui-accent);border-color:var(--ui-border-strong);color:var(--ui-fg)}
+#stat-tournament:checked ~ .stat-panel[data-kind="tournament"]{display:grid}
+#stat-casual:checked ~ .stat-tab-list label[for="stat-casual"]{background:var(--ui-accent);border-color:var(--ui-border-strong);color:var(--ui-fg)}
+#stat-casual:checked ~ .stat-panel[data-kind="casual"]{display:grid}
+#stat-ranked:checked ~ .stat-tab-list label[for="stat-ranked"]{background:var(--ui-accent);border-color:var(--ui-border-strong);color:var(--ui-fg)}
+#stat-ranked:checked ~ .stat-panel[data-kind="ranked"]{display:grid}
+#stat-all:focus-visible ~ .stat-tab-list label[for="stat-all"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}
+#stat-tournament:focus-visible ~ .stat-tab-list label[for="stat-tournament"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}
+#stat-casual:focus-visible ~ .stat-tab-list label[for="stat-casual"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}
+#stat-ranked:focus-visible ~ .stat-tab-list label[for="stat-ranked"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}

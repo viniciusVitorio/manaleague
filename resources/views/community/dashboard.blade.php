@@ -33,7 +33,7 @@
         <x-ui.stat label="Notificações" :value="$unread" icon="bell" :href="route('notifications.index')"
             :hint="$unread ? ($unread === 1 ? 'não lida' : 'não lidas') : 'Tudo em dia'" />
         <x-ui.stat label="Taxa de vitória" :value="$stats['played'] ? $stats['winrate'].'%' : '—'" icon="chart" :href="route('profiles.index')"
-            :hint="$stats['played'] ? $stats['wins'].'V · '.$stats['draws'].'E · '.$stats['losses'].'D em torneios' : 'Sem partidas de torneio ainda'" />
+            :hint="$stats['played'] ? $stats['wins'].'V · '.$stats['draws'].'E · '.$stats['losses'].'D em torneios, desafios e ranked' : 'Sem partidas ainda'" />
     </section>
 
     <div class="dash-main">

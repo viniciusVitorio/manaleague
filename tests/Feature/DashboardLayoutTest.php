@@ -21,7 +21,7 @@ class DashboardLayoutTest extends TestCase
         $page->assertSee('Meu painel')->assertSee('Desafiar amigo')->assertSee('Criar torneio')
             ->assertSee('Nenhuma partida pendente.')->assertSee('Tudo em dia por aqui.')
             ->assertSee('Você não tem desafios em aberto.')->assertSee('Suas atividades aparecerão aqui.')
-            ->assertSee('Sem partidas de torneio ainda')->assertDontSee('Precisa de você');
+            ->assertSee('Sem partidas ainda')->assertDontSee('Precisa de você');
         // Navegacao unica: o painel nao repete a barra interna da comunidade.
         $page->assertDontSee('community-nav', false);
         $this->assertMatchesRegularExpression('#href="'.preg_quote(url('/dashboard'), '#').'"\s+aria-current="page"#', $page->getContent());

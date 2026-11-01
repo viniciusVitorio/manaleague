@@ -97,9 +97,9 @@ class AchievementService
         return [
             'casual_comeback' => (int) $comeback,
             'tribal_count' => (int) $tribalCount,
-            'wins' => $summary['wins'],
-            'played' => $summary['played'],
-            'best_streak' => $summary['best_streak'],
+            'wins' => $summary['by_kind']['tournament']['wins'],
+            'played' => $summary['by_kind']['tournament']['played'],
+            'best_streak' => $summary['by_kind']['tournament']['best_streak'],
             'clean_sweeps' => $facts['clean_sweeps'],
             'zero_two' => (int) $facts['zero_two'],
             'bye' => (int) $facts['bye'],
