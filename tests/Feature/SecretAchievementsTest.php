@@ -24,7 +24,8 @@ class SecretAchievementsTest extends TestCase {
         $s->review($c, $b, 'confirm', 1);
         $this->assertTrue($pa->achievements()->where('achievement', 'secret_comeback')->exists());
         $this->assertFalse($pb->achievements()->where('achievement', 'secret_comeback')->exists());
-        $this->assertFalse($pa->achievements()->where('achievement', 'first_win')->exists(), 'Casual wins must not inflate tournament metrics');
+        $this->assertTrue($pa->achievements()->where('achievement', 'first_win')->exists(), 'Confirmed casual wins count for match achievements');
+        $this->assertFalse($pa->achievements()->where('achievement', 'debut')->exists(), 'Casual wins must not inflate tournament achievements');
         $this->assertSame('De virada', app(AchievementService::class)->catalog($pa)->firstWhere('key', 'secret_comeback')['name']);
     }
     public function test_tribal_requires_real_creature_types_not_a_deck_name(): void {

@@ -23,8 +23,8 @@ class PlayerStatsService
     public function for(PlayerProfile $profile): array
     {
         $entries = $profile->entries()->with(['tournament', 'matchesAsPlayerOne', 'matchesAsPlayerTwo'])->get();
-        $titles = $runnerUps = $thirdPlaces = $undefeatedRuns = $cleanSweeps = $comebacks = 0;
-        $zeroTwo = $bye = false;
+        $titles = $runnerUps = $thirdPlaces = $undefeatedRuns = $comebacks = 0;
+        $bye = false;
         $decks = [];
         $deckRecords = []; // por deck salvo (players.deck_id): vitórias, derrotas e torneios
         $results = [];
@@ -42,19 +42,18 @@ class PlayerStatsService
 
             foreach ($matches as $match) {
                 [$for, $against] = $this->score($match, $entry->id);
-                $results[] = $this->result('tournament', $match->played_at ?? $match->updated_at ?? $match->created_at, $for, $against);
-                $bye = $bye || $match->status === GameMatch::STATUS_BYE;
+                $isBye = $match->status === GameMatch::STATUS_BYE;
+                $results[] = $this->result('tournament', $match->played_at ?? $match->updated_at ?? $match->created_at, $for, $against, $isBye);
+                $bye = $bye || $isBye;
 
                 if ($for > $against) {
                     $decks[$deckKey]['wins']++;
                     if ($entry->deck_id) $deckRecords[$entry->deck_id]['wins']++;
-                    if ($for === 2 && $against === 0 && $match->status === GameMatch::STATUS_FINISHED) $cleanSweeps++;
                     if ($against > 0 && $match->stage !== GameMatch::STAGE_LEAGUE) $comebacks++;
                 } elseif ($for < $against) {
                     $entryLosses++;
                     $decks[$deckKey]['losses']++;
                     if ($entry->deck_id) $deckRecords[$entry->deck_id]['losses']++;
-                    $zeroTwo = $zeroTwo || ($for === 0 && $against === 2);
                 }
 
                 if ($match->status === GameMatch::STATUS_FINISHED) {
@@ -85,8 +84,10 @@ class PlayerStatsService
             'facts' => [
                 'titles' => $titles, 'runner_ups' => $runnerUps, 'third_places' => $thirdPlaces,
                 'podiums' => $titles + $runnerUps + $thirdPlaces,
-                'undefeated_runs' => $undefeatedRuns, 'clean_sweeps' => $cleanSweeps, 'comebacks' => $comebacks,
-                'zero_two' => $zeroTwo, 'bye' => $bye,
+                'undefeated_runs' => $undefeatedRuns, 'comebacks' => $comebacks, 'bye' => $bye,
+                // Valem para qualquer partida: torneio, desafio casual ou Ranked. BYE não conta.
+                'clean_sweeps' => $results->filter(fn (array $r) => ! $r['bye'] && $r['for'] >= 2 && $r['against'] === 0)->count(),
+                'zero_two' => $results->contains(fn (array $r) => $r['for'] === 0 && $r['against'] >= 2),
                 'tournaments_played' => $tournaments->count(),
                 'tournaments_finished' => $tournaments->where('status', Tournament::STATUS_FINISHED)->count(),
                 'formats_played' => $tournaments->pluck('format')->unique()->count(),
@@ -139,9 +140,9 @@ class PlayerStatsService
             });
     }
 
-    private function result(string $kind, ?Carbon $date, ?int $for, ?int $against): array
+    private function result(string $kind, ?Carbon $date, ?int $for, ?int $against, bool $bye = false): array
     {
-        return ['kind' => $kind, 'date' => $date, 'for' => (int) $for, 'against' => (int) $against];
+        return ['kind' => $kind, 'date' => $date, 'for' => (int) $for, 'against' => (int) $against, 'bye' => $bye];
     }
 
     /** Recorde de uma lista de partidas em ordem cronológica. Empate quebra a sequência de vitórias. */

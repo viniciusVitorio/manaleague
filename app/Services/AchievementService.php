@@ -34,12 +34,12 @@ class AchievementService
             'secret_tribal' => ['✦', 'Uma só tribo', 'Vença uma partida de torneio com um deck que tenha 20 criaturas do mesmo subtipo no deck principal (sem sideboard).', 'collection', 20, 'tribal_count'],
             // Partidas
             'first_win' => ['🗡️', 'First Blood', 'Vença sua primeira partida', 'matches', 1, 'wins'],
-            'clean_sweep' => ['🧹', 'Clean Sweep', 'Vença uma partida por 2–0', 'matches', 1, 'clean_sweeps'],
+            'clean_sweep' => ['🧹', 'Clean Sweep', 'Vença uma partida sem perder nenhum game (2–0 ou 3–0)', 'matches', 1, 'clean_sweeps'],
             'on_fire' => ['🔥', 'On Fire', 'Vença 3 partidas seguidas', 'matches', 3, 'best_streak'],
             'unstoppable' => ['⚡', 'Unstoppable', 'Vença 6 partidas seguidas', 'matches', 6, 'best_streak'],
             'grinder' => ['🛡️', 'Grinder', 'Jogue 25 partidas', 'matches', 25, 'played'],
             'centurion' => ['💯', 'Centurião', 'Vença 50 partidas', 'matches', 50, 'wins'],
-            'zero_two' => ['💀', '0–2 Enjoyer', 'Sobreviva a uma derrota por 0–2', 'matches', 1, 'zero_two'],
+            'zero_two' => ['💀', '0–2 Enjoyer', 'Sobreviva a uma derrota sem vencer nenhum game (0–2 ou 0–3)', 'matches', 1, 'zero_two'],
             'bye' => ['🎲', 'BYE Merchant', 'Ganhe uma rodada de BYE', 'matches', 1, 'bye'],
             // Torneios
             'debut' => ['🎟️', 'Estreia', 'Dispute seu primeiro torneio', 'tournaments', 1, 'tournaments_played'],
@@ -97,9 +97,10 @@ class AchievementService
         return [
             'casual_comeback' => (int) $comeback,
             'tribal_count' => (int) $tribalCount,
-            'wins' => $summary['by_kind']['tournament']['wins'],
-            'played' => $summary['by_kind']['tournament']['played'],
-            'best_streak' => $summary['by_kind']['tournament']['best_streak'],
+            // Partidas: torneio, desafio casual e Ranked contam juntos.
+            'wins' => $summary['wins'],
+            'played' => $summary['played'],
+            'best_streak' => $summary['best_streak'],
             'clean_sweeps' => $facts['clean_sweeps'],
             'zero_two' => (int) $facts['zero_two'],
             'bye' => (int) $facts['bye'],
