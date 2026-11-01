@@ -393,6 +393,9 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 /* ---------- Foil no deck ---------- */
 .foil-tag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;border:1px solid rgba(196,181,253,.5);background:linear-gradient(120deg,rgba(125,211,252,.18),rgba(216,180,254,.22),rgba(253,224,71,.18));color:var(--ui-fg);font-size:.72rem;font-weight:600;line-height:1.5;vertical-align:1px}
 .foil-pick{margin:8px 0 0;font-size:.85rem;color:var(--ui-fg-soft)}
+/* No modo "Minha coleção" a caixa some: o foil vem da coleção. Precisa de !important porque a regra geral
+   label:has(> input[type=checkbox]) { display:flex !important } venceria o [hidden]. */
+.foil-pick[hidden]{display:none !important}
 
 /* ---------- Estatísticas por tipo de partida (abas sem JS: rádio + label) ---------- */
 .stat-tabs{margin-bottom:20px}
