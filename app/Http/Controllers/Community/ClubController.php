@@ -29,7 +29,7 @@ class ClubController extends Controller
         $q = trim((string) $request->query('q', ''));
         $mine = $user->clubs()->withCount(['members', 'tournaments'])->orderBy('name')->get();
         $discover = Club::query()->where('privacy', 'public')->whereNotIn('id', $mine->pluck('id'))
-            ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'like', '%'.str_replace(['%', '_'], '', $q).'%')->orWhere('location', 'like', '%'.str_replace(['%', '_'], '', $q).'%')))
+            ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->whereLike('name', '%'.str_replace(['%', '_'], '', $q).'%')->orWhereLike('location', '%'.str_replace(['%', '_'], '', $q).'%')))
             ->withCount(['members', 'tournaments'])->orderByDesc('members_count')->orderBy('name')->paginate(12)->withQueryString();
         $next = Tournament::query()->whereIn('club_id', $mine->pluck('id'))->where('status', Tournament::STATUS_SETUP)->whereDate('tournament_date', '>=', today())
             ->orderBy('tournament_date')->get()->groupBy('club_id')->map->first();

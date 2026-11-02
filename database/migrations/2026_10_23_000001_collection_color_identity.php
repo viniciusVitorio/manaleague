@@ -18,7 +18,7 @@ return new class extends Migration
         });
 
         DB::table('collection_items')->whereNull('color_identity')->update([
-            'color_identity' => DB::raw("(SELECT COALESCE(NULLIF(dc.color_identity, ''), 'C') FROM deck_cards dc WHERE lower(dc.scryfall_id) = lower(collection_items.scryfall_id) LIMIT 1)"),
+            'color_identity' => DB::raw("(SELECT COALESCE(NULLIF(dc.color_identity, ''), 'C') FROM deck_cards dc WHERE lower(CAST(dc.scryfall_id AS TEXT)) = lower(CAST(collection_items.scryfall_id AS TEXT)) LIMIT 1)"),
         ]);
     }
 
