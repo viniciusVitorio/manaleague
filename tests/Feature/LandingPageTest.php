@@ -56,7 +56,7 @@ class LandingPageTest extends TestCase
             ->assertOk()
             ->assertSee(route('dashboard'), false)
             ->assertSee(route('decks.index'), false)
-            ->assertSee(route('challenges.index'), false)
+            ->assertSee(route('challenges.create'), false)
             ->assertDontSee('Já tenho conta')
             ->assertDontSee('@else', false);
     }

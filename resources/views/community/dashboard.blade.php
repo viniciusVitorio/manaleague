@@ -22,7 +22,7 @@
             <p>Olá, {{ $firstName }}. Acompanhe seus torneios, partidas e atividades no ManaLeague.</p>
         </div>
         <div class="dash-actions">
-            <a class="ui-btn ui-btn-outline" href="{{ route('challenges.index') }}"><x-icon name="swords" />Desafiar amigo</a>
+            <a class="ui-btn ui-btn-outline" href="{{ route('challenges.create') }}"><x-icon name="swords" />Desafiar amigo</a>
             <a class="ui-btn ui-btn-primary" href="{{ route('tournaments.create') }}"><x-icon name="plus" />Criar torneio</a>
         </div>
     </header>
@@ -61,7 +61,7 @@
                     </div>
                 @else
                     <x-ui.empty icon="circle-check" title="Nenhuma partida pendente." text="Entre num torneio pelo link do organizador ou chame alguém para jogar."
-                        :href="route('challenges.index')" action="Desafiar amigo" />
+                        :href="route('challenges.create')" action="Desafiar amigo" />
                 @endif
             </x-ui.card>
 
@@ -133,7 +133,7 @@
 
         <x-ui.card title="Desafios" icon="swords" :href="route('challenges.index')">
             @if($challenges->isEmpty())
-                <x-ui.empty icon="swords" title="Você não tem desafios em aberto." :href="route('challenges.index')" action="Desafiar" />
+                <x-ui.empty icon="swords" title="Você não tem desafios em aberto." :href="route('challenges.create')" action="Desafiar" />
             @else
                 <ul class="ui-list">
                     @foreach($challenges->take(5) as $challenge)

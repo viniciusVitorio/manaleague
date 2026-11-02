@@ -93,6 +93,6 @@ class DashboardLayoutTest extends TestCase
         $friend->ensurePlayerProfile();
         $user->friendProfiles()->attach($friend->playerProfile, ['status' => 'accepted']);
         $friend->friendProfiles()->attach($user->playerProfile, ['status' => 'accepted']);
-        $this->actingAs($user)->get('/challenges')->assertOk()->assertSee('class="ui-switch"', false)->assertSee('Partida ranqueada');
+        $this->actingAs($user)->get('/challenges/new')->assertOk()->assertSee('class="ui-switch"', false)->assertSee('Partida ranqueada');
     }
 }

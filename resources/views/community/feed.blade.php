@@ -4,7 +4,7 @@
 @php($icons = ['tournament' => 'trophy', 'match' => 'target', 'challenge' => 'swords', 'ranked' => 'chart', 'club' => 'shield'])
 <header class="page-head">
     <div><h1>Comunidade</h1><p>O que está rolando com seus amigos, clubes e torneios.</p></div>
-    <div class="hub-actions"><a class="ui-btn ui-btn-outline" href="{{ route('friends.index') }}"><x-icon name="user-plus" />Amigos</a><a class="ui-btn ui-btn-primary" href="{{ route('challenges.index') }}"><x-icon name="swords" />Desafiar</a></div>
+    <div class="hub-actions"><a class="ui-btn ui-btn-outline" href="{{ route('friends.index') }}"><x-icon name="user-plus" />Amigos</a><a class="ui-btn ui-btn-primary" href="{{ route('challenges.create') }}"><x-icon name="swords" />Desafiar</a></div>
 </header>
 
 <div class="hub-grid">
@@ -44,7 +44,7 @@
             @endforeach
         @empty
             <p class="muted small">Quando você ou seus amigos jogarem ranqueado, a disputa aparece aqui.</p>
-            <a class="ui-btn ui-btn-outline ui-btn-sm" href="{{ route('challenges.index', ['ranked' => 1]) }}">Desafio ranqueado</a>
+            <a class="ui-btn ui-btn-outline ui-btn-sm" href="{{ route('challenges.create', ['ranked' => 1]) }}">Desafio ranqueado</a>
         @endforelse
     </x-ui.card>
 
