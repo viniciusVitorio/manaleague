@@ -1,4 +1,6 @@
 @extends('layouts.app')
+{{-- Tela ao vivo: atualiza sozinha quando algo muda (live-refresh.js). --}}
+@section('live-scope', 'me')
 @section('content')
 @php
     $me = auth()->user();
@@ -33,7 +35,7 @@
         <x-ui.stat label="Notificações" :value="$unread" icon="bell" :href="route('notifications.index')"
             :hint="$unread ? ($unread === 1 ? 'não lida' : 'não lidas') : 'Tudo em dia'" />
         <x-ui.stat label="Taxa de vitória" :value="$stats['played'] ? $stats['winrate'].'%' : '—'" icon="chart" :href="route('profiles.index')"
-            :hint="$stats['played'] ? $stats['wins'].'V · '.$stats['draws'].'E · '.$stats['losses'].'D em torneios' : 'Sem partidas de torneio ainda'" />
+            :hint="$stats['played'] ? $stats['wins'].'V · '.$stats['draws'].'E · '.$stats['losses'].'D em torneios, desafios e ranked' : 'Sem partidas ainda'" />
     </section>
 
     <div class="dash-main">
@@ -65,6 +67,7 @@
 
             @if($actionCount)
             <x-ui.card title="Precisa de você" icon="alert" :meta="$actionCount.' '.($actionCount === 1 ? 'pendência' : 'pendências')">
+                @include('partials.confirm-all')
                 <ul class="ui-list">
                     @foreach($needDeck as $tournament)
                         <li><a class="ui-row" href="{{ route('arena.public', $tournament->public_slug) }}"><span class="ui-row-icon"><x-icon name="alert" /></span><span class="ui-row-main"><span class="ui-row-title">Cadastre seu deck para o torneio</span><span class="ui-row-sub">{{ $tournament->name }} · escolha um deck de {{ $tournament->format }} da sua conta para fazer o check-in</span></span><x-icon name="chevron-right" class="ui-chevron" /></a></li>

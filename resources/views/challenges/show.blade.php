@@ -1,4 +1,6 @@
 @extends('layouts.app')
+{{-- Tela ao vivo: atualiza sozinha quando algo muda (live-refresh.js). --}}
+@section('live-scope', 'challenge:'.$challenge->id)
 @section('content')
 @php($match = $challenge->casualMatch)
 <a class="back-link" href="{{ route('challenges.index') }}">← Desafios</a>

@@ -39,7 +39,7 @@ class PlayerProfileController extends Controller
     {
         $profile = $this->ownProfile($request);
         $summary = $this->stats->for($profile);
-        $this->achievements->sync($profile, $summary);
+        $this->achievements->sync($profile, $summary, notify: false); // as novas aparecem destacadas aqui mesmo
         $achievements = $this->achievements->catalog($profile, $summary);
         // Marca como vistas depois de montar o catalogo: as novas aparecem destacadas so desta vez.
         $this->achievements->markSeen($profile);
@@ -89,7 +89,7 @@ class PlayerProfileController extends Controller
         $this->authorize('view', $profile);
 
         $summary = $this->stats->for($profile);
-        $this->achievements->sync($profile, $summary);
+        $this->achievements->sync($profile, $summary, notify: ! $isOwner);
         $achievements = $this->achievements->catalog($profile, $summary);
         $friendRequests = collect();
 

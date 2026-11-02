@@ -1,4 +1,6 @@
 @extends('layouts.app')
+{{-- Tela ao vivo: atualiza sozinha quando algo muda (live-refresh.js). --}}
+@section('live-scope', 'me')
 @section('content')
 <header class="section-heading"><div><span class="eyebrow">Mesa casual</span><h1>Desafios 1v1</h1><p>Resultados separados dos torneios. Só contam após confirmação dos dois jogadores.</p></div><a class="btn btn-secondary" href="{{ route('challenges.rivalries') }}">Rivalidades</a></header>
 <section class="card section-card"><h2>Desafiar um amigo</h2>
@@ -12,6 +14,7 @@
 <label>Validade do convite<select name="expires_in"><option value="24">24 horas</option><option value="48">48 horas</option><option value="168">7 dias</option></select></label><button class="btn btn-primary">Enviar desafio</button></form>
 @endif</section>
 <section class="card section-card"><h2>Meus desafios</h2>
+@include('partials.confirm-all')
 @forelse($challenges as $challenge)<a class="history-row" href="{{ route('challenges.show', $challenge) }}"><div><strong>{{ $challenge->challenger->displayName() }} × {{ $challenge->opponent->displayName() }}</strong><small>@if($challenge->is_ranked)<b>Ranqueada</b> · @endif{{ $challenge->format }} · MD{{ $challenge->best_of }} · {{ $challenge->statusLabel() }}</small></div><span>Ver →</span></a>@empty<p>Nenhum desafio ainda. Convide um amigo para a primeira série.</p>@endforelse
 {{ $challenges->links() }}</section>
 @endsection

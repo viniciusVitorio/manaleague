@@ -91,12 +91,33 @@
 
 
 
-<div class="stat-grid">
-    <article class="card stat-card"><b>{{ $summary['wins'] }}–{{ $summary['losses'] }}@if($summary['draws'])–{{ $summary['draws'] }}@endif</b><span>Vitórias / derrotas</span></article>
-    <article class="card stat-card"><b>{{ $summary['games_for'] }}–{{ $summary['games_against'] }}</b><span>Games</span></article>
-    <article class="card stat-card"><b>{{ $summary['winrate'] }}%</b><span>Aproveitamento</span></article>
-    <article class="card stat-card"><b>{{ $summary['best_streak'] }}</b><span>Maior sequência</span></article>
-</div>
+{{-- Ranked desligado e sem partida ranqueada no histórico: a aba some. --}}
+@php($statTabs = array_filter(['all' => 'Geral'] + \App\Services\PlayerStatsService::KINDS, fn ($kind) => $kind !== 'ranked' || config('ranked.enabled') || $summary['by_kind']['ranked']['played'], ARRAY_FILTER_USE_KEY))
+@php($statEmpty = ['all' => 'Nenhuma partida ainda. Entre num torneio ou desafie um amigo.', 'tournament' => 'Nenhuma partida de torneio ainda.', 'casual' => 'Nenhum desafio casual confirmado ainda.', 'ranked' => 'Nenhuma partida ranqueada confirmada ainda.'])
+<section class="stat-tabs" aria-label="Estatísticas de partidas">
+    @foreach($statTabs as $kind => $label)
+        <input type="radio" name="stat-kind" id="stat-{{ $kind }}" value="{{ $kind }}" class="stat-tab-input" data-async-keep @checked($kind === 'all')>
+    @endforeach
+    <div class="stat-tab-list">
+        @foreach($statTabs as $kind => $label)
+            @php($tabPlayed = $kind === 'all' ? $summary['played'] : $summary['by_kind'][$kind]['played'])
+            <label for="stat-{{ $kind }}" class="stat-tab">{{ $label }} <span class="count">{{ $tabPlayed }}</span></label>
+        @endforeach
+    </div>
+    @foreach($statTabs as $kind => $label)
+        @php($record = $kind === 'all' ? $summary : $summary['by_kind'][$kind])
+        <div class="stat-grid stat-panel" data-kind="{{ $kind }}">
+            @if($record['played'])
+                <article class="card stat-card"><b>{{ $record['wins'] }}–{{ $record['losses'] }}@if($record['draws'])–{{ $record['draws'] }}@endif</b><span>Vitórias / derrotas{{ $record['draws'] ? ' / empates' : '' }}</span></article>
+                <article class="card stat-card"><b>{{ $record['games_for'] }}–{{ $record['games_against'] }}</b><span>Games</span></article>
+                <article class="card stat-card"><b>{{ $record['winrate'] }}%</b><span>Aproveitamento em {{ $record['played'] }} {{ $record['played'] === 1 ? 'partida' : 'partidas' }}</span></article>
+                <article class="card stat-card"><b>{{ $record['best_streak'] }}</b><span>Maior sequência de vitórias</span></article>
+            @else
+                <p class="card stat-card stat-empty muted">{{ $statEmpty[$kind] }}</p>
+            @endif
+        </div>
+    @endforeach
+</section>
 
 @php($headToHead ??= null)
 @if($headToHead && ($headToHead['played'] || $friendshipStatus === 'accepted'))

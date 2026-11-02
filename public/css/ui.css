@@ -262,7 +262,7 @@ input[type=radio]:checked::before{transform:scale(1)}
 /* Cabecalho do perfil como card: foto, nome e acoes ficam dentro do mesmo grid dos cards de baixo */
 .profile-hero.card { align-items: center; padding: 20px; margin-bottom: 12px; }
 .profile-hero.card .profile-title { align-items: center; gap: 20px; }
-.profile-hero.card + .stat-grid, .profile-hero.card + .unlock-banner { margin-top: 0; }
+.profile-hero.card + .stat-grid, .profile-hero.card + .stat-tabs, .profile-hero.card + .unlock-banner { margin-top: 0; }
 @media (max-width: 780px) { .profile-hero.card { align-items: stretch; padding: 16px; } .profile-hero.card .profile-title { gap: 14px; } }
 @media (max-width: 780px) { .profile-hero.card .profile-title { align-items: flex-start; } .profile-hero.card .deck-actions { justify-content: flex-start; } }
 /* Acao unica do card de perfil: canto superior direito, nunca centralizada ao lado do conteudo */
@@ -289,6 +289,14 @@ input::-ms-reveal{display:none}
 .theme-swatch span{flex:1}
 .theme-option-dark .theme-swatch span:first-child{background:#09090b}.theme-option-dark .theme-swatch span:last-child{background:#27272a}
 .theme-option-light .theme-swatch span:first-child{background:#fafafa}.theme-option-light .theme-swatch span:last-child{background:#e4e4e7}
+/* Cor no contador de vida: bolinhas com o rádio escondido (continua acessível pelo teclado e leitor de tela) */
+.life-color-options{display:flex;flex-wrap:wrap;gap:8px}
+.life-color-option{position:relative;margin:0!important}
+.life-color-option input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.life-color-dot{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--c);border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(127,127,127,.4)}
+.life-color-dot.is-auto{background:conic-gradient(#7c3aed 0 25%,#0891b2 0 50%,#d97706 0 75%,#059669 0);color:#fff;font-size:.72rem;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.life-color-option input:checked + .life-color-dot{box-shadow:0 0 0 2px var(--ui-bg,#09090b),0 0 0 4px var(--ui-fg)}
+.life-color-option input:focus-visible + .life-color-dot{outline:2px solid #a78bfa;outline-offset:3px}
 .theme-toggle{margin:0;display:inline-flex}
 
 /* ---------- Patch notes ---------- */
@@ -391,5 +399,40 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 .search-source{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
 
 /* ---------- Foil no deck ---------- */
-.foil-tag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;border:1px solid rgba(196,181,253,.5);background:linear-gradient(120deg,rgba(125,211,252,.18),rgba(216,180,254,.22),rgba(253,224,71,.18));color:var(--ui-fg);font-size:.72rem;font-weight:600;line-height:1.5;vertical-align:1px}
+/* Foil é só um detalhe: um ✦ discreto ao lado do nome, sem etiqueta (etiqueta fica para o que pede atenção, como "Banido") */
+.foil-mark{margin-left:5px;color:#a78bfa;font-size:.78rem;line-height:1;cursor:default;opacity:.85}
+:root[data-theme="light"] .foil-mark{color:#7c3aed}
 .foil-pick{margin:8px 0 0;font-size:.85rem;color:var(--ui-fg-soft)}
+/* No modo "Minha coleção" a caixa some: o foil vem da coleção. Precisa de !important porque a regra geral
+   label:has(> input[type=checkbox]) { display:flex !important } venceria o [hidden]. */
+.foil-pick[hidden]{display:none !important}
+
+/* ---------- Estatísticas por tipo de partida (abas sem JS: rádio + label) ---------- */
+.stat-tabs{margin-bottom:20px}
+.stat-tab-input{position:absolute;opacity:0;pointer-events:none}
+.stat-tab-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.stat-tab{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid var(--ui-border);border-radius:999px;color:var(--ui-fg-muted);font-size:.82rem;cursor:pointer;user-select:none}
+.stat-tab:hover{color:var(--ui-fg);border-color:var(--ui-border-strong)}
+.stat-tab .count{color:var(--ui-fg-subtle);font-size:.74rem}
+.stat-tabs .stat-panel{display:none;margin-bottom:0}
+.stat-empty{grid-column:1/-1;margin:0}
+#stat-all:checked ~ .stat-tab-list label[for="stat-all"]{background:var(--ui-accent);border-color:var(--ui-border-strong);color:var(--ui-fg)}
+#stat-all:checked ~ .stat-panel[data-kind="all"]{display:grid}
+#stat-tournament:checked ~ .stat-tab-list label[for="stat-tournament"]{background:var(--ui-accent);border-color:var(--ui-border-strong);color:var(--ui-fg)}
+#stat-tournament:checked ~ .stat-panel[data-kind="tournament"]{display:grid}
+#stat-casual:checked ~ .stat-tab-list label[for="stat-casual"]{background:var(--ui-accent);border-color:var(--ui-border-strong);color:var(--ui-fg)}
+#stat-casual:checked ~ .stat-panel[data-kind="casual"]{display:grid}
+#stat-ranked:checked ~ .stat-tab-list label[for="stat-ranked"]{background:var(--ui-accent);border-color:var(--ui-border-strong);color:var(--ui-fg)}
+#stat-ranked:checked ~ .stat-panel[data-kind="ranked"]{display:grid}
+#stat-all:focus-visible ~ .stat-tab-list label[for="stat-all"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}
+#stat-tournament:focus-visible ~ .stat-tab-list label[for="stat-tournament"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}
+#stat-casual:focus-visible ~ .stat-tab-list label[for="stat-casual"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}
+#stat-ranked:focus-visible ~ .stat-tab-list label[for="stat-ranked"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}
+
+/* ---------- Confirmar todos os placares pendentes ---------- */
+.confirm-all{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin:0 0 12px;padding:12px 14px;border:1px solid var(--ui-border-strong);border-radius:10px;background:var(--ui-muted)}
+.confirm-all p{margin:0;font-size:.88rem}.confirm-all p span{display:block;color:var(--ui-fg-subtle);font-size:.78rem}
+.confirm-all form{margin:0}
+
+/* ---------- Tela ao vivo: aviso quando há novidade e a pessoa está digitando ---------- */
+.live-notice{position:fixed;left:50%;bottom:18px;z-index:60;display:flex;align-items:center;gap:12px;max-width:calc(100% - 32px);padding:10px 12px 10px 16px;transform:translateX(-50%);border:1px solid var(--ui-border-strong);border-radius:10px;background:var(--ui-card);color:var(--ui-fg);font-size:.86rem;box-shadow:0 8px 24px rgba(0,0,0,.25)}

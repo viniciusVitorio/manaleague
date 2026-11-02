@@ -65,7 +65,7 @@ class FoilAndManaBoxImportTest extends TestCase
         $this->actingAs($user)->post(route('decks.cards.store', $deck), ['scryfall_id' => self::BOLT, 'board' => 'main', 'foil' => 1]);
 
         $this->assertSame([[false, 2], [true, 2]], $deck->cards()->reorder()->orderBy('foil')->get()->map(fn ($c) => [$c->foil, $c->quantity])->all());
-        $this->actingAs($user)->get(route('decks.show', $deck))->assertSee('<span class="foil-tag" title="Foil">foil</span>', false);
+        $this->actingAs($user)->get(route('decks.show', $deck))->assertSee('<span class="foil-mark" role="img" title="Foil" aria-label="Foil">✦</span>', false);
 
         // mover o foil para o sideboard leva o acabamento junto e não mistura com a cópia normal
         $foil = $deck->cards()->where('foil', true)->first();
