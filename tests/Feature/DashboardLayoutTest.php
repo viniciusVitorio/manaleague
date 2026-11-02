@@ -21,7 +21,7 @@ class DashboardLayoutTest extends TestCase
         $page->assertSee('Meu painel')->assertSee('Desafiar amigo')->assertSee('Criar torneio')
             ->assertSee('Nenhuma partida pendente.')->assertSee('Tudo em dia por aqui.')
             ->assertSee('Você não tem desafios em aberto.')->assertSee('Suas atividades aparecerão aqui.')
-            ->assertSee('Sem partidas de torneio ainda')->assertDontSee('Precisa de você');
+            ->assertSee('Sem partidas ainda')->assertDontSee('Precisa de você');
         // Navegacao unica: o painel nao repete a barra interna da comunidade.
         $page->assertDontSee('community-nav', false);
         $this->assertMatchesRegularExpression('#href="'.preg_quote(url('/dashboard'), '#').'"\s+aria-current="page"#', $page->getContent());
@@ -93,6 +93,6 @@ class DashboardLayoutTest extends TestCase
         $friend->ensurePlayerProfile();
         $user->friendProfiles()->attach($friend->playerProfile, ['status' => 'accepted']);
         $friend->friendProfiles()->attach($user->playerProfile, ['status' => 'accepted']);
-        $this->actingAs($user)->get('/challenges')->assertOk()->assertSee('class="ui-switch"', false)->assertSee('Partida ranqueada');
+        $this->actingAs($user)->get('/challenges/new')->assertOk()->assertSee('class="ui-switch"', false)->assertSee('Partida ranqueada');
     }
 }

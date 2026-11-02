@@ -1,4 +1,6 @@
 @extends('layouts.app')
+{{-- Tela ao vivo: atualiza sozinha quando algo muda (live-refresh.js). --}}
+@section('live-scope', 'ranked:'.$match->id)
 @section('content')
 @include('ranked.partials.head')
 @php($me = auth()->user())

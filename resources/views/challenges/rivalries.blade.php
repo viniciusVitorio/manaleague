@@ -3,7 +3,7 @@
 <a class="back-link" href="{{ route('challenges.index') }}">← Desafios</a>
 <header class="page-head">
     <div><h1>Rivalidades</h1><p>Seu retrospecto contra cada amigo nos desafios 1v1.</p></div>
-    <a class="ui-btn ui-btn-primary" href="{{ route('challenges.index') }}"><x-icon name="swords" />Novo desafio</a>
+    <a class="ui-btn ui-btn-primary" href="{{ route('challenges.create') }}"><x-icon name="swords" />Desafiar amigo</a>
 </header>
 
 <div class="ui-hint" style="margin-bottom:16px">
@@ -27,10 +27,10 @@
             <span class="ui-row-main"><span class="ui-row-title"><x-profile-link :of="$rival['profile']">{{ $rival['profile']->nickname }}</x-profile-link></span><span class="ui-row-sub">{{ $rival['played'] }} {{ $rival['played'] === 1 ? 'série' : 'séries' }}@if($rival['ranked']) · {{ $rival['ranked'] }} ranqueada{{ $rival['ranked'] > 1 ? 's' : '' }}@endif · {{ $pct }}% de vitórias</span></span>
             <span class="rival-bar" aria-hidden="true"><span style="width: {{ $pct }}%"></span></span>
             <span class="rival-record" aria-label="{{ $rival['wins'] }} vitórias, {{ $rival['losses'] }} derrotas{{ $rival['draws'] ? ' e '.$rival['draws'].' empates' : '' }}"><strong>{{ $rival['wins'] }}</strong>–{{ $rival['losses'] }}@if($rival['draws'])–{{ $rival['draws'] }}@endif</span>
-            <a class="ui-btn ui-btn-outline ui-btn-sm" href="{{ route('challenges.index', ['opponent' => $rival['profile']->id]) }}">Revanche</a>
+            <a class="ui-btn ui-btn-outline ui-btn-sm" href="{{ route('challenges.create', ['opponent' => $rival['profile']->id]) }}">Revanche</a>
         </div>
     @empty
-        <x-ui.empty icon="swords" title="Nenhuma rivalidade ainda." text="Desafie um amigo; quando os dois confirmarem o placar, a rivalidade aparece aqui." :href="route('challenges.index')" action="Desafiar" />
+        <x-ui.empty icon="swords" title="Nenhuma rivalidade ainda." text="Desafie um amigo; quando os dois confirmarem o placar, a rivalidade aparece aqui." :href="route('challenges.create')" action="Desafiar amigo" />
     @endforelse
 </x-ui.card>
 @endsection

@@ -55,6 +55,15 @@
     @endif
     @yield('content')
 </main>
+@hasSection('live-scope')
+@php($liveScope = trim($__env->yieldContent('live-scope')))
+@php($liveVersion = app(\App\Services\LiveVersionService::class)->versionOrNull(auth()->user(), $liveScope))
+@if($liveVersion)
+{{-- Tela ao vivo: live-refresh.js compara esta versão com a atual e atualiza a página quando muda. --}}
+<div id="live-refresh" hidden data-url="{{ route('live.version', ['scope' => $liveScope]) }}" data-version="{{ $liveVersion }}"></div>
+<script src="{{ \App\Support\VersionedAsset::url('js/live-refresh.js') }}" defer></script>
+@endif
+@endif
 <footer class="footer">ManaLeague &middot; Decks, coleção, partidas e torneios de Magic.</footer>
 </body>
 </html>

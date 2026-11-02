@@ -34,12 +34,12 @@ class AchievementService
             'secret_tribal' => ['✦', 'Uma só tribo', 'Vença uma partida de torneio com um deck que tenha 20 criaturas do mesmo subtipo no deck principal (sem sideboard).', 'collection', 20, 'tribal_count'],
             // Partidas
             'first_win' => ['🗡️', 'First Blood', 'Vença sua primeira partida', 'matches', 1, 'wins'],
-            'clean_sweep' => ['🧹', 'Clean Sweep', 'Vença uma partida por 2–0', 'matches', 1, 'clean_sweeps'],
+            'clean_sweep' => ['🧹', 'Clean Sweep', 'Vença uma partida sem perder nenhum game (2–0 ou 3–0)', 'matches', 1, 'clean_sweeps'],
             'on_fire' => ['🔥', 'On Fire', 'Vença 3 partidas seguidas', 'matches', 3, 'best_streak'],
             'unstoppable' => ['⚡', 'Unstoppable', 'Vença 6 partidas seguidas', 'matches', 6, 'best_streak'],
             'grinder' => ['🛡️', 'Grinder', 'Jogue 25 partidas', 'matches', 25, 'played'],
             'centurion' => ['💯', 'Centurião', 'Vença 50 partidas', 'matches', 50, 'wins'],
-            'zero_two' => ['💀', '0–2 Enjoyer', 'Sobreviva a uma derrota por 0–2', 'matches', 1, 'zero_two'],
+            'zero_two' => ['💀', '0–2 Enjoyer', 'Sobreviva a uma derrota sem vencer nenhum game (0–2 ou 0–3)', 'matches', 1, 'zero_two'],
             'bye' => ['🎲', 'BYE Merchant', 'Ganhe uma rodada de BYE', 'matches', 1, 'bye'],
             // Torneios
             'debut' => ['🎟️', 'Estreia', 'Dispute seu primeiro torneio', 'tournaments', 1, 'tournaments_played'],
@@ -97,6 +97,7 @@ class AchievementService
         return [
             'casual_comeback' => (int) $comeback,
             'tribal_count' => (int) $tribalCount,
+            // Partidas: torneio, desafio casual e Ranked contam juntos.
             'wins' => $summary['wins'],
             'played' => $summary['played'],
             'best_streak' => $summary['best_streak'],
@@ -160,10 +161,11 @@ class AchievementService
 
     /**
      * Grava as conquistas recem-atingidas. Desbloqueios sao permanentes.
+     * Com $notify, avisa o dono da conta no sino (quem abre o proprio perfil ja ve as novas destacadas e nao precisa).
      *
      * @return list<string> chaves desbloqueadas agora
      */
-    public function sync(PlayerProfile $profile, ?array $summary = null): array
+    public function sync(PlayerProfile $profile, ?array $summary = null, bool $notify = true): array
     {
         $metrics = $this->metrics($profile, $summary);
         $owned = $profile->achievements()->pluck('achievement')->all();
@@ -175,8 +177,30 @@ class AchievementService
                 if ($record->wasRecentlyCreated) $new[] = $key;
             }
         }
+        if ($notify) $this->announce($profile, $new);
 
         return $new;
+    }
+
+    /** Avisa no sino. Várias conquistas liberadas juntas viram um aviso só, com a lista. */
+    private function announce(PlayerProfile $profile, array $keys): void
+    {
+        if ($keys === [] || ! $profile->account) return;
+        $definitions = self::definitions();
+        $names = array_map(fn (string $key) => $definitions[$key][0].' '.$definitions[$key][1], $keys);
+
+        if (count($keys) === 1) {
+            $title = "Conquista desbloqueada: {$names[0]}";
+            $eventKey = "achievement:{$keys[0]}:{$profile->id}";
+        } else {
+            $shown = array_slice($names, 0, 3);
+            $rest = count($names) - count($shown);
+            $list = $rest > 0 ? implode(', ', $shown)." e mais {$rest}" : implode(', ', array_slice($shown, 0, -1)).' e '.end($shown);
+            $title = count($keys)." conquistas desbloqueadas: {$list}";
+            $eventKey = "achievements:{$profile->id}:".implode(',', $keys);
+        }
+
+        app(Community\NotificationService::class)->send($profile->account, 'achievement', $title, '/me/profile', $eventKey);
     }
 
     /** Catalogo completo com progresso, data de desbloqueio e raridade. */
@@ -217,10 +241,7 @@ class AchievementService
     {
         abort_unless(in_array($key, self::GRANTED, true), 422, 'Esta conquista não pode ser concedida manualmente.');
         $record = $profile->achievements()->firstOrCreate(['achievement' => $key], ['unlocked_at' => now()]);
-        if ($record->wasRecentlyCreated && $profile->account) {
-            [$icon, $name] = self::definitions()[$key];
-            app(Community\NotificationService::class)->send($profile->account, 'achievement', "Conquista desbloqueada: {$icon} {$name}", '/me/profile', "achievement:{$key}:{$profile->id}");
-        }
+        if ($record->wasRecentlyCreated) $this->announce($profile, [$key]);
 
         return $record->wasRecentlyCreated;
     }

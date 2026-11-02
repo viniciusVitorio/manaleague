@@ -238,6 +238,10 @@ class RankedMatchService
         if ($m->source_type === 'challenge') {
             Challenge::query()->whereKey($m->source_id)->where('status', 'accepted')->update(['status' => 'completed']);
         }
+        // Conquistas de partida (First Blood, Clean Sweep, sequências...) também valem no Ranked.
+        foreach ([$m->playerOne, $m->playerTwo] as $profile) {
+            if ($profile) app(\App\Services\AchievementService::class)->sync($profile);
+        }
     }
 
     private function fail(bool $condition, string $message): void

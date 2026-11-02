@@ -194,7 +194,7 @@
         <ul class="lp-list">
             <li><x-icon name="check-check" :size="14" /><span><b>Contador de vida</b> com veneno e dano de comandante, que envia o placar no fim da série</span></li>
             <li><x-icon name="check-check" :size="14" /><span><b>Rivalidades</b>: seu retrospecto contra cada amigo, com botão de revanche</span></li>
-            <li><x-icon name="check-check" :size="14" /><span><b>Confronto direto</b> no perfil, somando torneio, casual e ranked</span></li>
+            <li><x-icon name="check-check" :size="14" /><span><b>Rival</b> no perfil: o amigo que você mais desafiou, com o placar entre vocês</span></li>
         </ul>
     </div>
     <figure class="lp-shot lp-life" aria-label="Exemplo do contador de vida">
@@ -329,7 +329,7 @@
         <p>Crie a conta, cadastre o primeiro deck e mande o seu código de amigo para a galera.</p>
     </div>
     @auth
-        <a class="ui-btn ui-btn-outline lp-btn" href="{{ route('challenges.index') }}"><x-icon name="swords" :size="16" /> Desafiar um amigo</a>
+        <a class="ui-btn ui-btn-outline lp-btn" href="{{ route('challenges.create') }}"><x-icon name="swords" :size="16" /> Desafiar um amigo</a>
     @else
         <a class="ui-btn ui-btn-outline lp-btn" href="{{ route('register') }}">Criar minha conta <x-icon name="arrow-right" :size="16" /></a>
     @endauth

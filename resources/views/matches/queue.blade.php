@@ -1,4 +1,6 @@
 @extends('layouts.app')
+{{-- Tela ao vivo: atualiza sozinha quando algo muda (live-refresh.js). --}}
+@section('live-scope', 'tournament:'.$tournament->id)
 @push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/live.css') }}">@endpush
 @section('content')
 <h1>Resultados enviados · {{ $tournament->name }}</h1>

@@ -39,7 +39,7 @@ class PlayerProfileController extends Controller
     {
         $profile = $this->ownProfile($request);
         $summary = $this->stats->for($profile);
-        $this->achievements->sync($profile, $summary);
+        $this->achievements->sync($profile, $summary, notify: false); // as novas aparecem destacadas aqui mesmo
         $achievements = $this->achievements->catalog($profile, $summary);
         // Marca como vistas depois de montar o catalogo: as novas aparecem destacadas so desta vez.
         $this->achievements->markSeen($profile);
@@ -54,8 +54,9 @@ class PlayerProfileController extends Controller
         $ranked = $this->ranked($profile, $profile->account_user_id === $request->user()->id);
 
         $showcase = $this->showcase($decks, $summary, true);
+        $rival = app(\App\Services\RivalService::class)->for($profile);
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked'));
+        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked', 'rival'));
     }
 
     /**
@@ -89,7 +90,7 @@ class PlayerProfileController extends Controller
         $this->authorize('view', $profile);
 
         $summary = $this->stats->for($profile);
-        $this->achievements->sync($profile, $summary);
+        $this->achievements->sync($profile, $summary, notify: ! $isOwner);
         $achievements = $this->achievements->catalog($profile, $summary);
         $friendRequests = collect();
 
@@ -111,11 +112,10 @@ class PlayerProfileController extends Controller
         $tradeBinder = ($isOwner || $friendshipStatus === FriendshipService::ACCEPTED) ? app(CollectionService::class)->tradeBinder($profile->account_user_id) : null;
 
         $showcase = $this->showcase($decks, $summary, $isOwner);
-        // Confronto direto entre quem visita e o dono do perfil (torneios, desafios e Ranked).
-        $viewerProfile = $isOwner ? null : $user->playerProfile;
-        $headToHead = $viewerProfile ? app(\App\Services\HeadToHeadService::class)->between($viewerProfile, $profile) : null;
+        // Rival sai de desafios, que só acontecem entre amigos: mesma regra da lista de amigos.
+        $rival = ($isOwner || $friendshipStatus === FriendshipService::ACCEPTED) ? app(\App\Services\RivalService::class)->for($profile) : null;
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked', 'profileFriends', 'tradeBinder', 'headToHead'));
+        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked', 'profileFriends', 'tradeBinder', 'rival'));
     }
 
     /** Patente por formato (temporadas em andamento) + historico. Visivel para quem pode ver o perfil. */

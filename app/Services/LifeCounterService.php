@@ -5,10 +5,12 @@ namespace App\Services;
 use App\Models\Challenge;
 use App\Models\GameMatch;
 use App\Models\MatchResultSubmission;
+use App\Models\PlayerProfile;
 use App\Models\RankedMatch;
 use App\Models\Tournament;
 use App\Models\User;
 use App\Policies\MatchResultSubmissionPolicy;
+use App\Support\LifeColor;
 use Illuminate\Support\Str;
 
 /**
@@ -60,7 +62,7 @@ class LifeCounterService
                 'subtitle' => 'Mesa Commander · Rodada '.$match->round,
                 'format' => $tournament->format,
                 'startingLife' => $life,
-                'players' => $seats->map(fn ($p) => ['id' => $p->id, 'name' => $p->displayName()])->all(),
+                'players' => $seats->map(fn ($p) => $this->seat($p->id, $p->displayName(), $p->profile))->all(),
                 'meIndex' => $mine === false ? 0 : $mine,
                 'submit' => $organizer ? ['kind' => 'pod', 'method' => 'PUT', 'url' => route('matches.update', [$tournament, $match])] : null,
                 'resultUrl' => $organizer ? route('tournaments.show', $tournament) : route('matches.mine'),
@@ -88,8 +90,8 @@ class LifeCounterService
             // Liga aceita 1x1 / 1x0 por tempo; o servidor valida o placar final.
             'earlyEnd' => true,
             'players' => [
-                ['id' => $match->player_one_id, 'name' => $match->playerOne?->displayName()],
-                ['id' => $match->player_two_id, 'name' => $match->playerTwo?->displayName()],
+                $this->seat($match->player_one_id, $match->playerOne?->displayName(), $match->playerOne?->profile),
+                $this->seat($match->player_two_id, $match->playerTwo?->displayName(), $match->playerTwo?->profile),
             ],
             'meIndex' => $meIndex,
             'submit' => $participant
@@ -118,8 +120,8 @@ class LifeCounterService
             'winsNeeded' => $match->winsNeeded(),
             'earlyEnd' => $allowDraws,
             'players' => [
-                ['id' => $match->player_one_profile_id, 'name' => $match->playerOne?->displayName()],
-                ['id' => $match->player_two_profile_id, 'name' => $match->playerTwo?->displayName()],
+                $this->seat($match->player_one_profile_id, $match->playerOne?->displayName(), $match->playerOne),
+                $this->seat($match->player_two_profile_id, $match->playerTwo?->displayName(), $match->playerTwo),
             ],
             'meIndex' => $match->playerTwo?->account_user_id === $user->id ? 1 : 0,
             'submit' => ['kind' => 'ranked', 'method' => 'POST', 'url' => route('ranked.matches.results', $match)],
@@ -146,13 +148,19 @@ class LifeCounterService
             'winsNeeded' => intdiv((int) $challenge->best_of, 2) + 1,
             'earlyEnd' => false,
             'players' => [
-                ['id' => $challenge->challenger_id, 'name' => $challenge->challenger?->displayName()],
-                ['id' => $challenge->opponent_id, 'name' => $challenge->opponent?->displayName()],
+                $this->seat($challenge->challenger_id, $challenge->challenger?->displayName(), $challenge->challenger),
+                $this->seat($challenge->opponent_id, $challenge->opponent?->displayName(), $challenge->opponent),
             ],
             'meIndex' => $challenge->opponent?->account_user_id === $user->id ? 1 : 0,
             'submit' => ['kind' => 'challenge', 'method' => 'POST', 'url' => route('challenges.report', $challenge)],
             'resultUrl' => route('challenges.show', $challenge),
         ], $user);
+    }
+
+    /** Um lugar na mesa: id, nome e a cor que o dono da conta escolheu nas preferências (null = automática). */
+    private function seat(?int $id, ?string $name, ?PlayerProfile $profile): array
+    {
+        return ['id' => $id, 'name' => $name, 'color' => LifeColor::of($profile?->account)];
     }
 
     private function config(array $config, User $user): array

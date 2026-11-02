@@ -19,13 +19,72 @@ class ChallengeController extends Controller
         return Challenge::query()->where(fn ($q) => $q->where('challenger_id', $id)->orWhere('opponent_id', $id))->with(['challenger', 'opponent', 'casualMatch']);
     }
 
+    /** Desafios: o que está em andamento (o que precisa de você primeiro) e o histórico. Criar desafio fica numa tela própria. */
     public function index(Request $request)
     {
+        // Links antigos (?opponent= / ?ranked=) abriam o formulário aqui: agora ele mora em /challenges/new.
+        if ($request->hasAny(['opponent', 'ranked'])) {
+            return redirect()->route('challenges.create', $request->only(['opponent', 'ranked']));
+        }
         $this->service->expire();
-        $challenges = $this->query($request)->latest()->paginate(20);
-        $friends = $request->user()->friendProfiles()->wherePivot('status', 'accepted')->whereNotNull('account_user_id')->orderBy('nickname')->get();
+        $open = $this->query($request)->whereIn('status', ['pending', 'accepted'])->latest()->get();
+        $history = $this->query($request)->whereNotIn('status', ['pending', 'accepted'])->latest()->paginate(15);
+        $rows = $this->rows($request, $open->concat($history->getCollection()));
+        $open = $open->map(fn (Challenge $c) => $rows[$c->id])->sortByDesc('needs_me')->values();
+        $history->setCollection($history->getCollection()->map(fn (Challenge $c) => $rows[$c->id]));
+        $hasFriends = $this->friends($request)->isNotEmpty();
 
-        return view('challenges.index', compact('challenges', 'friends'));
+        return view('challenges.index', compact('open', 'history', 'hasFriends'));
+    }
+
+    public function create(Request $request)
+    {
+        $friends = $this->friends($request);
+
+        return view('challenges.create', compact('friends'));
+    }
+
+    private function friends(Request $request)
+    {
+        return $request->user()->friendProfiles()->wherePivot('status', 'accepted')->whereNotNull('account_user_id')->orderBy('nickname')->get();
+    }
+
+    /**
+     * Uma linha por desafio, do ponto de vista de quem está logado: o adversário, o placar (vitória/derrota) e
+     * o estado em palavras ("Confirmar placar", "Aguardando resposta"...). needs_me = falta uma ação sua.
+     */
+    private function rows(Request $request, $challenges): array
+    {
+        $user = $request->user();
+        $me = $user->ensurePlayerProfile()->id;
+        $ranked = RankedMatch::query()->with(['submissions' => fn ($q) => $q->where('status', 'pending')])
+            ->where('source_type', 'challenge')->whereIn('source_id', $challenges->where('is_ranked', true)->pluck('id'))->get()->keyBy('source_id');
+        $rows = [];
+        foreach ($challenges as $c) {
+            $mine = $c->challenger_id === $me;
+            $r = $c->is_ranked ? $ranked->get($c->id) : null;
+            $match = $c->casualMatch;
+            [$myScore, $theirScore] = $r
+                ? [$mine ? $r->score_one : $r->score_two, $mine ? $r->score_two : $r->score_one]
+                : [$mine ? $match?->challenger_games : $match?->opponent_games, $mine ? $match?->opponent_games : $match?->challenger_games];
+            $status = $r?->status ?? $match?->status;
+            $reportedByMe = (int) ($r ? $r->submissions->first()?->submitted_by : $match?->reported_by) === $user->id;
+
+            [$label, $tone, $needsMe] = match (true) {
+                $c->status === 'pending' => $mine ? ['Aguardando resposta', null, false] : ['Convite recebido', 'warning', true],
+                $c->status === 'accepted' && $status === 'reported' => $reportedByMe ? ['Aguardando confirmação', null, false] : ['Confirmar placar', 'warning', true],
+                $c->status === 'accepted' && $status === 'disputed' => ['Placar contestado', 'danger', true],
+                $c->status === 'accepted' => ['Jogar e enviar placar', 'info', true],
+                $c->status === 'completed' && $status === 'invalidated' => ['Anulada', null, false],
+                $c->status === 'completed' && $myScore !== null => $myScore > $theirScore ? ['Vitória '.$myScore.'–'.$theirScore, 'success', false]
+                    : ($myScore < $theirScore ? ['Derrota '.$myScore.'–'.$theirScore, 'danger', false] : ['Empate '.$myScore.'–'.$theirScore, null, false]),
+                default => [$c->statusLabel(), null, false],
+            };
+            $rows[$c->id] = ['challenge' => $c, 'opponent' => $mine ? $c->opponent : $c->challenger, 'invited_me' => ! $mine,
+                'label' => $label, 'tone' => $tone, 'needs_me' => $needsMe];
+        }
+
+        return $rows;
     }
 
     public function store(Request $request)

@@ -11,6 +11,7 @@
     const n = cfg.players.length;
     const isPod = cfg.mode === 'pod';
     const COLORS = ['#7c3aed', '#0891b2', '#d97706', '#059669', '#dc2626', '#db2777'];
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // ---------- estado ----------
     const freshPlayers = () => cfg.players.map(() => ({ life: cfg.startingLife, poison: 0, cmd: {}, out: false, ack: false }));
@@ -20,6 +21,29 @@
     try { state = JSON.parse(localStorage.getItem(cfg.storageKey) || 'null'); } catch (e) { state = null; }
     if (!state || state.v !== 1 || !Array.isArray(state.players) || state.players.length !== n) state = freshState();
     state.key = state.key || cfg.idempotencyKey;
+    // Cor do fundo: a que cada jogador escolheu nas preferências do perfil. Sem escolha (ou repetida na mesa),
+    // pega a primeira cor padrão que ninguém está usando, para os lados nunca ficarem iguais.
+    const seatColors = (() => {
+        const taken = new Set(), out = [];
+        cfg.players.forEach((p, i) => { if (p.color && !taken.has(p.color)) { out[i] = p.color; taken.add(p.color); } });
+        cfg.players.forEach((_, i) => {
+            if (out[i]) return;
+            out[i] = COLORS.find((c) => !taken.has(c)) || COLORS[i % COLORS.length];
+            taken.add(out[i]);
+        });
+        return out;
+    })();
+    const colorOf = (i) => seatColors[i];
+    // Fundo claro (ex.: branco) pede texto escuro; a conta segue a luminância relativa do WCAG.
+    function isLight(hex) {
+        const m = /^#([0-9a-f]{6})$/i.exec(hex || '');
+        if (!m) return false;
+        const [r, g, b] = [0, 2, 4].map((k) => {
+            const c = parseInt(m[1].slice(k, k + 2), 16) / 255;
+            return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5;
+    }
 
     const save = () => { try { localStorage.setItem(cfg.storageKey, JSON.stringify(state)); } catch (e) { /* aba anonima cheia: segue em memoria */ } };
     const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -91,7 +115,8 @@
 
     cfg.players.forEach((_, i) => {
         const seat = el('section', 'life-seat');
-        seat.style.setProperty('--c', COLORS[i % COLORS.length]);
+        seat.style.setProperty('--c', colorOf(i));
+        seat.classList.toggle('is-light', isLight(colorOf(i)));
         const panel = el('div', 'life-panel');
         const head = el('div', 'life-head');
         const nm = el('strong', 'life-name', name(i));
@@ -126,6 +151,7 @@
             seat.style.gridRow = String(row);
             seat.style.gridColumn = col + ' / span ' + span;
             panel.className = 'life-panel rot' + rot;
+            panels[i].rot = rot;
         });
     }
     layout();
@@ -149,9 +175,18 @@
         return state.finished ? 1 : null;
     }
 
+    // Quem levou a série (ou ficou de pé na mesa). null enquanto não acabou ou em empate.
+    function seriesWinner() {
+        if (!state.finished) return null;
+        if (isPod) return cfg.players.map((_, i) => i).find((i) => placeOf(i) === 1) ?? null;
+        return state.wins[0] === state.wins[1] ? null : (state.wins[0] > state.wins[1] ? 0 : 1);
+    }
+
     function render() {
+        const champion = seriesWinner();
         cfg.players.forEach((_, i) => {
             const p = state.players[i], ui = panels[i];
+            ui.seat.classList.toggle('is-winner', champion === i);
             ui.total.textContent = String(p.life);
             ui.seat.classList.toggle('is-out', !!p.out);
             ui.seat.classList.toggle('is-low', !p.out && p.life <= 5);
@@ -165,7 +200,7 @@
             if (cfg.commanderDamage) bits.push('⚔ ' + cmdMax);
             ui.poison.textContent = bits.join('   ');
             const place = placeOf(i);
-            ui.outBadge.textContent = p.out ? 'Eliminado · ' + place + 'º' : (place === 1 ? 'Vencedor · 1º' : '');
+            ui.outBadge.textContent = p.out ? 'Eliminado · ' + place + 'º' : (place === 1 ? '🏆 Vencedor · 1º' : (champion === i ? '🏆 Vencedor' : ''));
             ui.outBadge.hidden = !ui.outBadge.textContent;
         });
         hub.textContent = isPod ? '☰' : 'G' + Math.min(state.game, cfg.bestOf);
@@ -254,6 +289,7 @@
         state.game++;
         state.players = freshPlayers();
         save(); render();
+        celebrate(w, false);
         toast('Game ' + (state.game - 1) + ' para ' + name(w) + ' · ' + scoreText() + ' · Game ' + state.game + ' valendo!');
     }
 
@@ -272,7 +308,119 @@
     function finish() {
         state.finished = true;
         save(); render();
-        showResult();
+        const champion = seriesWinner();
+        if (champion === null || reduceMotion) return showResult();
+        // Primeiro a festa no lado de quem ganhou; o resumo aparece logo depois, por cima.
+        celebrate(champion, true);
+        setTimeout(() => { if (state.finished && modal.hidden) showResult(); }, 3500);
+    }
+
+    // ---------- comemoração ----------
+    // Confete, fogos e balões num canvas por cima de tudo, desenhados de frente para quem ganhou
+    // (o "para cima" segue a rotação do painel). Some sozinho; não bloqueia toques.
+    const UP = { 0: [0, -1], 180: [0, 1], 90: [1, 0], '-90': [-1, 0] };
+    let party = null;
+    function celebrate(i, big) {
+        if (reduceMotion) return;
+        const rect = panels[i].seat.getBoundingClientRect();
+        const [ux, uy] = UP[panels[i].rot] || UP[0];
+        const rx = -uy, ry = ux; // "direita" de quem está sentado ali
+        const sideways = ux !== 0;
+        const w = sideways ? rect.height : rect.width, h = sideways ? rect.width : rect.height;
+        const reach = Math.max(window.innerWidth, window.innerHeight);
+        // Cores claras e vivas: aparecem sobre qualquer fundo escolhido.
+        const tint = ['#facc15', '#fde68a', '#ffffff', '#f472b6', '#38bdf8', '#4ade80', '#a78bfa', '#fb923c'];
+        const pick = (list) => list[Math.floor(Math.random() * list.length)];
+        const rand = (a, b) => a + Math.random() * (b - a);
+
+        if (!party) {
+            const canvas = el('canvas', 'life-party');
+            canvas.setAttribute('aria-hidden', 'true');
+            root.append(canvas);
+            party = { canvas, ctx: canvas.getContext('2d'), bits: [], pending: 0, frame: null };
+        }
+        const p = party;
+        const later = (fn, ms) => { p.pending++; setTimeout(() => { p.pending--; fn(); }, ms); };
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        p.canvas.width = window.innerWidth * dpr;
+        p.canvas.height = window.innerHeight * dpr;
+        // Coordenadas locais: origem no centro do lado do vencedor, x para a direita dele, y para baixo dele.
+        p.frameOf = { a: rx * dpr, b: ry * dpr, c: -ux * dpr, d: -uy * dpr, e: (rect.left + rect.width / 2) * dpr, f: (rect.top + rect.height / 2) * dpr };
+        p.limit = reach * 1.2;
+
+        const confetti = (count, spread) => {
+            for (let k = 0; k < count; k++) {
+                p.bits.push({ kind: 'confetti', x: rand(-spread, spread), y: -h / 2 - rand(0, h * .6), vx: rand(-1.2, 1.2), vy: rand(1.5, 4),
+                    g: .06, rot: rand(0, Math.PI), vr: rand(-.2, .2), wob: rand(0, 6), size: rand(5, 10), color: pick(tint), life: 1 });
+            }
+        };
+        // Dois canhões nos cantos de baixo de quem ganhou, atirando para o alto e para o meio.
+        const cannons = (count) => {
+            [-1, 1].forEach((side) => {
+                for (let k = 0; k < count; k++) {
+                    p.bits.push({ kind: 'confetti', x: side * w * .48, y: h / 2 - 8, vx: -side * rand(1, 5.5), vy: -rand(7, 13.5),
+                        g: .16, rot: rand(0, Math.PI), vr: rand(-.25, .25), wob: rand(0, 6), size: rand(7, 12), color: pick(tint), life: 1 });
+                }
+            });
+        };
+        const firework = () => {
+            const x = rand(-w * .35, w * .35), y = rand(-h * .4, h * .05), color = pick(tint), sparks = 46;
+            for (let k = 0; k < sparks; k++) {
+                const angle = (k / sparks) * Math.PI * 2, speed = rand(2, 5.5);
+                p.bits.push({ kind: 'spark', x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, g: .05, drag: .965, color, life: 1, fade: rand(.012, .02) });
+            }
+            p.bits.push({ kind: 'flash', x, y, r: 6, color, life: 1, fade: .08 });
+        };
+        const balloon = () => {
+            p.bits.push({ kind: 'balloon', x: rand(-w * .45, w * .45), y: h / 2 + rand(30, 140), vy: -rand(.9, 1.7), sway: rand(0, 6), r: rand(16, 24),
+                color: pick(tint.filter((c) => c !== '#ffffff')), life: 1 });
+        };
+
+        if (big) {
+            // Uns 7 segundos de festa: ondas de confete, fogos espaçados e balões subindo devagar.
+            [0, 900, 2200, 3600].forEach((ms, k) => later(() => cannons(k ? 45 : 70), ms));
+            [0, 1300, 2800, 4300].forEach((ms) => later(() => confetti(110, Math.max(w, reach * .5)), ms));
+            for (let k = 0; k < 11; k++) later(firework, 150 + k * 450);
+            for (let k = 0; k < 18; k++) later(balloon, k * 260);
+        } else {
+            confetti(70, w / 2);
+            later(() => confetti(50, w / 2), 700);
+        }
+        if (!p.frame) p.frame = requestAnimationFrame(tick);
+    }
+
+    function tick() {
+        const p = party, { ctx, canvas } = p, f = p.frameOf;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.setTransform(f.a, f.b, f.c, f.d, f.e, f.f);
+        p.bits = p.bits.filter((b) => b.life > 0 && Math.abs(b.x) < p.limit && Math.abs(b.y) < p.limit);
+        for (const b of p.bits) {
+            ctx.globalAlpha = Math.max(0, Math.min(1, b.life));
+            if (b.kind === 'confetti') {
+                b.vy = Math.min(b.vy + b.g, 4.5); b.vx *= .985; b.x += b.vx + Math.sin(b.wob += .1) * .6; b.y += b.vy; b.rot += b.vr;
+                ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.rot); ctx.scale(1, Math.cos(b.wob));
+                ctx.fillStyle = b.color; ctx.fillRect(-b.size / 2, -b.size / 4, b.size, b.size / 2); ctx.restore();
+            } else if (b.kind === 'spark') {
+                b.vx *= b.drag; b.vy = b.vy * b.drag + b.g; b.x += b.vx; b.y += b.vy; b.life -= b.fade;
+                ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, 2.4, 0, Math.PI * 2); ctx.fill();
+            } else if (b.kind === 'flash') {
+                b.r += 5; b.life -= b.fade;
+                ctx.fillStyle = '#fff'; ctx.globalAlpha = Math.max(0, b.life) * .5; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+            } else if (b.kind === 'balloon') {
+                b.y += b.vy; b.x += Math.sin(b.sway += .03) * .7;
+                ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1.2;
+                ctx.beginPath(); ctx.moveTo(b.x, b.y + b.r * 1.2); ctx.quadraticCurveTo(b.x + 6, b.y + b.r * 2, b.x, b.y + b.r * 2.9); ctx.stroke();
+                ctx.fillStyle = b.color; ctx.beginPath(); ctx.ellipse(b.x, b.y, b.r, b.r * 1.2, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(b.x - 4, b.y + b.r * 1.3); ctx.lineTo(b.x + 4, b.y + b.r * 1.3); ctx.lineTo(b.x, b.y + b.r * 1.15); ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.ellipse(b.x - b.r * .35, b.y - b.r * .45, b.r * .22, b.r * .34, -.5, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+        ctx.globalAlpha = 1;
+        if (p.bits.length || p.pending) { p.frame = requestAnimationFrame(tick); return; }
+        // Acabou a festa: tira o canvas.
+        p.canvas.remove();
+        party = null;
     }
 
     // ---------- resultado ----------

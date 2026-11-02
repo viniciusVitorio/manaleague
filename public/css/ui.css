@@ -262,14 +262,36 @@ input[type=radio]:checked::before{transform:scale(1)}
 /* Cabecalho do perfil como card: foto, nome e acoes ficam dentro do mesmo grid dos cards de baixo */
 .profile-hero.card { align-items: center; padding: 20px; margin-bottom: 12px; }
 .profile-hero.card .profile-title { align-items: center; gap: 20px; }
-.profile-hero.card + .stat-grid, .profile-hero.card + .unlock-banner { margin-top: 0; }
+.profile-hero.card + .stat-grid, .profile-hero.card + .stat-tabs, .profile-hero.card + .unlock-banner { margin-top: 0; }
 @media (max-width: 780px) { .profile-hero.card { align-items: stretch; padding: 16px; } .profile-hero.card .profile-title { gap: 14px; } }
 @media (max-width: 780px) { .profile-hero.card .profile-title { align-items: flex-start; } .profile-hero.card .deck-actions { justify-content: flex-start; } }
 /* Acao unica do card de perfil: canto superior direito, nunca centralizada ao lado do conteudo */
 .profile-hero.card { position: relative; }
 .profile-hero-action { align-self: flex-start; flex: 0 0 auto; }
 .profile-hero-action form { margin: 0; }
-@media (max-width: 780px) { .profile-hero-action { position: absolute; top: 12px; right: 12px; } }
+/* Celular: o lapis do dono fica no canto (o titulo reserva o espaco dele); o botao de amizade do visitante desce para baixo do conteudo */
+@media (max-width: 780px) {
+  .profile-hero-action.is-icon { position: absolute; top: 12px; right: 12px; }
+  .profile-hero.card:has(.profile-hero-action.is-icon) .profile-title > div { padding-right: 40px; }
+  .profile-hero-action:not(.is-icon) { align-self: stretch; margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--ui-border); }
+  .profile-hero-action:not(.is-icon) .ui-btn { width: 100%; justify-content: center; }
+}
+/* Celular: foto ao lado do titulo, apelido e usuario; deck, conquistas e codigo usam a largura toda logo abaixo */
+@media (max-width: 480px) {
+  .profile-hero.card .profile-title { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 14px; align-items: start; }
+  .profile-hero.card .profile-title .eyebrow { margin-bottom: 4px; }
+  .profile-hero.card .profile-title > div { display: contents; }
+  .profile-hero.card .profile-title > .profile-avatar { grid-row: 1 / span 3; }
+  .profile-hero.card .profile-title > div > * { grid-column: 2; min-width: 0; }
+  .profile-hero.card .profile-title > div > :not(.eyebrow):not(.profile-name-line):not(.profile-handle) { grid-column: 1 / -1; }
+  .profile-hero.card .profile-avatar.large, .profile-hero.card .profile-avatar.large.has-photo { width: 64px; height: 64px; border-radius: 14px; font-size: 1.6rem; }
+  .profile-hero.card .profile-title h1 { font-size: 1.4rem; line-height: 1.2; overflow-wrap: anywhere; }
+  .profile-hero.card .profile-name-line { flex-wrap: nowrap; align-items: flex-start; gap: 2px; padding-right: 36px; }
+  .profile-hero.card .profile-copy-link { flex: 0 0 auto; width: 28px; height: 28px; }
+  .profile-hero.card .profile-handle { margin: 0; }
+  .profile-hero.card .profile-title > div > p:not(.profile-handle) { margin: 10px 0 0; }
+  .profile-hero.card .profile-meta { gap: 6px 14px; }
+}
 
 /* ---------- Mostrar/ocultar senha ---------- */
 .pw-field{position:relative;display:block;margin-top:6px}
@@ -289,6 +311,14 @@ input::-ms-reveal{display:none}
 .theme-swatch span{flex:1}
 .theme-option-dark .theme-swatch span:first-child{background:#09090b}.theme-option-dark .theme-swatch span:last-child{background:#27272a}
 .theme-option-light .theme-swatch span:first-child{background:#fafafa}.theme-option-light .theme-swatch span:last-child{background:#e4e4e7}
+/* Cor no contador de vida: bolinhas com o rádio escondido (continua acessível pelo teclado e leitor de tela) */
+.life-color-options{display:flex;flex-wrap:wrap;gap:8px}
+.life-color-option{position:relative;margin:0!important}
+.life-color-option input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.life-color-dot{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--c);border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(127,127,127,.4)}
+.life-color-dot.is-auto{background:conic-gradient(#7c3aed 0 25%,#0891b2 0 50%,#d97706 0 75%,#059669 0);color:#fff;font-size:.72rem;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.life-color-option input:checked + .life-color-dot{box-shadow:0 0 0 2px var(--ui-bg,#09090b),0 0 0 4px var(--ui-fg)}
+.life-color-option input:focus-visible + .life-color-dot{outline:2px solid #a78bfa;outline-offset:3px}
 .theme-toggle{margin:0;display:inline-flex}
 
 /* ---------- Patch notes ---------- */
@@ -325,10 +355,46 @@ input::-ms-reveal{display:none}
 .profile-copy-link:hover{background:var(--ui-muted);color:var(--ui-fg)}
 .profile-copy-status{color:var(--ui-success);font-size:.78rem}
 .profile-copy-status:empty{display:none}
-.h2h-record{display:flex;flex-wrap:wrap;gap:var(--s6);margin:var(--s2) 0 var(--s3)}
-.h2h-record b{display:block;font-size:1.45rem;font-weight:700;line-height:1.2}
-.h2h-record span{color:var(--ui-fg-subtle);font-size:.75rem}
 .h2h-last{margin:0;color:var(--ui-fg-muted);font-size:.85rem}
+/* Rival no perfil: voce x rival, com placar no meio e barra de vitorias/empates/derrotas */
+.rival-card{position:relative;overflow:hidden}
+.rival-card::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--ui-success),var(--ui-fg-faint) 50%,var(--ui-danger))}
+.rival-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
+.rival-top .eyebrow{display:inline-flex;align-items:center;gap:6px}
+.rival-status{padding:3px 10px;border:1px solid var(--ui-border-strong);border-radius:99px;color:var(--ui-fg-muted);font-size:.75rem;font-weight:600;white-space:nowrap}
+.rival-card.is-lead-me .rival-status{color:var(--ui-success);border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.07)}
+.rival-card.is-lead-rival .rival-status{color:var(--ui-danger);border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.07)}
+.rival-versus{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:var(--s4);margin:var(--s5) 0 var(--s4)}
+.rival-side,.rival-link{display:flex;flex-direction:column;align-items:center;gap:var(--s2);min-width:0;text-align:center}
+.rival-link{color:inherit;text-decoration:none}
+.rival-link:hover .rival-name{text-decoration:underline}
+.rival-link:hover .rival-avatar{border-color:var(--ui-fg-faint)}
+.profile-avatar.rival-avatar{width:72px;height:72px;border-radius:50%;font-size:2rem}
+.rival-name{max-width:100%;overflow:hidden;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.rival-score{display:grid;justify-items:center;gap:var(--s1);text-align:center}
+.rival-score-nums{display:flex;align-items:baseline;gap:var(--s3);font-variant-numeric:tabular-nums;line-height:1}
+.rival-score-nums b{font-size:2.4rem;font-weight:800}
+.rival-score-nums span{color:var(--ui-fg-faint);font-size:1.2rem}
+.rival-card.is-lead-me .rival-score-nums .is-wins{color:var(--ui-success)}
+.rival-card.is-lead-rival .rival-score-nums .is-losses{color:var(--ui-danger)}
+.rival-score small{max-width:160px;color:var(--ui-fg-subtle);font-size:.72rem}
+.rival-meter{display:flex;gap:2px;height:6px;border-radius:99px;overflow:hidden;background:var(--ui-accent)}
+.rival-meter span{min-width:6px}
+.rival-meter .is-wins{background:var(--ui-success)}
+.rival-meter .is-draws{background:var(--ui-fg-faint)}
+.rival-meter .is-losses{background:var(--ui-danger)}
+.rival-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s2) var(--s3);margin-top:var(--s3)}
+.rival-foot .btn{display:inline-flex;align-items:center;gap:6px}
+@media(max-width:480px){.rival-versus{gap:var(--s2)}.profile-avatar.rival-avatar{width:56px;height:56px;font-size:1.6rem}.rival-score-nums b{font-size:1.9rem}.rival-foot .btn{width:100%;justify-content:center}}
+/* Ultimos resultados no card de V-D-E: bolinhas (verde vitoria, vermelho derrota, cinza empate) */
+.form-row{display:flex;align-items:center;gap:10px;margin-top:10px}
+.form-dots{display:flex;align-items:center;gap:6px;margin:0;padding:0;list-style:none}
+.form-dot{width:12px;height:12px;border-radius:50%;background:currentColor;opacity:.55;cursor:default;transition:opacity .15s}
+.form-dot:hover{opacity:1}
+.form-dot.is-win{color:var(--ui-success)}.form-dot.is-loss{color:var(--ui-danger)}.form-dot.is-draw{color:var(--ui-fg-faint)}
+/* A mais recente (primeira, a esquerda) ganha um anel para marcar por onde os resultados novos entram */
+.form-dot:first-child{opacity:.9;box-shadow:0 0 0 2px var(--ui-card),0 0 0 3.5px currentColor}
+.form-hint{color:var(--ui-fg-subtle);font-size:.7rem;white-space:nowrap}
 .avatar-link{display:contents}
 
 /* ---------- Dia de evento: cronômetro (organizador) e check-in ---------- */
@@ -391,5 +457,77 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 .search-source{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
 
 /* ---------- Foil no deck ---------- */
-.foil-tag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;border:1px solid rgba(196,181,253,.5);background:linear-gradient(120deg,rgba(125,211,252,.18),rgba(216,180,254,.22),rgba(253,224,71,.18));color:var(--ui-fg);font-size:.72rem;font-weight:600;line-height:1.5;vertical-align:1px}
+/* Foil é só um detalhe: um ✦ discreto ao lado do nome, sem etiqueta (etiqueta fica para o que pede atenção, como "Banido") */
+.foil-mark{margin-left:5px;color:#a78bfa;font-size:.78rem;line-height:1;cursor:default;opacity:.85}
+:root[data-theme="light"] .foil-mark{color:#7c3aed}
 .foil-pick{margin:8px 0 0;font-size:.85rem;color:var(--ui-fg-soft)}
+/* No modo "Minha coleção" a caixa some: o foil vem da coleção. Precisa de !important porque a regra geral
+   label:has(> input[type=checkbox]) { display:flex !important } venceria o [hidden]. */
+.foil-pick[hidden]{display:none !important}
+
+/* ---------- Estatísticas por tipo de partida (abas sem JS: rádio + label) ---------- */
+.stat-tabs{margin-bottom:20px}
+.stat-tab-input{position:absolute;opacity:0;pointer-events:none}
+.stat-tab-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.stat-tab{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid var(--ui-border);border-radius:999px;color:var(--ui-fg-muted);font-size:.82rem;cursor:pointer;user-select:none}
+.stat-tab:hover{color:var(--ui-fg);border-color:var(--ui-border-strong)}
+.stat-tab .count{color:var(--ui-fg-subtle);font-size:.74rem}
+.stat-tabs .stat-panel{display:none;margin-bottom:0}
+.stat-empty{grid-column:1/-1;margin:0}
+#stat-all:checked ~ .stat-tab-list label[for="stat-all"]{background:var(--ui-accent);border-color:var(--ui-border-strong);color:var(--ui-fg)}
+#stat-all:checked ~ .stat-panel[data-kind="all"]{display:grid}
+#stat-tournament:checked ~ .stat-tab-list label[for="stat-tournament"]{background:var(--ui-accent);border-color:var(--ui-border-strong);color:var(--ui-fg)}
+#stat-tournament:checked ~ .stat-panel[data-kind="tournament"]{display:grid}
+#stat-casual:checked ~ .stat-tab-list label[for="stat-casual"]{background:var(--ui-accent);border-color:var(--ui-border-strong);color:var(--ui-fg)}
+#stat-casual:checked ~ .stat-panel[data-kind="casual"]{display:grid}
+#stat-ranked:checked ~ .stat-tab-list label[for="stat-ranked"]{background:var(--ui-accent);border-color:var(--ui-border-strong);color:var(--ui-fg)}
+#stat-ranked:checked ~ .stat-panel[data-kind="ranked"]{display:grid}
+#stat-all:focus-visible ~ .stat-tab-list label[for="stat-all"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}
+#stat-tournament:focus-visible ~ .stat-tab-list label[for="stat-tournament"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}
+#stat-casual:focus-visible ~ .stat-tab-list label[for="stat-casual"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}
+#stat-ranked:focus-visible ~ .stat-tab-list label[for="stat-ranked"]{outline:2px solid var(--ui-ring,var(--ui-fg-muted));outline-offset:2px}
+
+/* ---------- Confirmar todos os placares pendentes ---------- */
+.confirm-all{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin:0 0 12px;padding:12px 14px;border:1px solid var(--ui-border-strong);border-radius:10px;background:var(--ui-muted)}
+.confirm-all p{margin:0;font-size:.88rem}.confirm-all p span{display:block;color:var(--ui-fg-subtle);font-size:.78rem}
+.confirm-all form{margin:0}
+
+/* ---------- Tela ao vivo: aviso quando há novidade e a pessoa está digitando ---------- */
+.live-notice{position:fixed;left:50%;bottom:18px;z-index:60;display:flex;align-items:center;gap:12px;max-width:calc(100% - 32px);padding:10px 12px 10px 16px;transform:translateX(-50%);border:1px solid var(--ui-border-strong);border-radius:10px;background:var(--ui-card);color:var(--ui-fg);font-size:.86rem;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+
+/* Campo de avatar: um emoji so, grande e centralizado */
+.emoji-input{width:72px;height:56px;padding:0;font-size:1.8rem;line-height:1;text-align:center}
+
+/* ---------- Desafios: lista (em andamento + historico) e formulario de novo desafio ---------- */
+.page-head-actions{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.challenge-list{margin-bottom:var(--s4)}
+.challenge-row{text-decoration:none}
+.challenge-row:hover{background:var(--ui-muted)}
+.challenge-row .ui-avatar{width:36px;height:36px;font-size:1rem;flex:0 0 auto}
+.challenge-row .ui-row-title{color:var(--ui-fg);font-weight:500}
+.challenge-row.needs-me .ui-row-title{font-weight:700}
+.challenge-ranked{color:var(--ui-warning);font-weight:600}
+.challenge-row-go{flex:0 0 auto;color:var(--ui-fg-subtle)}
+@media(max-width:480px){.challenge-row{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:var(--s3);row-gap:6px}.challenge-row .ui-avatar{grid-row:1/span 2}.challenge-row .ui-badge{grid-column:2;justify-self:start}.challenge-row-go{display:none}.challenge-row .ui-row-title{white-space:normal}}
+.challenge-form{display:grid;gap:var(--s4)}
+.challenge-form .ui-option-box{border-bottom:1px solid var(--ui-border)}
+.friend-choices{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--s2);max-height:300px;overflow:auto;padding:2px}
+.friend-choice{position:relative;align-items:center;gap:10px;margin:0!important;padding:10px 12px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);background:var(--ui-bg);color:var(--ui-fg);font-weight:500;cursor:pointer;transition:border-color .15s,background-color .15s}
+.friend-choice:hover{border-color:var(--ui-border-strong)}
+.friend-choice span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.friend-choice .ui-avatar{flex:0 0 auto;width:32px;height:32px}
+.friend-choice input,.choice-chip input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.friend-choice:has(input:checked){border-color:var(--ui-primary);background:var(--ui-muted);box-shadow:0 0 0 1px var(--ui-primary)}
+.friend-choice:has(input:focus-visible),.choice-chip:has(input:focus-visible){outline:2px solid var(--ui-ring);outline-offset:2px}
+.challenge-fields{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:var(--s4);align-items:start;margin-bottom:var(--s4)}
+.challenge-fields > label{margin:0}
+.choice-group{margin:0;padding:0;border:0}
+.choice-group legend{margin:0 0 6px;padding:0;color:var(--ui-fg-soft);font-size:.82rem;font-weight:500}
+.choice-chips{display:flex;flex-wrap:wrap;gap:6px}
+.choice-chip{position:relative;margin:0!important}
+.choice-chip span{display:inline-flex;align-items:center;height:38px;padding:0 14px;border:1px solid var(--ui-border);border-radius:999px;background:var(--ui-bg);color:var(--ui-fg-muted);font-size:.84rem;font-weight:500;white-space:nowrap;transition:background-color .15s,color .15s}
+.choice-chip:hover span{border-color:var(--ui-border-strong);color:var(--ui-fg)}
+.choice-chip input:checked + span{border-color:var(--ui-primary);background:var(--ui-primary);color:var(--ui-primary-fg)}
+.challenge-form-actions{display:flex;justify-content:flex-end;gap:var(--s2)}
+@media(max-width:780px){.challenge-fields{grid-template-columns:1fr}}
+@media(max-width:480px){.challenge-form-actions{flex-direction:column-reverse}.challenge-form-actions .ui-btn{justify-content:center}}
