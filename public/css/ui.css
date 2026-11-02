@@ -269,7 +269,29 @@ input[type=radio]:checked::before{transform:scale(1)}
 .profile-hero.card { position: relative; }
 .profile-hero-action { align-self: flex-start; flex: 0 0 auto; }
 .profile-hero-action form { margin: 0; }
-@media (max-width: 780px) { .profile-hero-action { position: absolute; top: 12px; right: 12px; } }
+/* Celular: o lapis do dono fica no canto (o titulo reserva o espaco dele); o botao de amizade do visitante desce para baixo do conteudo */
+@media (max-width: 780px) {
+  .profile-hero-action.is-icon { position: absolute; top: 12px; right: 12px; }
+  .profile-hero.card:has(.profile-hero-action.is-icon) .profile-title > div { padding-right: 40px; }
+  .profile-hero-action:not(.is-icon) { align-self: stretch; margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--ui-border); }
+  .profile-hero-action:not(.is-icon) .ui-btn { width: 100%; justify-content: center; }
+}
+/* Celular: foto ao lado do titulo, apelido e usuario; deck, conquistas e codigo usam a largura toda logo abaixo */
+@media (max-width: 480px) {
+  .profile-hero.card .profile-title { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 14px; align-items: start; }
+  .profile-hero.card .profile-title .eyebrow { margin-bottom: 4px; }
+  .profile-hero.card .profile-title > div { display: contents; }
+  .profile-hero.card .profile-title > .profile-avatar { grid-row: 1 / span 3; }
+  .profile-hero.card .profile-title > div > * { grid-column: 2; min-width: 0; }
+  .profile-hero.card .profile-title > div > :not(.eyebrow):not(.profile-name-line):not(.profile-handle) { grid-column: 1 / -1; }
+  .profile-hero.card .profile-avatar.large, .profile-hero.card .profile-avatar.large.has-photo { width: 64px; height: 64px; border-radius: 14px; font-size: 1.6rem; }
+  .profile-hero.card .profile-title h1 { font-size: 1.4rem; line-height: 1.2; overflow-wrap: anywhere; }
+  .profile-hero.card .profile-name-line { flex-wrap: nowrap; align-items: flex-start; gap: 2px; padding-right: 36px; }
+  .profile-hero.card .profile-copy-link { flex: 0 0 auto; width: 28px; height: 28px; }
+  .profile-hero.card .profile-handle { margin: 0; }
+  .profile-hero.card .profile-title > div > p:not(.profile-handle) { margin: 10px 0 0; }
+  .profile-hero.card .profile-meta { gap: 6px 14px; }
+}
 
 /* ---------- Mostrar/ocultar senha ---------- */
 .pw-field{position:relative;display:block;margin-top:6px}

@@ -54,9 +54,10 @@
         </div>
     </div>
     {{-- Card de identidade: so uma acao secundaria, no canto (regra em docs/ui-rules.md). Navegacao fica no menu. --}}
-    <div class="profile-hero-action">
+    {{-- Dono: só o lápis no canto (ícone com aria-label). Visitante: o botão de amizade, que no celular desce para baixo do conteúdo. --}}
+    <div @class(['profile-hero-action', 'is-icon' => $isOwner])>
     @if($isOwner)
-        <a class="ui-btn ui-btn-outline ui-btn-sm" href="{{ route('profiles.edit') }}"><x-icon name="pencil" :size="14" />Editar perfil</a>
+        <a class="ui-icon-btn profile-edit-btn" href="{{ route('profiles.edit') }}" aria-label="Editar perfil" title="Editar perfil"><x-icon name="pencil" /></a>
     @elseif($friendshipStatus || auth()->user()->can('befriend', $profile))
         @php($friendLabel = match($friendshipStatus) { 'pending' => 'Cancelar solicitação', 'accepted' => 'Remover amizade', default => 'Solicitar amizade' })
         <form method="POST" action="{{ route('profiles.friend', $profile) }}">@csrf @method('PATCH')<button class="ui-btn ui-btn-outline ui-btn-sm"><x-icon name="{{ $friendshipStatus ? 'users' : 'user-plus' }}" :size="14" />{{ $friendLabel }}</button></form>
