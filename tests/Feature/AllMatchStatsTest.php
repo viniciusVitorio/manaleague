@@ -53,13 +53,23 @@ class AllMatchStatsTest extends TestCase
         $this->assertSame([6, 4, 75], [$stats['games_for'], $stats['games_against'], $stats['winrate']]);
         // Ordem: torneio V, casual V, casual D, ranked V → a maior sequência é 2.
         $this->assertSame(2, $stats['best_streak']);
+        // Forma recente: da mais nova para a mais antiga.
+        $this->assertSame(['win', 'loss', 'win', 'win'], array_column($stats['recent'], 'result'));
+        $this->assertSame(['ranked', 'casual', 'casual', 'tournament'], array_column($stats['recent'], 'kind'));
         $this->assertSame(1, $stats['by_kind']['tournament']['wins']);
         $this->assertSame([1, 1, 2], [$stats['by_kind']['casual']['wins'], $stats['by_kind']['casual']['losses'], $stats['by_kind']['casual']['played']]);
         $this->assertSame([1, 0], [$stats['by_kind']['ranked']['wins'], $stats['by_kind']['ranked']['losses']]);
 
         $this->actingAs($ana)->get(route('profiles.index'))->assertOk()
             ->assertSee('id="stat-casual"', false)->assertSee('Desafios')->assertSee('Ranked')
-            ->assertSee('3–1')->assertSee('Aproveitamento em 4 partidas');
+            // Ordem dos cards: partidas jogadas, V–D–E, aproveitamento, maior sequência.
+            ->assertSeeInOrder(['data-kind="all"', '<b>4</b><span>Partidas jogadas', '<b>3–1–0</b><span>Vitórias / derrotas / empates', '<b>75%</b><span>Aproveitamento', '<b>2</b><span>Maior sequência de vitórias'], false)
+            // Desafio casual não tem empate: só V–D.
+            ->assertSeeInOrder(['data-kind="casual"', '<b>2</b><span>Partidas jogadas', '<b>1–1</b><span>Vitórias / derrotas</span>', 'data-kind="ranked"'], false)
+            ->assertDontSee('<span>Games</span>', false)
+            // Últimos resultados: bolinhas dentro do card de V–D–E, sem área separada.
+            ->assertSeeInOrder(['data-kind="all"', 'Vitórias / derrotas / empates</span>', 'class="form-dots"', 'form-dot is-win" title="Vitória 2–1 · Ranked', 'form-dot is-loss', '<b>75%</b>'], false)
+            ->assertSee('← mais recente</small>', false)->assertDontSee('Forma recente')->assertDontSee('Sequência atual');
         $this->actingAs($ana)->get(route('dashboard'))->assertOk()->assertSee('3V · 0E · 1D em torneios, desafios e ranked');
     }
 

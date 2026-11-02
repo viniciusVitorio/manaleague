@@ -1,5 +1,6 @@
 @extends('layouts.app')
 @section('content')
+@push('head')<script src="{{ \App\Support\VersionedAsset::url('js/emoji-input.js') }}" defer></script>@endpush
 @php($me = auth()->user())
 <header class="hero compact"><div><a class="back-link" href="{{ route('profiles.index') }}">← Meu perfil</a><span class="eyebrow">Configurações</span><h1>Editar perfil</h1><p>Gerencie sua identidade, sua senha e suas preferências.</p></div></header>
 
@@ -26,7 +27,7 @@
     <section class="card section-card"><h2>Dados pessoais</h2>
         <form method="POST" action="{{ route('profiles.update') }}">@csrf @method('PATCH')
             <label>Nome de exibição <small>Aparece no perfil, nos torneios e no ranking. Pode ter espaços e acentos.</small><input name="nickname" value="{{ old('nickname', $profile->nickname) }}" maxlength="80" required></label>
-            <label>Avatar <small>Use um emoji</small><input name="avatar" value="{{ old('avatar', $profile->avatar) }}" maxlength="20" placeholder="🧙"></label>
+            <label>Avatar <small>Só 1 emoji. Digitar outro troca o atual.</small><input class="emoji-input" name="avatar" value="{{ old('avatar', $profile->emoji()) }}" maxlength="20" placeholder="🧙" autocomplete="off" spellcheck="false" data-single-emoji></label>
             <button class="btn btn-primary">Salvar perfil</button>
         </form>
     </section>

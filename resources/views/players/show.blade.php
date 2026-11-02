@@ -54,9 +54,10 @@
         </div>
     </div>
     {{-- Card de identidade: so uma acao secundaria, no canto (regra em docs/ui-rules.md). Navegacao fica no menu. --}}
-    <div class="profile-hero-action">
+    {{-- Dono: só o lápis no canto (ícone com aria-label). Visitante: o botão de amizade, que no celular desce para baixo do conteúdo. --}}
+    <div @class(['profile-hero-action', 'is-icon' => $isOwner])>
     @if($isOwner)
-        <a class="ui-btn ui-btn-outline ui-btn-sm" href="{{ route('profiles.edit') }}"><x-icon name="pencil" :size="14" />Editar perfil</a>
+        <a class="ui-icon-btn profile-edit-btn" href="{{ route('profiles.edit') }}" aria-label="Editar perfil" title="Editar perfil"><x-icon name="pencil" /></a>
     @elseif($friendshipStatus || auth()->user()->can('befriend', $profile))
         @php($friendLabel = match($friendshipStatus) { 'pending' => 'Cancelar solicitação', 'accepted' => 'Remover amizade', default => 'Solicitar amizade' })
         <form method="POST" action="{{ route('profiles.friend', $profile) }}">@csrf @method('PATCH')<button class="ui-btn ui-btn-outline ui-btn-sm"><x-icon name="{{ $friendshipStatus ? 'users' : 'user-plus' }}" :size="14" />{{ $friendLabel }}</button></form>
@@ -108,9 +109,19 @@
         @php($record = $kind === 'all' ? $summary : $summary['by_kind'][$kind])
         <div class="stat-grid stat-panel" data-kind="{{ $kind }}">
             @if($record['played'])
-                <article class="card stat-card"><b>{{ $record['wins'] }}–{{ $record['losses'] }}@if($record['draws'])–{{ $record['draws'] }}@endif</b><span>Vitórias / derrotas{{ $record['draws'] ? ' / empates' : '' }}</span></article>
-                <article class="card stat-card"><b>{{ $record['games_for'] }}–{{ $record['games_against'] }}</b><span>Games</span></article>
-                <article class="card stat-card"><b>{{ $record['winrate'] }}%</b><span>Aproveitamento em {{ $record['played'] }} {{ $record['played'] === 1 ? 'partida' : 'partidas' }}</span></article>
+                {{-- Ordem: partidas jogadas, V–D–E (desafio casual não tem empate), aproveitamento, maior sequência. --}}
+                @php($withDraws = $kind !== 'casual')
+                <article class="card stat-card"><b>{{ $record['played'] }}</b><span>{{ $record['played'] === 1 ? 'Partida jogada' : 'Partidas jogadas' }}</span></article>
+                {{-- Bolinhas discretas com os últimos resultados (mais recente à esquerda); o detalhe fica na dica. --}}
+                <article class="card stat-card"><b>{{ $record['wins'] }}–{{ $record['losses'] }}@if($withDraws)–{{ $record['draws'] }}@endif</b><span>{{ $withDraws ? 'Vitórias / derrotas / empates' : 'Vitórias / derrotas' }}</span>
+                    <div class="form-row"><ol class="form-dots" aria-label="Últimos resultados, do mais recente ao mais antigo">
+                        @foreach($record['recent'] as $game)
+                            @php($gameTip = ['win' => 'Vitória', 'loss' => 'Derrota', 'draw' => 'Empate'][$game['result']].($game['bye'] ? ' por BYE' : ' '.$game['for'].'–'.$game['against']).' · '.\App\Services\PlayerStatsService::KIND_SINGULAR[$game['kind']].($game['date'] ? ' · '.$game['date']->timezone(config('app.timezone'))->format('d/m/Y') : ''))
+                            <li class="form-dot is-{{ $game['result'] }}" title="{{ $gameTip }}"><span class="sr-only">{{ $gameTip }}</span></li>
+                        @endforeach
+                    </ol><small class="form-hint" aria-hidden="true">← mais recente</small></div>
+                </article>
+                <article class="card stat-card"><b>{{ $record['winrate'] }}%</b><span>Aproveitamento</span></article>
                 <article class="card stat-card"><b>{{ $record['best_streak'] }}</b><span>Maior sequência de vitórias</span></article>
             @else
                 <p class="card stat-card stat-empty muted">{{ $statEmpty[$kind] }}</p>
@@ -118,6 +129,52 @@
         </div>
     @endforeach
 </section>
+
+{{-- Rival: o amigo mais enfrentado em desafios. Sem desafio confirmado, a seção nem aparece. --}}
+@php($rival ??= null)
+@if($rival)
+@php($rivalName = $rival['profile']->nickname)
+@php($leader = $rival['wins'] <=> $rival['losses'])
+@php($rivalStatus = $leader > 0 ? ($isOwner ? 'Você lidera' : $profile->nickname.' lidera') : ($leader < 0 ? $rivalName.' lidera' : 'Rivalidade empatada'))
+<section class="card section-card rival-card is-lead-{{ ['-1' => 'rival', '0' => 'tie', '1' => 'me'][(string) $leader] }}" aria-labelledby="rival-title">
+    <div class="rival-top">
+        <span class="eyebrow"><x-icon name="swords" size="13" /> Rival</span>
+        <span class="rival-status">{{ $rivalStatus }}</span>
+    </div>
+    <h2 id="rival-title" class="sr-only">Rival: {{ $rivalName }}</h2>
+    <p class="sr-only">{{ $isOwner ? 'Seu placar' : 'Placar de '.$profile->nickname }} nos desafios contra {{ $rivalName }}: {{ $rival['wins'] }} {{ $rival['wins'] === 1 ? 'vitória' : 'vitórias' }}, {{ $rival['losses'] }} {{ $rival['losses'] === 1 ? 'derrota' : 'derrotas' }}@if($rival['draws']) e {{ $rival['draws'] }} {{ $rival['draws'] === 1 ? 'empate' : 'empates' }}@endif.</p>
+    <div class="rival-versus" aria-hidden="true">
+        <div class="rival-side">
+            <x-avatar :of="$profile" class="profile-avatar rival-avatar" />
+            <span class="rival-name">{{ $isOwner ? 'Você' : $profile->nickname }}</span>
+        </div>
+        <div class="rival-score">
+            <div class="rival-score-nums"><b class="is-wins">{{ $rival['wins'] }}</b><span>×</span><b class="is-losses">{{ $rival['losses'] }}</b></div>
+            <small>{{ $isOwner ? 'Seu placar nos desafios' : 'Placar de '.$profile->nickname.' nos desafios' }}@if($rival['draws']) · {{ $rival['draws'] }} {{ $rival['draws'] === 1 ? 'empate' : 'empates' }}@endif</small>
+        </div>
+        <div class="rival-side">
+            @can('view', $rival['profile'])
+                <a class="rival-link" href="{{ route('profiles.show', $rival['profile']) }}" tabindex="-1"><x-avatar :of="$rival['profile']" class="profile-avatar rival-avatar" /><span class="rival-name">{{ $rivalName }}</span></a>
+            @else
+                <x-avatar :of="$rival['profile']" class="profile-avatar rival-avatar" /><span class="rival-name">{{ $rivalName }}</span>
+            @endcan
+        </div>
+    </div>
+    <div class="rival-meter" aria-hidden="true">
+        @if($rival['wins'])<span class="is-wins" style="flex-grow:{{ $rival['wins'] }}"></span>@endif
+        @if($rival['draws'])<span class="is-draws" style="flex-grow:{{ $rival['draws'] }}"></span>@endif
+        @if($rival['losses'])<span class="is-losses" style="flex-grow:{{ $rival['losses'] }}"></span>@endif
+    </div>
+    <div class="rival-foot">
+        <p class="h2h-last">{{ $rival['played'] }} {{ $rival['played'] === 1 ? 'desafio' : 'desafios' }} {{ $isOwner ? 'entre vocês' : 'entre '.$profile->nickname.' e '.$rivalName }} · último em {{ $rival['last']->timezone(config('app.timezone'))->format('d/m/Y') }}</p>
+        @if($isOwner)
+            <a class="btn btn-secondary btn-small" href="{{ route('challenges.index', ['opponent' => $rival['profile']->id]) }}"><x-icon name="swords" size="15" /> Desafiar {{ $rivalName }}</a>
+        @elseif(! $rival['profile']->is(auth()->user()?->playerProfile))
+            @can('view', $rival['profile'])<a class="btn btn-ghost btn-small" href="{{ route('profiles.show', $rival['profile']) }}">Ver perfil de {{ $rivalName }}</a>@endcan
+        @endif
+    </div>
+</section>
+@endif
 
 @php($headToHead ??= null)
 @if($headToHead && ($headToHead['played'] || $friendshipStatus === 'accepted'))

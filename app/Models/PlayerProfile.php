@@ -70,10 +70,19 @@ class PlayerProfile extends Model
         return $handle;
     }
 
+    /** O emoji do perfil (só um; um valor antigo com vários mostra apenas o primeiro) ou null. */
+    public function emoji(): ?string
+    {
+        $avatar = trim((string) $this->avatar);
+        if ($avatar === '') return null;
+
+        return function_exists('grapheme_substr') ? (grapheme_substr($avatar, 0, 1) ?: null) : mb_substr($avatar, 0, 1);
+    }
+
     /** Emoji escolhido no perfil ou, sem ele, a inicial do apelido (para os circulos de avatar). */
     public function mark(): string
     {
-        return $this->avatar ?: mb_strtoupper(mb_substr($this->nickname ?: '?', 0, 1));
+        return $this->emoji() ?? mb_strtoupper(mb_substr($this->nickname ?: '?', 0, 1));
     }
 
     /** URL da foto de perfil (assinada no S3) ou null quando nao ha foto. */
@@ -85,7 +94,7 @@ class PlayerProfile extends Model
     /** Apelido com o emoji do perfil na frente, quando houver. */
     public function displayName(): string
     {
-        return ($this->avatar ? $this->avatar.' ' : '').$this->nickname;
+        return (($emoji = $this->emoji()) ? $emoji.' ' : '').$this->nickname;
     }
 
     public function rankedSuspended(): bool

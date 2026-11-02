@@ -76,7 +76,7 @@ class ClubService
         $rows = [];
         $row = function ($player) use (&$rows) {
             $key = $player->player_profile_id ? 'p'.$player->player_profile_id : 'n'.mb_strtolower(trim($player->name));
-            $rows[$key] ??= ['key' => $key, 'name' => $player->name, 'profile_id' => $player->player_profile_id, 'avatar' => $player->profile?->avatar, 'events' => [], 'wins' => 0, 'draws' => 0, 'losses' => 0, 'points' => 0, 'titles' => 0];
+            $rows[$key] ??= ['key' => $key, 'name' => $player->name, 'profile_id' => $player->player_profile_id, 'avatar' => $player->profile?->emoji(), 'events' => [], 'wins' => 0, 'draws' => 0, 'losses' => 0, 'points' => 0, 'titles' => 0];
 
             return $key;
         };

@@ -20,6 +20,12 @@ class PlayerStatsService
     /** Tipos de partida, na ordem das abas do perfil. */
     public const KINDS = ['tournament' => 'Torneios', 'casual' => 'Desafios', 'ranked' => 'Ranked'];
 
+    /** Nome de uma partida só, para a dica da forma recente. */
+    public const KIND_SINGULAR = ['tournament' => 'Torneio', 'casual' => 'Desafio', 'ranked' => 'Ranked'];
+
+    /** Quantas partidas a "forma recente" mostra. */
+    public const RECENT_FORM = 5;
+
     public function for(PlayerProfile $profile): array
     {
         $entries = $profile->entries()->with(['tournament', 'matchesAsPlayerOne', 'matchesAsPlayerTwo'])->get();
@@ -163,12 +169,18 @@ class PlayerStatsService
         }
 
         $played = $wins + $losses + $draws;
+        $outcome = fn (array $r) => $r['for'] > $r['against'] ? 'win' : ($r['for'] < $r['against'] ? 'loss' : 'draw');
+
+        // Forma recente: as últimas partidas, da mais nova para a mais antiga.
+        $recent = $results->reverse()->take(self::RECENT_FORM)->values()
+            ->map(fn (array $r) => ['result' => $outcome($r), 'for' => $r['for'], 'against' => $r['against'], 'kind' => $r['kind'], 'bye' => $r['bye'], 'date' => $r['date']])->all();
 
         return [
             'wins' => $wins, 'losses' => $losses, 'draws' => $draws, 'played' => $played,
             'games_for' => $gamesFor, 'games_against' => $gamesAgainst,
             'winrate' => $played ? (int) round($wins / $played * 100) : 0,
             'best_streak' => $bestStreak,
+            'recent' => $recent,
         ];
     }
 
