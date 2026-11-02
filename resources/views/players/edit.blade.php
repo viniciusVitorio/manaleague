@@ -64,6 +64,16 @@
                     @endforeach
                 </div>
             </fieldset>
+            <fieldset class="pref-group">
+                <legend>Cor no contador de vida</legend>
+                <p class="muted small-note">O fundo do seu lado da mesa no contador. Se o adversário escolher a mesma cor, um dos dois fica com uma cor automática.</p>
+                <div class="life-color-options">
+                    <label class="life-color-option" title="Automática"><input type="radio" name="life_color" value="" @checked(! \App\Support\LifeColor::of($me))><span class="life-color-dot is-auto" aria-hidden="true">A</span><span class="sr-only">Automática</span></label>
+                    @foreach(\App\Support\LifeColor::ALL as $hex => $colorName)
+                        <label class="life-color-option" title="{{ $colorName }}"><input type="radio" name="life_color" value="{{ $hex }}" @checked(\App\Support\LifeColor::of($me) === $hex)><span class="life-color-dot" style="--c: {{ $hex }}" aria-hidden="true"></span><span class="sr-only">{{ $colorName }}</span></label>
+                    @endforeach
+                </div>
+            </fieldset>
             <input type="hidden" name="show_deck_ownership" value="0">
             <label class="check-label"><input type="checkbox" name="show_deck_ownership" value="1" @checked($me->show_deck_ownership !== false)> Mostrar nos meus decks quantas cópias tenho na coleção</label>
             <p class="muted small-note">O contador “2/4” ao lado de cada carta. Só aparece se você tiver cartas cadastradas na coleção.</p>
