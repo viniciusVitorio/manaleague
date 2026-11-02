@@ -50,6 +50,13 @@ class PlayerProfileTest extends TestCase
         $this->actingAs($player)->patch(route('profiles.update'), ['nickname' => 'Vini', 'avatar' => '🧙'])->assertRedirect();
         $this->assertSame('🧙', $player->playerProfile()->value('avatar'));
         $this->actingAs($player)->patch(route('profiles.update'), ['nickname' => 'Vini', 'avatar' => '🧙🐉'])->assertSessionHasErrors('avatar');
+        $this->actingAs($player)->patch(route('profiles.update'), ['nickname' => 'Vini', 'avatar' => '🧙‍♂️'])->assertSessionHasNoErrors(); // emoji composto conta como 1
+
+        // O campo do formulário só aceita 1 emoji; um valor antigo com vários aparece só com o primeiro.
+        $this->actingAs($player)->get(route('profiles.edit'))->assertOk()->assertSee('data-single-emoji', false)->assertSee('js/emoji-input.js', false);
+        $player->playerProfile->forceFill(['avatar' => '🔥🐉'])->save();
+        $this->assertSame('🔥', $player->playerProfile->fresh()->mark());
+        $this->assertSame('🔥 Vini', $player->playerProfile->fresh()->displayName());
     }
 
     public function test_open_profile_works_like_a_social_network_but_code_only_stays_private(): void

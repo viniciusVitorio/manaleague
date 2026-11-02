@@ -475,3 +475,6 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 
 /* ---------- Tela ao vivo: aviso quando há novidade e a pessoa está digitando ---------- */
 .live-notice{position:fixed;left:50%;bottom:18px;z-index:60;display:flex;align-items:center;gap:12px;max-width:calc(100% - 32px);padding:10px 12px 10px 16px;transform:translateX(-50%);border:1px solid var(--ui-border-strong);border-radius:10px;background:var(--ui-card);color:var(--ui-fg);font-size:.86rem;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+
+/* Campo de avatar: um emoji so, grande e centralizado */
+.emoji-input{width:72px;height:56px;padding:0;font-size:1.8rem;line-height:1;text-align:center}
