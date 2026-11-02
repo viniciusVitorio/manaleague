@@ -33,7 +33,8 @@ Nenhuma mudança de interface é entregue sem esta verificação (ver "Definiç�
 
 ## Dados de teste
 
-- Conta `demo@manaleague.test` / `manaleague123`, amigos Ajani, Chandra, Jace, Liliana e Bruno Banido.
+- Conta `demo@manaleague.test` / `manaleague123`, com os amigos do `DemoSeeder` (Ajani, Chandra, Jace, Liliana).
+  O banco local pode ter outros dados criados em testes manuais; não conte com eles.
 - Precisa de um estado específico (desafio confirmado, placar pendente)? Crie com um script no tinker
   (`docker compose cp x.php app:/tmp/x.php` e `MSYS_NO_PATHCONV=1 docker compose exec -T app php artisan tinker /tmp/x.php`)
   usando os services (`ChallengeService`, `RankedMatchService`), nunca SQL solto. Diga na resposta o que foi criado.
