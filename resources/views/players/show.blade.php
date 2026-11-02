@@ -176,23 +176,6 @@
 </section>
 @endif
 
-@php($headToHead ??= null)
-@if($headToHead && ($headToHead['played'] || $friendshipStatus === 'accepted'))
-<section class="card section-card head-to-head" aria-labelledby="h2h-title">
-    <span class="eyebrow">Confronto direto</span><h2 id="h2h-title">Você × {{ $profile->nickname }}</h2>
-    @if($headToHead['played'])
-        @php($last = $headToHead['last'])
-        <div class="h2h-record">
-            <div><b>{{ $headToHead['wins'] }}</b><span>{{ $headToHead['wins'] === 1 ? 'Vitória' : 'Vitórias' }}</span></div>
-            <div><b>{{ $headToHead['losses'] }}</b><span>{{ $headToHead['losses'] === 1 ? 'Derrota' : 'Derrotas' }}</span></div>
-            @if($headToHead['draws'])<div><b>{{ $headToHead['draws'] }}</b><span>{{ $headToHead['draws'] === 1 ? 'Empate' : 'Empates' }}</span></div>@endif
-        </div>
-        <p class="h2h-last">{{ $headToHead['played'] }} {{ $headToHead['played'] === 1 ? 'partida' : 'partidas' }} · última: {{ $last['kind'] }}, {{ ['win' => 'você venceu', 'loss' => 'você perdeu', 'draw' => 'empate'][$last['result']] }} por {{ $last['me'] }}×{{ $last['them'] }} em {{ $last['date']->timezone(config('app.timezone'))->format('d/m/Y') }}</p>
-    @else
-        <x-ui.empty icon="swords" title="Vocês ainda não se enfrentaram" text="Chame para um desafio e comece a rivalidade." :href="route('challenges.index', ['opponent' => $profile->id])" action="Desafiar" />
-    @endif
-</section>
-@endif
 
 
 @if($ranked)

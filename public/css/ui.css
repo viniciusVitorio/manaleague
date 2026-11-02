@@ -355,9 +355,6 @@ input::-ms-reveal{display:none}
 .profile-copy-link:hover{background:var(--ui-muted);color:var(--ui-fg)}
 .profile-copy-status{color:var(--ui-success);font-size:.78rem}
 .profile-copy-status:empty{display:none}
-.h2h-record{display:flex;flex-wrap:wrap;gap:var(--s6);margin:var(--s2) 0 var(--s3)}
-.h2h-record b{display:block;font-size:1.45rem;font-weight:700;line-height:1.2}
-.h2h-record span{color:var(--ui-fg-subtle);font-size:.75rem}
 .h2h-last{margin:0;color:var(--ui-fg-muted);font-size:.85rem}
 /* Rival no perfil: voce x rival, com placar no meio e barra de vitorias/empates/derrotas */
 .rival-card{position:relative;overflow:hidden}
