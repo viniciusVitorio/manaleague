@@ -16,6 +16,8 @@ A tabela `patch_notes` é só uma cópia; se o banco for perdido, a próxima sin
 ## Padrão do texto
 
 > Com o Claude Code, peça "escreva o patch note da próxima versão": a skill `.claude/skills/patch-notes/SKILL.md` segue este padrão.
+>
+> Para avisar nos grupos de WhatsApp e Telegram, peça "escreva o anúncio da versão para o grupo": a skill `.claude/skills/anuncio-comunidade/SKILL.md` transforma o patch note numa mensagem leve e com emojis.
 
 **Título:** `Nome da versão · palavras-chave` — a tag já aparece acima do título, não repita.
 Ex.: `Versão inicial · Torneios, decks e comunidade`, `Temporada de inverno · Ranked e clubes`.
