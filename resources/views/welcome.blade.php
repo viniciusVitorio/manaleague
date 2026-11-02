@@ -329,7 +329,7 @@
         <p>Crie a conta, cadastre o primeiro deck e mande o seu código de amigo para a galera.</p>
     </div>
     @auth
-        <a class="ui-btn ui-btn-outline lp-btn" href="{{ route('challenges.index') }}"><x-icon name="swords" :size="16" /> Desafiar um amigo</a>
+        <a class="ui-btn ui-btn-outline lp-btn" href="{{ route('challenges.create') }}"><x-icon name="swords" :size="16" /> Desafiar um amigo</a>
     @else
         <a class="ui-btn ui-btn-outline lp-btn" href="{{ route('register') }}">Criar minha conta <x-icon name="arrow-right" :size="16" /></a>
     @endauth

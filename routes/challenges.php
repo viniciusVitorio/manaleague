@@ -7,6 +7,7 @@ Route::get('/s/achievement/{token}', [AchievementShareController::class, 'public
 Route::middleware('auth')->group(function () {
     Route::get('/challenges', [ChallengeController::class, 'index'])->name('challenges.index');
     Route::get('/challenges/rivalries', [ChallengeController::class, 'rivalries'])->name('challenges.rivalries');
+    Route::get('/challenges/new', [ChallengeController::class, 'create'])->name('challenges.create');
     Route::post('/challenges', [ChallengeController::class, 'store'])->middleware('throttle:10,1')->name('challenges.store');
     Route::get('/challenges/{challenge}', [ChallengeController::class, 'show'])->name('challenges.show');
     foreach (['transition', 'report', 'review'] as $action) Route::post('/challenges/{challenge}/'.$action, [ChallengeController::class, $action])->middleware('throttle:30,1')->name('challenges.'.$action);

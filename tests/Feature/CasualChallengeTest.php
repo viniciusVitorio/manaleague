@@ -62,7 +62,7 @@ class CasualChallengeTest extends TestCase
     public function test_http_flow_rivalry_and_private_boundaries(): void
     {
         [$a, $b] = $this->friends();
-        $this->actingAs($a)->get('/challenges')->assertOk()->assertSee('Desafios 1v1');
+        $this->actingAs($a)->get('/challenges')->assertOk()->assertSee('Desafiar amigo');
         $this->post('/challenges', ['opponent_id' => $b->playerProfile->id, 'format' => 'Pauper', 'best_of' => 3, 'expires_in' => 24])->assertRedirect();
         $c = Challenge::sole();
         $this->actingAs(User::factory()->create())->get('/challenges/'.$c->id)->assertForbidden();

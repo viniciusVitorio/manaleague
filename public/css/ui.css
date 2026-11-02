@@ -497,3 +497,37 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 
 /* Campo de avatar: um emoji so, grande e centralizado */
 .emoji-input{width:72px;height:56px;padding:0;font-size:1.8rem;line-height:1;text-align:center}
+
+/* ---------- Desafios: lista (em andamento + historico) e formulario de novo desafio ---------- */
+.page-head-actions{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.challenge-list{margin-bottom:var(--s4)}
+.challenge-row{text-decoration:none}
+.challenge-row:hover{background:var(--ui-muted)}
+.challenge-row .ui-avatar{width:36px;height:36px;font-size:1rem;flex:0 0 auto}
+.challenge-row .ui-row-title{color:var(--ui-fg);font-weight:500}
+.challenge-row.needs-me .ui-row-title{font-weight:700}
+.challenge-ranked{color:var(--ui-warning);font-weight:600}
+.challenge-row-go{flex:0 0 auto;color:var(--ui-fg-subtle)}
+@media(max-width:480px){.challenge-row{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:var(--s3);row-gap:6px}.challenge-row .ui-avatar{grid-row:1/span 2}.challenge-row .ui-badge{grid-column:2;justify-self:start}.challenge-row-go{display:none}.challenge-row .ui-row-title{white-space:normal}}
+.challenge-form{display:grid;gap:var(--s4)}
+.challenge-form .ui-option-box{border-bottom:1px solid var(--ui-border)}
+.friend-choices{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--s2);max-height:300px;overflow:auto;padding:2px}
+.friend-choice{position:relative;align-items:center;gap:10px;margin:0!important;padding:10px 12px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);background:var(--ui-bg);color:var(--ui-fg);font-weight:500;cursor:pointer;transition:border-color .15s,background-color .15s}
+.friend-choice:hover{border-color:var(--ui-border-strong)}
+.friend-choice span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.friend-choice .ui-avatar{flex:0 0 auto;width:32px;height:32px}
+.friend-choice input,.choice-chip input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.friend-choice:has(input:checked){border-color:var(--ui-primary);background:var(--ui-muted);box-shadow:0 0 0 1px var(--ui-primary)}
+.friend-choice:has(input:focus-visible),.choice-chip:has(input:focus-visible){outline:2px solid var(--ui-ring);outline-offset:2px}
+.challenge-fields{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:var(--s4);align-items:start;margin-bottom:var(--s4)}
+.challenge-fields > label{margin:0}
+.choice-group{margin:0;padding:0;border:0}
+.choice-group legend{margin:0 0 6px;padding:0;color:var(--ui-fg-soft);font-size:.82rem;font-weight:500}
+.choice-chips{display:flex;flex-wrap:wrap;gap:6px}
+.choice-chip{position:relative;margin:0!important}
+.choice-chip span{display:inline-flex;align-items:center;height:38px;padding:0 14px;border:1px solid var(--ui-border);border-radius:999px;background:var(--ui-bg);color:var(--ui-fg-muted);font-size:.84rem;font-weight:500;white-space:nowrap;transition:background-color .15s,color .15s}
+.choice-chip:hover span{border-color:var(--ui-border-strong);color:var(--ui-fg)}
+.choice-chip input:checked + span{border-color:var(--ui-primary);background:var(--ui-primary);color:var(--ui-primary-fg)}
+.challenge-form-actions{display:flex;justify-content:flex-end;gap:var(--s2)}
+@media(max-width:780px){.challenge-fields{grid-template-columns:1fr}}
+@media(max-width:480px){.challenge-form-actions{flex-direction:column-reverse}.challenge-form-actions .ui-btn{justify-content:center}}

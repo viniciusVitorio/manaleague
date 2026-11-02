@@ -168,7 +168,7 @@
     <div class="rival-foot">
         <p class="h2h-last">{{ $rival['played'] }} {{ $rival['played'] === 1 ? 'desafio' : 'desafios' }} {{ $isOwner ? 'entre vocês' : 'entre '.$profile->nickname.' e '.$rivalName }} · último em {{ $rival['last']->timezone(config('app.timezone'))->format('d/m/Y') }}</p>
         @if($isOwner)
-            <a class="btn btn-secondary btn-small" href="{{ route('challenges.index', ['opponent' => $rival['profile']->id]) }}"><x-icon name="swords" size="15" /> Desafiar {{ $rivalName }}</a>
+            <a class="btn btn-secondary btn-small" href="{{ route('challenges.create', ['opponent' => $rival['profile']->id]) }}"><x-icon name="swords" size="15" /> Desafiar {{ $rivalName }}</a>
         @elseif(! $rival['profile']->is(auth()->user()?->playerProfile))
             @can('view', $rival['profile'])<a class="btn btn-ghost btn-small" href="{{ route('profiles.show', $rival['profile']) }}">Ver perfil de {{ $rivalName }}</a>@endcan
         @endif
@@ -181,7 +181,7 @@
 @if($ranked)
 @push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/ranked.css') }}">@endpush
 <section class="card section-card profile-ranked" id="ranque">
-    <div class="section-heading"><div><span class="eyebrow">ELO / PDL</span><h2>Ranque</h2></div>@if($isOwner && $ranked['activeFormats']->isNotEmpty())<a class="btn btn-small btn-secondary" href="{{ route('challenges.index', ['ranked' => 1]) }}">Desafio ranqueado</a>@endif</div>
+    <div class="section-heading"><div><span class="eyebrow">ELO / PDL</span><h2>Ranque</h2></div>@if($isOwner && $ranked['activeFormats']->isNotEmpty())<a class="btn btn-small btn-secondary" href="{{ route('challenges.create', ['ranked' => 1]) }}">Desafio ranqueado</a>@endif</div>
     <div class="rank-cards">
     @forelse($ranked['ratings'] as $rating)
         @include('ranked.partials.rank-card', ['rating' => $rating->rating, 'tiers' => $ranked['tiers'], 'label' => $rating->format.' · '.$rating->season->name, 'record' => $rating])
