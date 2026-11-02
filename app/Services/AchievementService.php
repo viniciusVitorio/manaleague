@@ -161,10 +161,11 @@ class AchievementService
 
     /**
      * Grava as conquistas recem-atingidas. Desbloqueios sao permanentes.
+     * Com $notify, avisa o dono da conta no sino (quem abre o proprio perfil ja ve as novas destacadas e nao precisa).
      *
      * @return list<string> chaves desbloqueadas agora
      */
-    public function sync(PlayerProfile $profile, ?array $summary = null): array
+    public function sync(PlayerProfile $profile, ?array $summary = null, bool $notify = true): array
     {
         $metrics = $this->metrics($profile, $summary);
         $owned = $profile->achievements()->pluck('achievement')->all();
@@ -176,8 +177,30 @@ class AchievementService
                 if ($record->wasRecentlyCreated) $new[] = $key;
             }
         }
+        if ($notify) $this->announce($profile, $new);
 
         return $new;
+    }
+
+    /** Avisa no sino. Várias conquistas liberadas juntas viram um aviso só, com a lista. */
+    private function announce(PlayerProfile $profile, array $keys): void
+    {
+        if ($keys === [] || ! $profile->account) return;
+        $definitions = self::definitions();
+        $names = array_map(fn (string $key) => $definitions[$key][0].' '.$definitions[$key][1], $keys);
+
+        if (count($keys) === 1) {
+            $title = "Conquista desbloqueada: {$names[0]}";
+            $eventKey = "achievement:{$keys[0]}:{$profile->id}";
+        } else {
+            $shown = array_slice($names, 0, 3);
+            $rest = count($names) - count($shown);
+            $list = $rest > 0 ? implode(', ', $shown)." e mais {$rest}" : implode(', ', array_slice($shown, 0, -1)).' e '.end($shown);
+            $title = count($keys)." conquistas desbloqueadas: {$list}";
+            $eventKey = "achievements:{$profile->id}:".implode(',', $keys);
+        }
+
+        app(Community\NotificationService::class)->send($profile->account, 'achievement', $title, '/me/profile', $eventKey);
     }
 
     /** Catalogo completo com progresso, data de desbloqueio e raridade. */
@@ -218,10 +241,7 @@ class AchievementService
     {
         abort_unless(in_array($key, self::GRANTED, true), 422, 'Esta conquista não pode ser concedida manualmente.');
         $record = $profile->achievements()->firstOrCreate(['achievement' => $key], ['unlocked_at' => now()]);
-        if ($record->wasRecentlyCreated && $profile->account) {
-            [$icon, $name] = self::definitions()[$key];
-            app(Community\NotificationService::class)->send($profile->account, 'achievement', "Conquista desbloqueada: {$icon} {$name}", '/me/profile', "achievement:{$key}:{$profile->id}");
-        }
+        if ($record->wasRecentlyCreated) $this->announce($profile, [$key]);
 
         return $record->wasRecentlyCreated;
     }
