@@ -108,9 +108,19 @@
         @php($record = $kind === 'all' ? $summary : $summary['by_kind'][$kind])
         <div class="stat-grid stat-panel" data-kind="{{ $kind }}">
             @if($record['played'])
-                <article class="card stat-card"><b>{{ $record['wins'] }}–{{ $record['losses'] }}@if($record['draws'])–{{ $record['draws'] }}@endif</b><span>Vitórias / derrotas{{ $record['draws'] ? ' / empates' : '' }}</span></article>
-                <article class="card stat-card"><b>{{ $record['games_for'] }}–{{ $record['games_against'] }}</b><span>Games</span></article>
-                <article class="card stat-card"><b>{{ $record['winrate'] }}%</b><span>Aproveitamento em {{ $record['played'] }} {{ $record['played'] === 1 ? 'partida' : 'partidas' }}</span></article>
+                {{-- Ordem: partidas jogadas, V–D–E (desafio casual não tem empate), aproveitamento, maior sequência. --}}
+                @php($withDraws = $kind !== 'casual')
+                <article class="card stat-card"><b>{{ $record['played'] }}</b><span>{{ $record['played'] === 1 ? 'Partida jogada' : 'Partidas jogadas' }}</span></article>
+                {{-- Bolinhas discretas com os últimos resultados (mais recente à esquerda); o detalhe fica na dica. --}}
+                <article class="card stat-card"><b>{{ $record['wins'] }}–{{ $record['losses'] }}@if($withDraws)–{{ $record['draws'] }}@endif</b><span>{{ $withDraws ? 'Vitórias / derrotas / empates' : 'Vitórias / derrotas' }}</span>
+                    <div class="form-row"><ol class="form-dots" aria-label="Últimos resultados, do mais recente ao mais antigo">
+                        @foreach($record['recent'] as $game)
+                            @php($gameTip = ['win' => 'Vitória', 'loss' => 'Derrota', 'draw' => 'Empate'][$game['result']].($game['bye'] ? ' por BYE' : ' '.$game['for'].'–'.$game['against']).' · '.\App\Services\PlayerStatsService::KIND_SINGULAR[$game['kind']].($game['date'] ? ' · '.$game['date']->timezone(config('app.timezone'))->format('d/m/Y') : ''))
+                            <li class="form-dot is-{{ $game['result'] }}" title="{{ $gameTip }}"><span class="sr-only">{{ $gameTip }}</span></li>
+                        @endforeach
+                    </ol><small class="form-hint" aria-hidden="true">← mais recente</small></div>
+                </article>
+                <article class="card stat-card"><b>{{ $record['winrate'] }}%</b><span>Aproveitamento</span></article>
                 <article class="card stat-card"><b>{{ $record['best_streak'] }}</b><span>Maior sequência de vitórias</span></article>
             @else
                 <p class="card stat-card stat-empty muted">{{ $statEmpty[$kind] }}</p>

@@ -337,6 +337,15 @@ input::-ms-reveal{display:none}
 .h2h-record b{display:block;font-size:1.45rem;font-weight:700;line-height:1.2}
 .h2h-record span{color:var(--ui-fg-subtle);font-size:.75rem}
 .h2h-last{margin:0;color:var(--ui-fg-muted);font-size:.85rem}
+/* Ultimos resultados no card de V-D-E: bolinhas (verde vitoria, vermelho derrota, cinza empate) */
+.form-row{display:flex;align-items:center;gap:10px;margin-top:10px}
+.form-dots{display:flex;align-items:center;gap:6px;margin:0;padding:0;list-style:none}
+.form-dot{width:12px;height:12px;border-radius:50%;background:currentColor;opacity:.55;cursor:default;transition:opacity .15s}
+.form-dot:hover{opacity:1}
+.form-dot.is-win{color:var(--ui-success)}.form-dot.is-loss{color:var(--ui-danger)}.form-dot.is-draw{color:var(--ui-fg-faint)}
+/* A mais recente (primeira, a esquerda) ganha um anel para marcar por onde os resultados novos entram */
+.form-dot:first-child{opacity:.9;box-shadow:0 0 0 2px var(--ui-card),0 0 0 3.5px currentColor}
+.form-hint{color:var(--ui-fg-subtle);font-size:.7rem;white-space:nowrap}
 .avatar-link{display:contents}
 
 /* ---------- Dia de evento: cronômetro (organizador) e check-in ---------- */
