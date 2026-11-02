@@ -1,86 +1,246 @@
 # Regras de UI do ManaLeague
 
-Regras curtas e verificaveis para qualquer tela nova ou ajuste (humano ou IA).
-Ao pedir algo para uma IA, inclua: **"siga docs/ui-rules.md"**. Se uma regra atrapalhar um caso real,
-mude a regra aqui primeiro — nao abra excecao escondida na tela.
+Regras verificáveis para qualquer tela nova ou ajuste, feita por pessoa ou por IA.
+Se uma regra atrapalhar um caso real, **mude a regra aqui primeiro**; não abra exceção escondida na tela.
 
-## 1. Base visual
+Referência rápida do que já foi aprovado: card do **Rival** e estatísticas do perfil (`players/show.blade.php`),
+lista e formulário de **Desafios** (`challenges/index`, `challenges/create`), **contador de vida** (`life/*`, `js/life-counter.js`).
 
-- Tema escuro unico, paleta zinc. Use **sempre os tokens** de `public/css/ui.css` (`--ui-bg`, `--ui-card`,
-  `--ui-muted`, `--ui-border`, `--ui-fg`, `--ui-fg-muted`, `--ui-fg-subtle`, `--ui-primary`) — nunca cor solta no HTML.
-- Cores de status so para status: `--ui-success`, `--ui-warning`, `--ui-danger`, `--ui-info` (via `<x-ui.badge tone>`).
-- Espacamento em multiplos de 4px (`--s1`…`--s8`). Distancia entre cards irmaos: **12px**. Padding de card: **20px** (16px no celular).
-- Raio: `--ui-radius` (10px) em cards, `--ui-radius-sm` (6px) em botoes/inputs, `999px` so em pills, badges e avatar redondo do cabecalho.
-- Sem gradiente decorativo, sem glass, sem sombra forte. Hierarquia vem de tamanho, peso e cor do texto.
-- Icones: so o set Lucide de `<x-icon>`, 14–16px, mesmo traco. Nao misture emoji e icone na mesma funcao
-  (emoji e conteudo do usuario — avatar, conquistas — nao e icone de interface).
+---
 
-## 2. Grid e alinhamento
+## 1. Princípios
 
-- Todo conteudo fica dentro do `.container` (max 1120px). **Nada encosta fora da coluna**: foto, titulo e cards
-  comecam na mesma linha vertical da esquerda.
-- Uma pagina e uma pilha de blocos com a mesma largura. Blocos lado a lado so em grid (`stat-grid`, `profile-columns`),
-  com o mesmo gap.
-- Link de voltar (`← Torneios`) fica **acima** do primeiro card, nunca dentro dele.
+1. **Bonito com propósito.** A tela é sóbria (paleta zinc, poucos tons), e o brilho aparece onde há algo a celebrar
+   ou a decidir: quem lidera, uma vitória, uma conquista, a ação que falta. Enfeite sem significado é ruído.
+2. **A informação vem primeiro.** Número grande com legenda pequena; a ação principal visível sem rolar; detalhes em dica (`title`) ou em tela própria.
+3. **Celular primeiro.** A maioria joga com o celular na mesa: tudo tem que funcionar com o polegar em 360–390px.
+4. **Discreto por padrão, intenso por exceção.** Indicadores do dia a dia (bolinhas de forma, selos) são suaves;
+   animação forte (confete, fogos) só em momento de vitória real.
+5. **Consistência acima de criatividade.** Antes de inventar um componente, procure um igual (seção 4). Duas telas
+   que fazem a mesma coisa usam o mesmo componente.
 
-## 3. Cards
+### Aprovado e rejeitado (aprendizado real)
 
-| Tipo | Para que serve | Acoes permitidas |
+| Aprovado | Rejeitado |
+|---|---|
+| Card do Rival: os dois avatares lado a lado, placar grande no meio, selo de quem lidera, barra fina de vitórias e botão "Desafiar" | Versão "arena" com painel de fundo, brilho dourado, coroa 👑 e anel no avatar: "enfeitado demais" |
+| Bolinhas da forma recente pequenas (12px), cor suave (`opacity .55`), anel na mais recente e legenda "← mais recente" | Bolinhas grandes com letra e cor forte numa área separada |
+| Editar perfil como ícone de lápis no canto | Botão com texto cobrindo o título no celular |
+| Lista de desafios como página de entrada e formulário em tela própria ("Desafiar amigo") | Formulário de criar no topo da lista |
+| Escolha por cartões (amigos com foto) e por chips (melhor de 1/3/5) | `<select>` para poucas opções |
+| Contador de vida: confete, canhões, balões e fogos na vitória, com duração longa (≈7s) | — |
+| Uma seção por história: o Rival já mostra o retrospecto, então o "Confronto direto" saiu do perfil | Seção de números soltos (vitórias/derrotas em texto) sem visual, ou duas seções contando a mesma coisa |
+
+---
+
+## 2. Base visual
+
+### Tokens (sempre use, nunca cor solta)
+
+Definidos em `public/css/ui.css` para o tema **escuro (padrão)** e o **claro** (`html[data-theme="light"]`).
+Toda cor nova tem que funcionar nos dois.
+
+| Uso | Token |
+|---|---|
+| Fundo da página / card / área neutra / hover | `--ui-bg` / `--ui-card` / `--ui-muted` / `--ui-accent` |
+| Bordas | `--ui-border`, `--ui-border-strong`; foco: `--ui-ring` |
+| Texto | `--ui-fg` (principal), `--ui-fg-soft`, `--ui-fg-muted` (secundário), `--ui-fg-subtle` (meta), `--ui-fg-faint` (desligado) |
+| Botão primário | `--ui-primary` + `--ui-primary-fg` (branco no escuro, quase preto no claro) |
+| Estado | `--ui-success` (vitória, ok), `--ui-danger` (derrota, erro), `--ui-warning` (precisa de você), `--ui-info` (em andamento) |
+| Espaço | `--s1` 4px · `--s2` 8 · `--s3` 12 · `--s4` 16 · `--s5` 20 · `--s6` 24 · `--s8` 32 |
+| Raio | `--ui-radius` 10px (cards), `--ui-radius-sm` 6px (botões, inputs, linhas), `999px` (pills, selos, avatar redondo) |
+
+- Fundo translúcido de estado: `rgba(74,222,128,.07)` sucesso, `rgba(248,113,113,.08)` perigo, `rgba(251,191,36,.07)` aviso,
+  com borda na mesma cor a `.22–.3`. É o padrão do `.ui-badge-*`; copie dali.
+- Cor de status é **só para status**. Vitória sempre verde, derrota sempre vermelha, empate cinza (`--ui-fg-faint`).
+- Exceções que já existem: cores dos jogadores no contador de vida (`App\Support\LifeColor`), roxo do foil (`✦`), cores de mana.
+
+### Profundidade
+
+- Sem glassmorphism, sem sombra forte, sem gradiente de fundo em card.
+- Permitido: **linha de destaque de 3px** no topo de um card de confronto (`.rival-card::before`, gradiente verde → cinza → vermelho)
+  e brilho (`box-shadow` com cor) **só** em animação de vitória.
+
+### Tipografia
+
+- Um `h1` por página. Seções com `h2` (ou `ui-card-title`). Rótulo acima do título: `.eyebrow` (caixa alta, pequeno).
+- Número de destaque: peso 700–800, `font-variant-numeric: tabular-nums`, legenda pequena embaixo em `--ui-fg-subtle`.
+- Placar sempre com travessão: `2–1`, `3–1–0` (V–D–E). "×" só entre dois nomes ou dois números grandes num confronto.
+
+### Ícones
+
+- Só `<x-icon name="...">` (Lucide, 14–16px). Disponíveis: search, sun, moon, upload, download, repeat, sparkles, dollar,
+  heart, megaphone, link, pin, trash, medal, user-plus, globe, lock, info, check-check, pencil, settings, layout-dashboard,
+  trophy, swords, bell, plus, user, users, log-out, menu, x, chevron-right, chevron-down, arrow-right, calendar, activity,
+  circle-check, clock, inbox, layers, library, chart, shield, flag, target, ellipsis, crown, alert, home.
+- Precisa de outro? Adicione o path do Lucide em `components/icon.blade.php` (licença ISC), não use emoji no lugar.
+- Emoji é conteúdo (avatar, conquista, mensagem de festa), não ícone de interface.
+
+---
+
+## 3. Estrutura de página
+
+```
+← Voltar                         (back-link, fora de card, só em páginas de detalhe/formulário)
+[eyebrow]
+Título h1                         [ação secundária] [AÇÃO PRIMÁRIA]   ← .page-head + .page-head-actions
+Frase curta do que é a tela
+(aviso/alerta contextual: confirm-all, ui-hint)
+Card · Card · Card                (mesma largura, 12–16px entre eles)
+```
+
+- Todo conteúdo dentro do `.container` (máx. 1120px). Nada encosta fora da coluna.
+- **Lista é a página de entrada; criar é tela própria.** A lista tem no canto o botão primário ("Desafiar amigo",
+  "Novo torneio"); o formulário abre em `/<recurso>/new` com `← <Lista>`, título "Novo ...", campos em cards e,
+  no fim, `Cancelar` (ghost) + ação primária. Links que pré-preenchem usam query (`?opponent=ID`).
+- Lista com o que **precisa de você** primeiro (selo amarelo), depois o resto, depois o histórico (paginado).
+- Uma página tem **no máximo 1 botão primário**.
+
+---
+
+## 4. Componentes (use estes antes de criar outro)
+
+| Componente | Quando | Como |
 |---|---|---|
-| **Identidade** (cabecalho de perfil, de clube, de torneio) | quem/o que e | **no maximo 1** acao, secundaria (`ui-btn-outline ui-btn-sm`), no **canto superior direito** |
-| **Dados** (stats, ranque, historico) | numeros e listas | 1 acao de secao no cabecalho do card (`Ver tudo`, `Desafio ranqueado`) |
-| **Formulario** | editar algo | 1 botao primario no fim; "remover/cancelar" como `ghost` |
-| **Vazio** (`<x-ui.empty>`) | estado sem dados | 1 CTA que leva para criar o dado |
+| `<x-ui.card title icon meta href>` | bloco com cabeçalho | `meta` = contagem ("7 desafios"); `href` = "Ver tudo" |
+| `<x-ui.empty icon title text href action>` | lista vazia | texto verdadeiro + 1 CTA que cria o dado |
+| `<x-ui.badge tone>` / `.ui-badge ui-badge-{tone}` | estado curto | `success` vitória/ok, `danger` derrota/erro, `warning` precisa de você, `info` em andamento, sem tom = neutro |
+| `<x-ui.stat label value icon hint href>` | número do painel | |
+| `<x-ui.status :status>` | estado de torneio/partida | não traduza estado na mão |
+| `<x-avatar :of>` | foto/emoji/inicial | nunca imprima `mark()` ou emoji direto |
+| `<x-profile-link :of>` | nome clicável | nunca dentro de outro link, `<label>`, `<option>` |
+| `.ui-row` (+ `ui-row-main`, `ui-row-title`, `ui-row-sub`) | linha de lista | linha inteira clicável quando leva a um detalhe (`<a class="ui-row ...">`); ver `challenges/partials/row.blade.php` |
+| `.ui-option.ui-option-box` + `input.ui-switch` | liga/desliga com explicação | título + descrição à esquerda, chave à direita |
+| `.choice-chips` / `.choice-chip` | 2–5 opções curtas (melhor de, validade) | radio escondido + `span` em pill; selecionado = primário |
+| `.friend-choices` / `.friend-choice` | escolher pessoa | cartão com avatar + nome, radio escondido, borda primária quando marcado |
+| `.stat-grid` + `.stat-card` | números do perfil | ordem: partidas, V–D–E, aproveitamento, maior sequência |
+| `.form-dots` / `.form-dot.is-win|is-loss|is-draw` | últimos resultados | 12px, `opacity .55`, `:hover` 1, anel na primeira, `title` com o detalhe + `sr-only` |
+| `.rival-card` | "um contra o outro" | avatares nas pontas, placar no meio, selo de quem lidera, barra `.rival-meter`, rodapé com resumo + ação |
+| `partials/confirm-all` | 2+ placares para confirmar | já incluso nas listas de partidas e desafios |
+| `.ui-hint` | explicação de regra | no topo da página, com ícone `info` |
 
-- Card de identidade **nao** leva botoes de navegacao (ex.: "Desafios", "Rivalidades"): isso ja existe no menu.
-- Excecao: o icone "Copiar link do perfil" ao lado do nome nao conta como a acao do card (e parte do titulo, como num perfil de rede social).
-- Uma pagina tem **no maximo 1 botao primario** (branco). Todo o resto e `outline` ou `ghost`.
-- Acao destrutiva (remover, excluir) nunca e primaria; pede confirmacao quando apaga dados.
+### Botões
 
-## 4. Botoes e links
+| Papel | Classe | Exemplo |
+|---|---|---|
+| Ação principal (1 por página) | `ui-btn ui-btn-primary` | "Desafiar amigo", "Enviar desafio" |
+| Secundária | `ui-btn ui-btn-outline` | "Rivalidades", "Revanche" |
+| Terciária / cancelar | `ui-btn ui-btn-ghost` | "Cancelar" |
+| Dentro de card / linha | `+ ui-btn-sm` | |
+| Só ícone | `ui-icon-btn` + `aria-label` + `title` | lápis de editar perfil, copiar link |
 
-- Classes: `ui-btn` + `ui-btn-primary | ui-btn-outline | ui-btn-ghost` (+ `ui-btn-sm` dentro de cards).
-- Texto do botao = verbo + objeto curto ("Editar perfil", "Enviar foto"). Nada de "Clique aqui".
-- Botao com icone: icone a esquerda, 14px. Botao so com icone precisa de `aria-label`.
-- Navegar = link (`<a>`); mudar dados = `<form>` com `POST/PATCH/DELETE` + `@csrf`.
-- Formularios POST ja sao enviados sem recarregar a pagina (`js/async-forms.js`); o controller continua com `back()->with('status', ...)`.
-  So use `data-async="off"` com motivo (ex.: download). Itens repetidos que mudam com o envio (partidas, rodadas) levam `id` estavel
-  (`match-{id}`, `round-{n}`) para a tela atualizar no lugar. JS de tela: eventos delegados no `document` (nunca `form.submit()`;
-  use `form.requestSubmit()`).
+- Ícone à esquerda do texto (`<x-icon name="swords" />Desafiar amigo`). Texto = verbo + objeto ("Enviar foto").
+- **Legado:** `btn btn-primary|btn-secondary|btn-ghost btn-small` ainda existe em telas antigas. Em tela nova use só `ui-btn`.
+  Ao tocar numa linha antiga pode migrar **aquela linha** (`btn-secondary` → `ui-btn-outline`, `btn-small` → `ui-btn-sm`); nunca em massa.
+- Destrutivo nunca é primário e pede confirmação (`data-confirm="..."`).
 
-## 5. Tipografia
+---
 
-- Um `h1` por pagina (nome do perfil, titulo da tela). Seções: `h2`. Rotulo acima do titulo: `.eyebrow` (caixa alta, pequeno, `--ui-fg-subtle`).
-- Texto secundario em `--ui-fg-muted`; meta (datas, contagens) em `--ui-fg-subtle` e tamanho menor.
-- Numeros de estatistica em destaque (peso 700) com legenda pequena embaixo.
+## 5. Padrões de tela já resolvidos
 
-## 6. Avatar
+### Confronto (Rival)
 
-- Sempre `<x-avatar :of="$perfilOuUsuario" class="...">` — nunca imprimir `mark()`/emoji direto.
-- Tamanhos: 28px (listas/cabecalho do site), 42px (linhas de amigos), 62px (grande sem foto), **104px** (grande com foto; 80px no celular).
-- Foto preenche o quadrado (`object-fit: cover`); sem foto mostra o emoji ou a inicial centralizada.
-- Nome de jogador e clicavel, como numa rede social: envolva com `<x-profile-link :of="$playerOuPerfilOuConta">nome</x-profile-link>`.
-  O texto nao muda (sublinha so no hover) e o link so aparece se quem ve pode abrir o perfil.
-  **Nunca** dentro de outro link (card ou linha clicavel), nem em `<label>`, `<option>` ou atributo.
-- Avatar ao lado do nome tambem leva ao perfil: `<x-profile-link :of="..." class="avatar-link" tabindex="-1" aria-hidden="true"><x-avatar .../></x-profile-link>`
-  (fora do Tab e dos leitores de tela, porque o nome ao lado ja e o link acessivel).
+```
+⚔ RIVAL                                   [Você lidera]
+   (avatar)          3 × 1          (avatar)
+     Você      Seu placar nos desafios   Ajani
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  (verde/cinza/vermelho, proporcional)
+3 desafios entre vocês · último em 01/11/2026      [⚔ Desafiar Ajani]
+```
 
-## 7. Celular (≤780px)
+- Placar do ponto de vista de quem está à esquerda. Número de quem lidera colorido (verde se é você, vermelho se é o outro).
+- Resumo para leitor de tela em `.sr-only` ("Seu placar... 3 vitórias, 1 derrota").
+- Seção que não tem dado **não aparece** (sem "nenhum rival ainda").
 
-- Grids viram uma coluna; o padding do card cai para 16px.
-- A acao do card de identidade continua no canto superior direito; nunca empurra o conteudo para baixo.
-- Toque minimo de 32px de altura; nada de hover como unico jeito de achar uma acao.
+### Linha de lista com estado
 
-## 8. Estados e mensagens
+`avatar · título ("Ajani desafiou você") · sub (Ranqueada · Pauper · MD3 · data) · selo de estado · chevron`.
+No celular (≤480px) o selo desce para baixo do texto e o chevron some (grid de 2 colunas).
 
-- Sucesso: `session('status')` → alerta verde no topo. Erro de campo: mensagem logo acima do campo, em portugues, dizendo o que fazer.
-- Sem dados: `<x-ui.empty>` com texto verdadeiro (nada de placeholder de funcao que nao existe).
-- Carregamento externo (Scryfall, S3) falha "macio": a tela abre e mostra o fallback.
+### Cabeçalho de perfil no celular
 
-## 9. Checklist antes de entregar uma tela
+Foto (64px) ao lado do eyebrow, nome e @usuário; o resto (deck, conquistas, código) ocupa a largura toda embaixo
+(grid com o bloco de texto em `display: contents`). Ação do dono = ícone no canto (o título reserva `padding-right`);
+ação do visitante = botão de largura total no rodapé do card.
 
-1. Todos os blocos alinhados na mesma coluna? Link de voltar fora do card?
-2. No maximo 1 botao primario na pagina? Card de identidade com no maximo 1 acao, no canto?
-3. So tokens e classes `ui-*` (nenhuma cor/raio novo)?
-4. Testado em 1280px e em 390px de largura?
-5. Textos em portugues, verbos claros, sem ingles de framework?
+### Formulário
+
+Campos agrupados em cards com título ("Adversário", "Série"). Escolhas curtas em chips, pessoas em cartões, texto livre com
+`<datalist>` de sugestões. Erros: mensagem em português dizendo o que fazer (vem do servidor; o layout já mostra).
+Campo com regra rígida também ajuda no cliente (ex.: `emoji-input.js` mantém um emoji só), mas o servidor sempre valida.
+
+---
+
+## 6. Movimento e animação
+
+| Tipo | Duração | Uso |
+|---|---|---|
+| Hover / foco | `.15s` (`transition: background-color, border-color, color, opacity`) | botões, linhas, chips, cartões |
+| Entrada de elemento | `.2–.3s`, `ui-pop` (sobe 4px e aparece) | toasts, menus, avisos |
+| Revelar detalhe | `opacity` de `.55` → `1` no hover | bolinhas de forma |
+| Celebração | 3–7s, canvas (`.life-party`) | vitória no contador de vida; conquista desbloqueada |
+
+- Celebração tem que **orientar para o vencedor**, ficar abaixo de modais (`z-index` menor) e não cobrir o resultado.
+- `@media (prefers-reduced-motion: reduce)`: desligue animações longas e troque por um estado final estático.
+- Nada pisca em loop sem motivo; pulso (`life-pulse`) só para "sua vez" ou alerta ativo.
+- `transform: translateY(.5px)` no `:active` dos botões já existe; não adicione `scale` exagerado.
+
+---
+
+## 7. Acessibilidade
+
+- Informação visual também em texto: bolinha tem `title` + `<span class="sr-only">`; barra tem resumo em `.sr-only`.
+- Cor nunca é o único sinal (selo diz "Vitória 2–1", não só fica verde).
+- Botão só com ícone: `aria-label` e `title`. Grupo de radios customizados: `role="radiogroup"` + `aria-label`; foco visível
+  com `:has(input:focus-visible)` e `outline: 2px solid var(--ui-ring)`.
+- Toque mínimo de 32px (botões 36px; chips 38px). Nada de ação que só aparece no hover.
+- Elementos decorativos com `aria-hidden="true"`.
+
+---
+
+## 8. Celular (≤780px e ≤480px)
+
+- Teste em **360px e 390px**. Grids viram uma coluna; padding de card cai para 16px.
+- Texto longo não espreme selo: selo desce de linha. Nome longo usa `overflow-wrap: anywhere` ou reticências.
+- Botão de ação no fim de formulário/card ocupa a largura toda (≤480px); `Cancelar` fica embaixo dele.
+- Ação no canto (ícone) é `position: absolute` e o conteúdo ao lado reserva o espaço com `padding-right`.
+
+---
+
+## 9. CSS e JS
+
+- **Onde:** componente compartilhado → `public/css/ui.css` (bloco com comentário `/* ---------- Nome ---------- */`);
+  só de um módulo → CSS do módulo com `@push('head')<link ... VersionedAsset::url('css/x.css')>@endpush`.
+- **Nome:** prefixo da funcionalidade (`rival-`, `challenge-`, `form-`, `friend-choice`). Antes de criar,
+  `grep -rn "\.prefixo-" public/css` para não colidir.
+- `style=""` só para valor dinâmico (ex.: `flex-grow` proporcional). Nada de cor inline.
+- Escreva as regras do celular junto do componente, no mesmo bloco.
+- Cuidado com a cascata do legado (`.stat-card span`, `.stat-card b`, `label:has(> input)`); se um elemento novo dentro
+  desses herdar estilo, sobrescreva com seletor específico.
+- **JS:** arquivo pequeno por comportamento em `public/js/`, IIFE com `'use strict'`, carregado com `defer` via
+  `VersionedAsset::url`, ligado por `data-*` (ex.: `data-single-emoji`, `data-copy-link`). Eventos delegados no `document`;
+  para reagir à atualização da página use o evento `manaleague:updated`.
+- Formulários POST já são enviados sem recarregar (`async-forms.js`); telas "ao vivo" usam `@section('live-scope', ...)`.
+- Sem CDN e sem bibliotecas novas no front (a CSP só libera `'self'`).
+
+---
+
+## 10. Texto
+
+- Português do Brasil, frases curtas, "você". Botão: verbo + objeto. Sem inglês de framework ("submit", "loading").
+- Plural certo: `1 desafio` / `2 desafios`, `1 vitória` / `2 vitórias`.
+- Data `dd/mm/aaaa` no fuso do app. Estados com o mesmo nome em todo lugar ("Aguardando confirmação", "Confirmar placar").
+- Vazio diz o que fazer: "Nenhum desafio ainda. Chame um amigo para a primeira série."
+
+---
+
+## Checklist antes de entregar
+
+1. Usei componentes e classes existentes? Nome de classe novo tem prefixo e não colide?
+2. Só tokens (nenhuma cor/raio novo)? Funciona no tema claro também?
+3. No máximo 1 botão primário? Ação principal visível sem rolar?
+4. Conferido em 1280px e 390px (skill `verificar-tela`)? Selo e nome não se espremem?
+5. Informação visual tem texto (`title`, `sr-only`)? Botão de ícone tem `aria-label`?
+6. Animação respeita `prefers-reduced-motion`? É discreta, ou é um momento de celebração?
+7. Textos em português, plural certo, datas `dd/mm/aaaa`?
+8. Seção sem dado some (ou mostra `x-ui.empty` com ação útil)?
