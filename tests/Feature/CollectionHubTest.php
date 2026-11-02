@@ -149,7 +149,7 @@ class CollectionHubTest extends TestCase
         $this->item($ana, 'Sol Ring', ['quantity' => 1, 'foil' => true]);
 
         $this->actingAs($ana)->get(route('decks.show', $deck))->assertOk()
-            ->assertSee('owned-badge is-some', false)->assertSee('2/4')->assertSee('owned-badge is-ok', false)->assertSee('1/1');
+            ->assertSee('owned-badge is-some', false)->assertSee('title="No deck: 4 · Na sua coleção: 2">4/2</span>', false)->assertSee('owned-badge is-ok', false)->assertSee('1/1');
         $this->actingAs($bia)->get(route('decks.show', $deck))->assertOk()->assertDontSee('owned-badge', false);
 
         // dono pode ocultar (e voltar a mostrar); a escolha fica salva na conta

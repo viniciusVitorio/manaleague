@@ -78,7 +78,7 @@
                 @if($hasCollection)
                     <form method="POST" action="{{ route('preferences.deck-ownership') }}" class="ownership-toggle">@csrf @method('PATCH')
                         <input type="hidden" name="show" value="{{ $showOwnership ? 0 : 1 }}">
-                        <button class="btn btn-ghost btn-small" aria-pressed="{{ $showOwnership ? 'true' : 'false' }}" title="Mostra, ao lado de cada carta, quantas cópias você tem na coleção">{{ $showOwnership ? 'Ocultar minha coleção' : 'Mostrar o que tenho' }}</button>
+                        <button class="btn btn-ghost btn-small" aria-pressed="{{ $showOwnership ? 'true' : 'false' }}" title="Mostra, ao lado de cada carta, quantas cópias o deck pede e quantas você tem na coleção (deck/coleção)">{{ $showOwnership ? 'Ocultar minha coleção' : 'Mostrar o que tenho' }}</button>
                     </form>
                 @endif
             </div>
