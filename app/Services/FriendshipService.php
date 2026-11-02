@@ -207,7 +207,7 @@ class FriendshipService
             ? PlayerProfile::query()
                 ->whereNotNull('account_user_id')
                 ->where('discoverable', true)
-                ->where('nickname', 'like', '%'.str_replace(['%', '_', '\\'], '', $term).'%')
+                ->whereLike('nickname', '%'.str_replace(['%', '_', '\\'], '', $term).'%')
                 ->orderBy('nickname')->limit(20)->get()
             : collect();
 

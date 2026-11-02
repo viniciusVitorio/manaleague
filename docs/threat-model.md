@@ -64,7 +64,7 @@
 
 - CSP ainda permite `'unsafe-inline'` para os pequenos handlers inline (copiar link, confirmacoes); migrar para JS externo com nonce;
 - a `APP_KEY` de exemplo usada nas primeiras versoes continua no historico do Git — nunca reutiliza-la (producao usa a chave do GitHub Secrets);
-- SQLite nao e indicado para alta concorrencia; migrar para RDS PostgreSQL em crescimento;
+- PostgreSQL roda na mesma EC2 do app (sem replica nem failover); migrar para RDS em crescimento;
 - backups e monitoramento gerenciado ficam como evolucao futura;
 - fotos de perfil nao passam por moderacao de conteudo (evolucao: Amazon Rekognition ou denuncia/remocao por admin);
 - uma URL assinada vazada continua valida ate expirar (no maximo ~2h); objetos orfaos (falha ao apagar a foto antiga) ficam no bucket ate limpeza manual.

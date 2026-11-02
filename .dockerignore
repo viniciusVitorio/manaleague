@@ -6,4 +6,4 @@ vendor
 node_modules
 bootstrap/cache/*.php
 storage/logs/*
-storage/app/database.sqlite
+storage/app/*.sqlite*

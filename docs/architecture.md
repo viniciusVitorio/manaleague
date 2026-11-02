@@ -9,7 +9,7 @@
 | Caddy | porta publica (80/443), TLS automatico (Let's Encrypt), IP real via `CF-Connecting-IP`, compressao, headers e proxy reverso para o WAF |
 | WAF: Nginx + ModSecurity v3 + OWASP CRS v4 | imagem oficial `owasp/modsecurity-crs` (tag LTS fixa, sem porta publicada): inspeciona toda requisicao com o **OWASP Core Rule Set**, serve o `public/` e passa so o `index.php` para o PHP-FPM |
 | Laravel/PHP-FPM | autenticacao, autorizacao, round-robin, ranking, finais e headers de seguranca (`SecurityHeaders`) |
-| SQLite | usuarios, torneios, jogadores, partidas e sessoes |
+| PostgreSQL 17 | usuarios, torneios, jogadores, partidas, sessoes, cache e fila (servico `db` do Compose, volume `pg_data`, sem porta publicada) |
 | Amazon S3 (privado) | fotos de perfil (`avatars/<uuid>.webp`), lidas pelo navegador via URL assinada |
 | GitHub Actions | CI, scanners, quality gate e CD |
 | SonarQube Cloud | analise estatica e Quality Gate |
@@ -19,7 +19,7 @@
 
 ```text
 Internet → Cloudflare (DDoS, Free Managed Ruleset, rate limit) → Security Group :80/:443 (so faixas da Cloudflare)
-         → Caddy (TLS, IP real) → Nginx + ModSecurity/OWASP CRS (WAF) → PHP-FPM/Laravel → SQLite
+         → Caddy (TLS, IP real) → Nginx + ModSecurity/OWASP CRS (WAF) → PHP-FPM/Laravel → PostgreSQL
                 ↘ headers                  ↘ 403 "Requisicao bloqueada"      ↘ CSP/HSTS/XFO (middleware)
 ```
 
@@ -35,7 +35,8 @@ Commit → PHPUnit → Composer Audit/Trivy → Sonar → Quality Gate
 
 ## Decisoes
 
-- **SQLite:** reduz custo e configuracao para um trabalho academico de baixa carga.
+- **PostgreSQL no Compose:** substituiu o SQLite (escrita concorrente, tipos rigidos e backup com `pg_dump`) sem custo extra de RDS: roda na propria EC2, ajustado para a t3.micro (`shared_buffers=64MB`, `max_connections=40`, `mem_limit` 256 MB), so na rede interna do Docker e com senha SCRAM vinda do secret `DB_PASSWORD`. A CI roda a suite inteira no PostgreSQL; localmente o `phpunit.xml` continua em SQLite em memoria (rapido), e `DB_CONNECTION=pgsql` no ambiente troca o banco dos testes.
+- **Migracao SQLite → PostgreSQL:** `php artisan db:import-sqlite <arquivo> [--if-empty] [--force]` cria o esquema pelas migrations e copia os dados tabela a tabela, em ordem de chave estrangeira e numa unica transacao (falhou = nada gravado); converte 0/1 em booleano, ignora colunas/tabelas que nao existem mais no codigo, ajusta as sequencias dos ids e confere as contagens. No 1o boot do container com Postgres o `entrypoint` roda a importacao do banco antigo do volume (`storage/app/database.sqlite`, so se o Postgres ainda nao tiver usuarios) e renomeia o arquivo para `database.sqlite.migrado-<data>`; o deploy guarda antes uma copia em `/opt/manaleague/database-pre-postgres.sqlite`.
 - **Docker Compose:** reproduz o mesmo runtime local e na EC2.
 - **Caddy na borda:** emite e renova o certificado TLS sozinho (Full strict na Cloudflare) e resolve o IP real; o WAF fica atras dele, numa rede interna do Docker.
 - **WAF em duas camadas:** a Cloudflare Free segura volume (DDoS, rate limit, regras gerenciadas basicas); o OWASP CRS completo roda na origem com a **ModSecurity v3** (servico `waf` do `docker-compose.yml`, imagem oficial `owasp/modsecurity-crs`), porque o CRS da Cloudflare so existe no plano Pro. Configuracao do CRS por variavel de ambiente da imagem: paranoia 1, limiar de anomalia 5, metodos `PUT/PATCH/DELETE` liberados, limites de corpo (8 MB com arquivo, 256 KB sem) e respostas fora da inspecao. Excecoes do projeto em `deploy/modsecurity/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf` (senhas, token CSRF e cookies do Laravel fora da inspecao; nunca uma regra inteira desligada). Nginx do WAF em `deploy/modsecurity/nginx/` e pagina de bloqueio em `deploy/modsecurity/blocked.html` (resposta 403 com `X-WAF-Block`). `WAF_MODE=DetectionOnly` (variavel do GitHub) vira `MODSEC_RULE_ENGINE` e so registra, para investigar falso positivo sem deploy de codigo. Regras disparadas aparecem em `docker compose logs waf` (error log com id/mensagem e audit log JSON com partes `AHZ`, sem corpo nem cookies). A CI (job `WAF`) sobe a stack inteira e roda `docker/waf/waf-smoke.sh`: trafego legitimo do app nao pode ser bloqueado e ataques classicos (SQLi, XSS, LFI, RCE, PHP injection, scanner, Log4Shell, TRACE) precisam ser.

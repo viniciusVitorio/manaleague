@@ -32,7 +32,7 @@ class CollectionController extends Controller
         ]);
         $query = CollectionItem::where('user_id', $user->id);
         if ($q = trim($filters['q'] ?? '')) {
-            $query->where(fn ($w) => $w->where('name', 'like', '%'.str_replace(['%', '_'], '', $q).'%')->orWhere('set_code', strtoupper($q)));
+            $query->where(fn ($w) => $w->whereLike('name', '%'.str_replace(['%', '_'], '', $q).'%')->orWhere('set_code', strtoupper($q)));
         }
         match ($filters['show'] ?? 'all') {
             'trade' => $query->where('for_trade', '>', 0), 'foil' => $query->where('foil', true), default => null
@@ -41,10 +41,10 @@ class CollectionController extends Controller
             null => null,
             'C' => $query->where('color_identity', 'C'),
             'M' => $query->whereNotNull('color_identity')->where('color_identity', '!=', 'C')->whereRaw('length(color_identity) > 1'),
-            default => $query->where('color_identity', 'like', '%'.$color.'%'),
+            default => $query->whereLike('color_identity', '%'.$color.'%'),
         };
         if ($type = $filters['type'] ?? null) {
-            $query->where('type_line', 'like', '%'.$type.'%');
+            $query->whereLike('type_line', '%'.$type.'%');
         }
         if ($rarity = $filters['rarity'] ?? null) {
             $query->where('rarity', $rarity);
@@ -79,9 +79,9 @@ class CollectionController extends Controller
         $term = mb_strtolower(str_replace(['%', '_'], '', trim($validated['q'])));
 
         $cards = CollectionItem::where('user_id', $request->user()->id)
-            ->where('name', 'like', '%'.$term.'%')
-            ->selectRaw('lower(scryfall_id) as card_id, max(name) as card_name, max(set_code) as set_code, max(type_line) as type_line, max(image_url) as image_url, foil, sum(quantity) as owned')
-            ->groupByRaw('lower(scryfall_id), foil')
+            ->whereLike('name', '%'.$term.'%')
+            ->selectRaw('lower(CAST(scryfall_id AS TEXT)) as card_id, max(name) as card_name, max(set_code) as set_code, max(type_line) as type_line, max(image_url) as image_url, foil, sum(quantity) as owned')
+            ->groupByRaw('lower(CAST(scryfall_id AS TEXT)), foil')
             ->orderBy('card_name')->limit(24)->get()
             // Relevância: nomes que começam com o termo primeiro, depois o resto em ordem alfabética.
             ->sortBy(fn ($item) => [str_starts_with(mb_strtolower($item->card_name), $term) ? 0 : 1, $item->card_name, (int) $item->foil])

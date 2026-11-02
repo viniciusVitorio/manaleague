@@ -10,8 +10,12 @@ services:
       APP_URL: "${APP_URL:-http://localhost:8080}"
       LOG_CHANNEL: "${LOG_CHANNEL:-stderr}"
       LOG_LEVEL: "${LOG_LEVEL:-debug}"
-      DB_CONNECTION: sqlite
-      DB_DATABASE: /var/www/html/storage/app/database.sqlite
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: "${DB_DATABASE:-manaleague}"
+      DB_USERNAME: "${DB_USERNAME:-manaleague}"
+      DB_PASSWORD: "${DB_PASSWORD:?Defina DB_PASSWORD no .env (openssl rand -hex 24)}"
       SESSION_DRIVER: database
       SESSION_ENCRYPT: "true"
       SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-false}"
@@ -30,12 +34,44 @@ services:
       AWS_BUCKET: "${AWS_BUCKET:-}"
       AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION:-us-east-1}"
     volumes:
+      # O volume guarda logs, avatares locais e o banco SQLite antigo (importado e renomeado no 1o boot).
       - app_storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "php artisan about >/dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
+      # 1o boot apos a troca de banco: migrations + copia do SQLite para o Postgres.
+      start_period: 60s
+
+  db:
+    # PostgreSQL na mesma EC2: sem porta publicada, so o app (rede interna do Docker) alcanca.
+    # A senha so vale na criacao do volume: trocar DB_PASSWORD depois exige ALTER USER no banco.
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${DB_DATABASE:-manaleague}"
+      POSTGRES_USER: "${DB_USERNAME:-manaleague}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?Defina DB_PASSWORD no .env (openssl rand -hex 24)}"
+      POSTGRES_INITDB_ARGS: "--auth=scram-sha-256"
+    # Ajustado para a t3.micro (1 GB dividido com PHP, WAF e Caddy).
+    command: >-
+      postgres -c shared_buffers=64MB -c effective_cache_size=192MB -c work_mem=4MB
+      -c maintenance_work_mem=32MB -c max_connections=40
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    mem_limit: 256m
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
 
   waf:
     # WAF: imagem oficial da OWASP = Nginx + ModSecurity v3 + OWASP Core Rule Set v4 (tag LTS fixa;
@@ -105,5 +141,6 @@ services:
 
 volumes:
   app_storage:
+  pg_data:
   caddy_data:
   caddy_config:
