@@ -129,6 +129,52 @@
     @endforeach
 </section>
 
+{{-- Rival: o amigo mais enfrentado em desafios. Sem desafio confirmado, a seção nem aparece. --}}
+@php($rival ??= null)
+@if($rival)
+@php($rivalName = $rival['profile']->nickname)
+@php($leader = $rival['wins'] <=> $rival['losses'])
+@php($rivalStatus = $leader > 0 ? ($isOwner ? 'Você lidera' : $profile->nickname.' lidera') : ($leader < 0 ? $rivalName.' lidera' : 'Rivalidade empatada'))
+<section class="card section-card rival-card is-lead-{{ ['-1' => 'rival', '0' => 'tie', '1' => 'me'][(string) $leader] }}" aria-labelledby="rival-title">
+    <div class="rival-top">
+        <span class="eyebrow"><x-icon name="swords" size="13" /> Rival</span>
+        <span class="rival-status">{{ $rivalStatus }}</span>
+    </div>
+    <h2 id="rival-title" class="sr-only">Rival: {{ $rivalName }}</h2>
+    <p class="sr-only">{{ $isOwner ? 'Seu placar' : 'Placar de '.$profile->nickname }} nos desafios contra {{ $rivalName }}: {{ $rival['wins'] }} {{ $rival['wins'] === 1 ? 'vitória' : 'vitórias' }}, {{ $rival['losses'] }} {{ $rival['losses'] === 1 ? 'derrota' : 'derrotas' }}@if($rival['draws']) e {{ $rival['draws'] }} {{ $rival['draws'] === 1 ? 'empate' : 'empates' }}@endif.</p>
+    <div class="rival-versus" aria-hidden="true">
+        <div class="rival-side">
+            <x-avatar :of="$profile" class="profile-avatar rival-avatar" />
+            <span class="rival-name">{{ $isOwner ? 'Você' : $profile->nickname }}</span>
+        </div>
+        <div class="rival-score">
+            <div class="rival-score-nums"><b class="is-wins">{{ $rival['wins'] }}</b><span>×</span><b class="is-losses">{{ $rival['losses'] }}</b></div>
+            <small>{{ $isOwner ? 'Seu placar nos desafios' : 'Placar de '.$profile->nickname.' nos desafios' }}@if($rival['draws']) · {{ $rival['draws'] }} {{ $rival['draws'] === 1 ? 'empate' : 'empates' }}@endif</small>
+        </div>
+        <div class="rival-side">
+            @can('view', $rival['profile'])
+                <a class="rival-link" href="{{ route('profiles.show', $rival['profile']) }}" tabindex="-1"><x-avatar :of="$rival['profile']" class="profile-avatar rival-avatar" /><span class="rival-name">{{ $rivalName }}</span></a>
+            @else
+                <x-avatar :of="$rival['profile']" class="profile-avatar rival-avatar" /><span class="rival-name">{{ $rivalName }}</span>
+            @endcan
+        </div>
+    </div>
+    <div class="rival-meter" aria-hidden="true">
+        @if($rival['wins'])<span class="is-wins" style="flex-grow:{{ $rival['wins'] }}"></span>@endif
+        @if($rival['draws'])<span class="is-draws" style="flex-grow:{{ $rival['draws'] }}"></span>@endif
+        @if($rival['losses'])<span class="is-losses" style="flex-grow:{{ $rival['losses'] }}"></span>@endif
+    </div>
+    <div class="rival-foot">
+        <p class="h2h-last">{{ $rival['played'] }} {{ $rival['played'] === 1 ? 'desafio' : 'desafios' }} {{ $isOwner ? 'entre vocês' : 'entre '.$profile->nickname.' e '.$rivalName }} · último em {{ $rival['last']->timezone(config('app.timezone'))->format('d/m/Y') }}</p>
+        @if($isOwner)
+            <a class="btn btn-secondary btn-small" href="{{ route('challenges.index', ['opponent' => $rival['profile']->id]) }}"><x-icon name="swords" size="15" /> Desafiar {{ $rivalName }}</a>
+        @elseif(! $rival['profile']->is(auth()->user()?->playerProfile))
+            @can('view', $rival['profile'])<a class="btn btn-ghost btn-small" href="{{ route('profiles.show', $rival['profile']) }}">Ver perfil de {{ $rivalName }}</a>@endcan
+        @endif
+    </div>
+</section>
+@endif
+
 @php($headToHead ??= null)
 @if($headToHead && ($headToHead['played'] || $friendshipStatus === 'accepted'))
 <section class="card section-card head-to-head" aria-labelledby="h2h-title">
