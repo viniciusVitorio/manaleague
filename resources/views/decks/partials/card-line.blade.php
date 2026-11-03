@@ -17,8 +17,9 @@
     <span class="card-name" tabindex="0" title="{{ $card->name }}">
         <span class="card-face">{{ $faces[0] ?? $card->name }}
             @if($card->foil)<span class="foil-mark" role="img" title="Foil" aria-label="Foil">✦</span>@endif
-            @if(in_array($card->name, $bannedNames ?? [], true))<span class="ban-tag" title="Banida no {{ $deck->format }}">Banido</span>@endif
             @if($ownership)<span class="owned-badge {{ $ownership['class'] }}" title="No deck: {{ $ownership['need'] }} · Na sua coleção: {{ $ownership['have'] }}">{{ $ownership['need'] }}/{{ $ownership['have'] }}</span>@endif
+            @if(in_array($card->name, $bannedNames ?? [], true))<span class="ban-tag" title="Banida no {{ $deck->format }}">Banido</span>
+            @elseif(in_array($card->name, $invalidNames ?? [], true))<span class="ban-tag is-invalid" title="Não é válida no Pauper: nunca saiu como comum">Inválida</span>@endif
         </span>
         @if(count($faces) > 1)<span class="card-back">// {{ implode(' // ', array_slice($faces, 1)) }}</span>@endif
         @if($card->image_url)<img class="card-preview" src="{{ $card->image_url }}" alt="" loading="lazy" width="244" height="340">@endif

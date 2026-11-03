@@ -23,7 +23,7 @@ class DeckCard extends Model
 
     protected $fillable = [
         'scryfall_id', 'board', 'foil', 'quantity', 'name', 'mana_cost', 'cmc', 'type_line',
-        'color_identity', 'rarity', 'set_code', 'image_url', 'art_url',
+        'color_identity', 'rarity', 'pauper_legality', 'set_code', 'image_url', 'art_url',
     ];
 
     protected function casts(): array { return ['quantity' => 'integer', 'cmc' => 'float', 'foil' => 'boolean']; }

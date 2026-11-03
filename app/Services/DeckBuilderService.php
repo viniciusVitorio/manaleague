@@ -23,11 +23,13 @@ class DeckBuilderService
             $existing = $deck->cards()->where('scryfall_id', $card['scryfall_id'])->where('board', $board)->where('foil', $foil)->lockForUpdate()->first();
 
             if ($existing) {
-                $existing->update(['quantity' => min(self::MAX_COPIES, $existing->quantity + $quantity)]);
+                // Aproveita a consulta ao Scryfall para atualizar a legalidade no Pauper (pode ter mudado).
+                $existing->update(['quantity' => min(self::MAX_COPIES, $existing->quantity + $quantity)]
+                    + (isset($card['pauper_legality']) ? ['pauper_legality' => $card['pauper_legality']] : []));
                 $result = $existing;
             } else {
                 $result = $deck->cards()->create([
-                    ...collect($card)->only(['scryfall_id', 'name', 'mana_cost', 'cmc', 'type_line', 'color_identity', 'rarity', 'set_code', 'image_url', 'art_url'])->all(),
+                    ...collect($card)->only(['scryfall_id', 'name', 'mana_cost', 'cmc', 'type_line', 'color_identity', 'rarity', 'pauper_legality', 'set_code', 'image_url', 'art_url'])->all(),
                     'board' => $board,
                     'foil' => $foil,
                     'quantity' => min(self::MAX_COPIES, $quantity),

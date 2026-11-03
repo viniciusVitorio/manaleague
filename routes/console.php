@@ -113,3 +113,11 @@ Artisan::command('cards:sync-bans', function (): int {
 })->purpose('Atualiza a lista de cartas banidas por formato (Scryfall)');
 
 \Illuminate\Support\Facades\Schedule::command('cards:sync-bans')->dailyAt('06:00');
+
+Artisan::command('cards:sync-legality', function (): int {
+    $result = app(\App\Services\Decks\PauperLegalityService::class)->sync(app(\App\Services\ScryfallClient::class));
+    $this->info("Pauper: {$result['checked']} carta(s) consultada(s), {$result['updated']} linha(s) de deck atualizada(s).");
+    return 0;
+})->purpose('Atualiza a legalidade no Pauper das cartas salvas em decks (Scryfall)');
+
+\Illuminate\Support\Facades\Schedule::command('cards:sync-legality')->dailyAt('06:10');

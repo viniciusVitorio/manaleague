@@ -35,7 +35,10 @@ class Tournament extends Model
         return ['tournament_date' => 'date', 'round_limit' => 'integer', 'ranked' => 'boolean', 'allow_banned' => 'boolean', 'round_ends_at' => 'datetime', 'round_minutes' => 'integer'];
     }
 
-    /** Decks com cartas banidas no formato ficam de fora (inscrição, troca de deck, check-in e início). */
+    /**
+     * Decks com cartas banidas no formato ficam de fora (inscrição, troca de deck, check-in e início).
+     * No Pauper, as cartas inválidas (nunca saíram como comum) também: ver BanListService::blockedByDeck.
+     */
     public function blocksBannedCards(): bool
     {
         return ! $this->allow_banned && \App\Services\Decks\BanListService::covers($this->format);
@@ -65,10 +68,14 @@ class Tournament extends Model
     public function rulesLabel(): string
     {
         if ($this->rules === self::RULES_CUSTOM) {
-            return 'Regras personalizadas · '.($this->allow_banned ? 'cartas banidas liberadas' : 'sem cartas banidas');
+            $label = \App\Services\Decks\BanListService::blockedLabel($this->format);
+
+            return 'Regras personalizadas · '.($this->allow_banned ? $label.' liberadas' : 'sem '.$label);
         }
 
-        return \App\Services\Decks\BanListService::covers($this->format) ? 'Regras padrão do '.$this->format.' · sem cartas banidas' : 'Regras padrão do '.$this->format;
+        return \App\Services\Decks\BanListService::covers($this->format)
+            ? 'Regras padrão do '.$this->format.' · sem '.\App\Services\Decks\BanListService::blockedLabel($this->format)
+            : 'Regras padrão do '.$this->format;
     }
 
     /** Cronômetro da rodada atual em andamento (definido pelo organizador). */

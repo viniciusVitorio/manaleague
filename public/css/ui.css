@@ -436,9 +436,10 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 
 
 /* ---------- Cartas banidas (deck) e regras do torneio ---------- */
-.ban-tag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;border:1px solid var(--ui-danger);background:var(--ui-danger);color:#fff;font-size:.72rem;font-weight:600;line-height:1.5;vertical-align:1px}
+.ban-tag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;border:1px solid rgba(248,113,113,.45);background:rgba(248,113,113,.16);color:var(--ui-danger);font-size:.72rem;font-weight:600;line-height:1.5;vertical-align:1px}
 .ban-alert .ban-tag{margin-left:2px}
 .player-row .ban-tag{margin-left:0;margin-top:4px}
+.ban-tag.is-invalid{border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);color:var(--ui-warning)}
 .ban-tag.is-neutral{border-color:var(--ui-border-strong);background:var(--ui-accent);color:var(--ui-fg-muted);font-weight:500}
 .rules-fieldset{border:1px solid var(--ui-border);border-radius:8px;padding:4px 14px 12px;margin:16px 0}
 .rules-fieldset legend{padding:0 6px;color:var(--ui-fg-soft);font-size:.82rem;font-weight:500}

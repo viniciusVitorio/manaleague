@@ -93,7 +93,7 @@ class BannedCardsTest extends TestCase
         $this->actingAs($org)->post(route('tournaments.store'), $base)->assertRedirect();
         $standard = Tournament::latest('id')->first();
         $this->assertSame([Tournament::RULES_STANDARD, false, true], [$standard->rules, $standard->allow_banned, $standard->blocksBannedCards()]);
-        $this->assertSame('Regras padrão do Pauper · sem cartas banidas', $standard->rulesLabel());
+        $this->assertSame('Regras padrão do Pauper · sem cartas banidas ou inválidas', $standard->rulesLabel());
 
         // padrão ignora "permitir banidas" e regras da casa
         $this->actingAs($org)->post(route('tournaments.store'), $base + ['rules' => 'standard', 'allow_banned' => 1, 'house_rules' => 'Proxies ok'])->assertRedirect();
@@ -102,7 +102,7 @@ class BannedCardsTest extends TestCase
         $this->actingAs($org)->post(route('tournaments.store'), $base + ['rules' => 'custom', 'allow_banned' => 1, 'house_rules' => 'Proxies liberados'])->assertRedirect();
         $custom = Tournament::latest('id')->first();
         $this->assertSame([Tournament::RULES_CUSTOM, true, false], [$custom->rules, $custom->allow_banned, $custom->blocksBannedCards()]);
-        $this->get(route('arena.public', $custom->public_slug))->assertSee('Regras personalizadas · cartas banidas liberadas')->assertSee('Proxies liberados');
+        $this->get(route('arena.public', $custom->public_slug))->assertSee('Regras personalizadas · cartas banidas ou inválidas liberadas')->assertSee('Proxies liberados');
         $this->actingAs($org)->get(route('tournaments.invite.show', $custom->invite_token))->assertSee('Proxies liberados');
         $this->actingAs($org)->get(route('tournaments.create'))->assertSee('Regras do torneio')->assertSee('Permitir cartas banidas no formato');
 
@@ -130,9 +130,9 @@ class BannedCardsTest extends TestCase
         $t = $this->tournament($org);
 
         // convite: o seletor avisa e a inscrição com o deck banido é recusada, com as cartas
-        $this->actingAs($ana)->get(route('tournaments.invite.show', $t->invite_token))->assertSee('Tron Gush · tem cartas banidas')->assertSee('não podem ser usados neste torneio');
+        $this->actingAs($ana)->get(route('tournaments.invite.show', $t->invite_token))->assertSee('Tron Gush · tem cartas banidas ou inválidas')->assertSee('não podem ser usados neste torneio');
         $this->actingAs($ana)->post(route('tournaments.invite.store', $t->invite_token), ['deck_id' => $banned->id])
-            ->assertSessionHasErrors(['deck_id' => 'Seu deck tem cartas banidas no Pauper: Gush e High Tide. Troque essas cartas ou escolha outro deck.']);
+            ->assertSessionHasErrors(['deck_id' => 'Seu deck tem cartas banidas ou inválidas no Pauper: Gush e High Tide. Troque essas cartas ou escolha outro deck.']);
         $this->assertSame(0, $t->players()->count());
 
         $this->actingAs($ana)->post(route('tournaments.invite.store', $t->invite_token), ['deck_id' => $clean->id])->assertSessionHasNoErrors();
@@ -144,14 +144,14 @@ class BannedCardsTest extends TestCase
 
         // o deck muda depois da inscrição: check-in barrado (jogadora e organizador), início barrado
         $clean->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Gush', 'quantity' => 1, 'board' => 'side', 'type_line' => 'Instant', 'cmc' => 5, 'mana_cost' => '{4}{U}']);
-        $this->actingAs($ana)->get(route('arena.public', $t->public_slug))->assertSee('Seu deck tem cartas banidas no Pauper: Gush.');
+        $this->actingAs($ana)->get(route('arena.public', $t->public_slug))->assertSee('Seu deck tem cartas banidas ou inválidas no Pauper: Gush.');
         $this->actingAs($ana)->post(route('tournaments.check-in', $t))->assertSessionHasErrors('check_in');
         $this->actingAs($org)->patch(route('tournaments.players.check-in', [$t, $entry]))
-            ->assertSessionHasErrors(['check_in' => 'O deck de Ana tem cartas banidas no Pauper. A presença só pode ser marcada depois que a pessoa trocar as cartas ou o deck.']);
+            ->assertSessionHasErrors(['check_in' => 'O deck de Ana tem cartas banidas ou inválidas no Pauper. A presença só pode ser marcada depois que a pessoa trocar as cartas ou o deck.']);
         $this->assertNull($entry->fresh()->checked_in_at);
         $this->actingAs($org)->get(route('tournaments.show', $t))->assertSee('Deck inválido');
         $t->players()->create(['name' => 'Bia']);
-        $this->actingAs($org)->post(route('tournaments.start', $t))->assertSessionHasErrors(['tournament' => 'Não dá para começar: Ana está com cartas banidas no Pauper. Peça para trocarem o deck ou remova da lista.']);
+        $this->actingAs($org)->post(route('tournaments.start', $t))->assertSessionHasErrors(['tournament' => 'Não dá para começar: Ana está com cartas banidas ou inválidas no Pauper. Peça para trocarem o deck ou remova da lista.']);
         $this->assertSame('setup', $t->fresh()->status);
 
         // trocou as cartas: check-in liberado
@@ -186,6 +186,6 @@ class BannedCardsTest extends TestCase
         $loose = $this->tournament($org, ['rules' => 'custom', 'allow_banned' => true]);
         $loose->players()->create(['name' => 'Ana', 'player_profile_id' => $ana->playerProfile->id, 'deck_id' => $deck->id]);
         $this->actingAs($org)->put(route('tournaments.update', $loose), ['name' => 'Copa', 'format' => 'Pauper', 'tournament_date' => '2026-11-01', 'rules' => 'standard'])
-            ->assertSessionHas('status', 'Torneio atualizado. Atenção: 1 inscrito está com cartas banidas no deck e só pode fazer check-in depois de trocar.');
+            ->assertSessionHas('status', 'Torneio atualizado. Atenção: 1 inscrito está com cartas banidas ou inválidas no deck e só pode fazer check-in depois de trocar.');
     }
 }

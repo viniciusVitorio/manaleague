@@ -3,6 +3,14 @@
 @section('content')
 @php
     $boardLabel = ['main' => 'Deck', 'side' => 'Sideboard', 'commander' => 'Comandante'];
+    // Alerta das cartas que tiram o deck de torneios com as regras do formato: banidas e, no Pauper, inválidas.
+    $bannedCount = count($bannedNames);
+    $invalidCount = count($invalidNames);
+    $blockedHeadline = match (true) {
+        $bannedCount > 0 && $invalidCount > 0 => $bannedCount.($bannedCount === 1 ? ' carta banida' : ' cartas banidas').' e '.$invalidCount.($invalidCount === 1 ? ' inválida' : ' inválidas').' no '.$deck->format.'.',
+        $invalidCount > 0 => $invalidCount.($invalidCount === 1 ? ' carta inválida no Pauper (nunca saiu como comum).' : ' cartas inválidas no Pauper (nunca saíram como comum).'),
+        default => $bannedCount.($bannedCount === 1 ? ' carta banida' : ' cartas banidas').' no '.$deck->format.'.',
+    };
 @endphp
 <header class="deck-hero card" @if($summary['cover']) style="--cover: url('{{ $summary['cover'] }}')" @endif>
     <div class="deck-hero-inner">
@@ -46,8 +54,8 @@
 </section>
 @endif
 
-@if($bannedNames)
-<div class="alert alert-danger ban-alert" role="status"><strong>{{ count($bannedNames) === 1 ? '1 carta banida' : count($bannedNames).' cartas banidas' }} no {{ $deck->format }}.</strong> Torneios com as regras padrão do formato não aceitam este deck até a troca{{ count($bannedNames) === 1 ? ' dela' : ' delas' }}. Elas estão marcadas com <span class="ban-tag">Banido</span> na lista.</div>
+@if($bannedNames || $invalidNames)
+<div class="alert alert-danger ban-alert" role="status"><strong>{{ $blockedHeadline }}</strong> Torneios com as regras padrão do formato não aceitam este deck até a troca{{ $bannedCount + $invalidCount === 1 ? ' dela' : ' delas' }}. Elas estão marcadas com @if($bannedNames)<span class="ban-tag">Banido</span>@endif @if($bannedNames && $invalidNames) e @endif @if($invalidNames)<span class="ban-tag is-invalid">Inválida</span>@endif na lista.</div>
 @endif
 @if($summary['warnings'])
 <div class="alert alert-warning"><strong>Construção:</strong><ul>@foreach($summary['warnings'] as $warning)<li>{{ $warning }}</li>@endforeach</ul></div>
