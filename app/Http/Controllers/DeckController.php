@@ -84,8 +84,10 @@ class DeckController extends Controller
         $exportText = $this->builder->exportText($deck);
         // Cartas banidas no formato do deck (tag "Banido" na lista).
         $bannedNames = app(\App\Services\Decks\BanListService::class)->bannedInDeck($deck->id, $deck->format);
+        // Cartas que nunca saíram como comum (tag "Inválida"; só em deck de Pauper).
+        $invalidNames = \App\Services\Decks\PauperLegalityService::invalidNames($deck->cards, $deck->format);
 
-        return view('decks.show', compact('deck', 'summary', 'isOwner', 'owned', 'needed', 'hasCollection', 'showOwnership', 'exportText', 'bannedNames'));
+        return view('decks.show', compact('deck', 'summary', 'isOwner', 'owned', 'needed', 'hasCollection', 'showOwnership', 'exportText', 'bannedNames', 'invalidNames'));
     }
 
     /** Baixa o deck em .csv no padrão do ManaBox. Mesma regra de acesso da página do deck. */

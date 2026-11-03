@@ -56,8 +56,8 @@ class TournamentController extends Controller
         $enrolledProfileIds = $tournament->players->pluck('player_profile_id')->filter();
         $friends = $tournament->user->friendProfiles()->wherePivot('status', 'accepted')->whereNotIn('player_profiles.id', $enrolledProfileIds)->orderBy('nickname')->get();
         $recap = $recaps->for($tournament);
-        // Inscritos cujo deck tem banidas (só nos torneios que barram): o organizador vê a marca, sem a lista de cartas.
-        $bannedDecks = $tournament->blocksBannedCards() ? app(BanListService::class)->bannedByDeck($tournament->players->pluck('deck_id'), $tournament->format) : [];
+        // Inscritos cujo deck tem banidas ou, no Pauper, inválidas (só nos torneios que barram): o organizador vê a marca, sem a lista de cartas.
+        $bannedDecks = $tournament->blocksBannedCards() ? app(BanListService::class)->blockedByDeck($tournament->players->pluck('deck_id'), $tournament->format) : [];
         // O organizador tambem pode jogar: mostra o card de troca de deck da propria inscricao.
         $profile = auth()->user()->playerProfile()->with('decks')->first();
         $entry = $profile ? $tournament->players->firstWhere('player_profile_id', $profile->id) : null;
@@ -139,11 +139,12 @@ class TournamentController extends Controller
     private function bannedWarning(Tournament $tournament): string
     {
         $warning = '';
-        $count = $tournament->blocksBannedCards() ? count(app(BanListService::class)->bannedByDeck($tournament->players()->pluck('deck_id'), $tournament->format)) : 0;
+        $count = $tournament->blocksBannedCards() ? count(app(BanListService::class)->blockedByDeck($tournament->players()->pluck('deck_id'), $tournament->format)) : 0;
+        $label = BanListService::blockedLabel($tournament->format);
         if ($count > 0) {
             $warning .= $count === 1
-                ? ' Atenção: 1 inscrito está com cartas banidas no deck e só pode fazer check-in depois de trocar.'
-                : " Atenção: {$count} inscritos estão com cartas banidas no deck e só podem fazer check-in depois de trocar.";
+                ? " Atenção: 1 inscrito está com {$label} no deck e só pode fazer check-in depois de trocar."
+                : " Atenção: {$count} inscritos estão com {$label} no deck e só podem fazer check-in depois de trocar.";
         }
 
         $missing = $tournament->playersWithoutDeck()->count();

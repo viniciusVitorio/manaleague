@@ -5,7 +5,8 @@
     $usable = $profile->decks->filter(fn ($deck) => $tournament->acceptsDeck($deck))->values();
     $currentDeckId = old('deck_id', $current ? $current->deck_id : $usable->firstWhere('is_primary', true)?->id);
     $bannedPicker = $tournament->blocksBannedCards()
-        ? app(\App\Services\Decks\BanListService::class)->bannedByDeck($usable->pluck('id'), $tournament->format) : [];
+        ? app(\App\Services\Decks\BanListService::class)->blockedByDeck($usable->pluck('id'), $tournament->format) : [];
+    $blockedLabel = \App\Services\Decks\BanListService::blockedLabel($tournament->format);
     $hiddenDecks = $profile->decks->count() - $usable->count();
 @endphp
 @if($usable->isNotEmpty())
@@ -17,11 +18,11 @@
             <option value="" disabled selected>Escolha um deck</option>
         @endif
         @foreach($usable as $deck)
-            <option value="{{ $deck->id }}" @selected((string) $currentDeckId === (string) $deck->id)>{{ $deck->name }}{{ $deck->colors ? ' · '.$deck->colors : '' }}{{ $deck->is_primary ? ' ★' : '' }}{{ isset($bannedPicker[$deck->id]) ? ' · tem cartas banidas' : '' }}</option>
+            <option value="{{ $deck->id }}" @selected((string) $currentDeckId === (string) $deck->id)>{{ $deck->name }}{{ $deck->colors ? ' · '.$deck->colors : '' }}{{ $deck->is_primary ? ' ★' : '' }}{{ isset($bannedPicker[$deck->id]) ? ' · tem '.$blockedLabel : '' }}</option>
         @endforeach
     </select>
 </label>
-@if($bannedPicker)<p class="muted small-note">Decks com cartas banidas no {{ $tournament->format }} não podem ser usados neste torneio.</p>@endif
+@if($bannedPicker)<p class="muted small-note">Decks com {{ $blockedLabel }} no {{ $tournament->format }} não podem ser usados neste torneio.</p>@endif
 @if($hiddenDecks > 0)<p class="muted small-note">Aparecem só os decks de {{ $tournament->format }} e os decks sem formato definido.</p>@endif
 @elseif($tournament->requiresDeck())
 <div class="alert alert-warning" role="status">Para entrar neste torneio você precisa de um deck de {{ $tournament->format }} salvo na sua conta. <a href="{{ route('decks.index') }}">Criar um deck</a></div>

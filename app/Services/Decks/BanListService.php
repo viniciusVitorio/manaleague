@@ -77,22 +77,51 @@ class BanListService
             ->all();
     }
 
-    /** Banidas do deck que impedem a inscrição/check-in neste torneio (vazio quando o torneio aceita). */
+    /**
+     * Cartas que tiram o deck de um torneio com as regras do formato: as banidas e, no Pauper, também as inválidas
+     * (que nunca saíram como comum, ver PauperLegalityService). Uma consulta para vários decks.
+     *
+     * @param  iterable<int|null>  $deckIds
+     * @return array<int, list<string>> deck_id => nomes em ordem alfabética (só decks com alguma carta proibida)
+     */
+    public function blockedByDeck(iterable $deckIds, ?string $format): array
+    {
+        $ids = collect($deckIds)->filter()->unique()->values();
+        $blocked = $this->bannedByDeck($ids, $format);
+
+        foreach (app(PauperLegalityService::class)->invalidByDeck($ids, $format) as $deckId => $names) {
+            $merged = array_values(array_unique([...($blocked[$deckId] ?? []), ...$names]));
+            sort($merged);
+            $blocked[$deckId] = $merged;
+        }
+
+        return $blocked;
+    }
+
+    /** Cartas do deck que impedem a inscrição/check-in neste torneio (vazio quando o torneio aceita). */
     public function blockingCards(Tournament $tournament, ?int $deckId): array
     {
-        return $tournament->blocksBannedCards() ? $this->bannedInDeck($deckId, $tournament->format) : [];
+        if (! $deckId || ! $tournament->blocksBannedCards()) return [];
+
+        return $this->blockedByDeck([$deckId], $tournament->format)[$deckId] ?? [];
+    }
+
+    /** "cartas banidas", ou "cartas banidas ou inválidas" no Pauper (onde as inválidas também barram o deck). */
+    public static function blockedLabel(?string $format): string
+    {
+        return $format === PauperLegalityService::FORMAT ? 'cartas banidas ou inválidas' : 'cartas banidas';
     }
 
     /** Mensagem para o próprio jogador, com as cartas (ele é o dono do deck). */
     public static function messageForOwner(Tournament $tournament, array $names): string
     {
-        return 'Seu deck tem cartas banidas no '.$tournament->format.': '.self::listNames($names).'. Troque essas cartas ou escolha outro deck.';
+        return 'Seu deck tem '.self::blockedLabel($tournament->format).' no '.$tournament->format.': '.self::listNames($names).'. Troque essas cartas ou escolha outro deck.';
     }
 
     /** Mensagem para o organizador: sem listar as cartas, que o deck pode ser privado. */
     public static function messageForOrganizer(Tournament $tournament, string $playerName): string
     {
-        return 'O deck de '.$playerName.' tem cartas banidas no '.$tournament->format.'.';
+        return 'O deck de '.$playerName.' tem '.self::blockedLabel($tournament->format).' no '.$tournament->format.'.';
     }
 
     private static function listNames(array $names): string

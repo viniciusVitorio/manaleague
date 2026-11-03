@@ -266,6 +266,8 @@ jobs:
           sudo docker compose -p manaleague exec -T app php artisan optimize
           # Lista de cartas banidas (Scryfall). Se falhar, o deploy segue com a lista anterior.
           sudo docker compose -p manaleague exec -T app php artisan cards:sync-bans || echo "Aviso: lista de banidas não atualizada."
+          # Legalidade no Pauper das cartas já salvas em decks (tag "Inválida"). Se falhar, as cartas ficam como estavam.
+          sudo docker compose -p manaleague exec -T app php artisan cards:sync-legality || echo "Aviso: legalidade no Pauper não atualizada."
           curl --fail --retry 10 --retry-delay 3 --retry-all-errors --resolve manaleague.com.br:443:127.0.0.1 https://manaleague.com.br/login >/dev/null
           REMOTE
       - name: Export published GitHub Releases

@@ -98,7 +98,8 @@ class ScryfallClient
             return null;
         }
 
-        $key = 'scryfall:card:'.strtolower($id);
+        // v2: o cache antigo não tinha pauper_legality.
+        $key = 'scryfall:card:v2:'.strtolower($id);
         if (is_array($cached = Cache::get($key))) {
             return $cached;
         }
@@ -239,6 +240,8 @@ class ScryfallClient
             'image_url' => $this->safeImage($images['normal'] ?? null),
             'art_url' => $this->safeImage($images['art_crop'] ?? null),
             'legal_commander' => ($card['legalities']['commander'] ?? null) === 'legal',
+            // Legalidade da carta (todas as impressões), não da raridade desta edição. Valor fora do esperado = desconhecido.
+            'pauper_legality' => in_array($card['legalities']['pauper'] ?? null, ['legal', 'not_legal', 'banned'], true) ? $card['legalities']['pauper'] : null,
             'price_usd' => isset($card['prices']['usd']) && is_numeric($card['prices']['usd']) ? (float) $card['prices']['usd'] : null,
             'price_usd_foil' => isset($card['prices']['usd_foil']) && is_numeric($card['prices']['usd_foil']) ? (float) $card['prices']['usd_foil'] : null,
         ];
