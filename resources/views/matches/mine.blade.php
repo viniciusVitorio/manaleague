@@ -3,31 +3,85 @@
 @section('live-scope', 'me')
 @push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/live.css') }}"><script defer src="{{ \App\Support\VersionedAsset::url('js/round-timer.js') }}"></script>@endpush
 @section('content')
-<h1>Minhas partidas</h1>
+<header class="page-head">
+    <div>
+        <span class="eyebrow">Torneios, desafios e ranked</span>
+        <h1>Minhas partidas</h1>
+        <p>
+            @if($total['played'])
+                {{ $total['played'] }} {{ $total['played'] === 1 ? 'partida encerrada' : 'partidas encerradas' }} · campanha <b class="mm-record" title="Vitórias–Derrotas–Empates">{{ $total['label'] }}</b><span class="sr-only"> ({{ $total['w'] }} {{ $total['w'] === 1 ? 'vitória' : 'vitórias' }}, {{ $total['l'] }} {{ $total['l'] === 1 ? 'derrota' : 'derrotas' }}, {{ $total['d'] }} {{ $total['d'] === 1 ? 'empate' : 'empates' }})</span>
+            @else
+                Tudo o que você joga: torneios, desafios entre amigos e ranked. O placar vale quando o adversário confirma.
+            @endif
+        </p>
+    </div>
+    <div class="page-head-actions">
+        <a class="ui-btn ui-btn-outline" href="{{ route('challenges.create') }}"><x-icon name="swords" />Desafiar amigo</a>
+    </div>
+</header>
+
 @include('partials.confirm-all')
-@forelse($matches as $match)
-<article class="card section-card mobile-result"><h2>{{ $match->tournament->name }} · Rodada {{ $match->round }}</h2>@if($match->status==='pending' && $match->tournament->roundTimerRunning())<x-round-timer :ends-at="$match->tournament->round_ends_at" class="round-timer-compact" />@endif<p>@if($match->pod_player_ids)@foreach($match->tournament->players->whereIn('id', $match->pod_player_ids)->values() as $podPlayer)@unless($loop->first) · @endunless<x-profile-link :of="$podPlayer">{{ $podPlayer->displayName() }}</x-profile-link>@endforeach @else<x-profile-link :of="$match->playerOne">{{ $match->playerOne?->displayName() }}</x-profile-link> × <x-profile-link :of="$match->playerTwo">{{ $match->playerTwo?->displayName() ?? 'BYE' }}</x-profile-link>@endif</p>
-@php($submission=$submissions->get($match->id))
-@if($submission)
-<p>{{ match($submission->status) {'pending'=>'Aguardando confirmação','disputed'=>'Contestado · aguardando organizador','confirmed'=>'Confirmado','resolved'=>'Resolvido pelo organizador',default=>$submission->status} }} · {{ $submission->player_one_games }} × {{ $submission->player_two_games }}</p>
-@if($submission->dispute_reason)<p>Contestação: {{ $submission->dispute_reason }}</p>@endif
-@if($submission->resolution_reason)<p>Resolução: {{ $submission->resolution_reason }}</p>@endif
-@if($submission->status==='pending' && $submission->submitted_by!==auth()->id())
-<form method="POST" action="{{ route('matches.submissions.respond',$submission) }}">@csrf<input type="hidden" name="action" value="confirm"><button class="btn btn-primary">Confirmar placar</button></form>
-<form method="POST" action="{{ route('matches.submissions.respond',$submission) }}">@csrf<input type="hidden" name="action" value="dispute"><label>Motivo da contestação<textarea name="reason" minlength="3" maxlength="1000" required></textarea></label><button class="btn btn-secondary">Contestar</button></form>
+
+<nav class="mm-tabs" aria-label="Tipo de partida">
+    @foreach($filters as $key => $name)
+        <a class="mm-tab @if($filter === $key) is-active @endif" href="{{ route('matches.mine', $key === 'todas' ? [] : ['tipo' => $key]) }}" @if($filter === $key) aria-current="page" @endif>{{ $name }} <span class="mm-tab-count">{{ $counts[$key] }}</span></a>
+    @endforeach
+</nav>
+
+@if($open->isEmpty() && $history->isEmpty())
+    <x-ui.card>
+        @switch($filter)
+            @case('desafios')
+                <x-ui.empty icon="swords" title="Nenhum desafio ainda." text="Chame um amigo para uma série casual ou valendo ranque." :href="route('challenges.create')" action="Desafiar amigo" />
+                @break
+            @case('ranked')
+                <x-ui.empty icon="medal" title="Nenhuma partida ranqueada ainda." text="Entre na fila do Ranked ou mande um desafio ranqueado para um amigo." :href="route('challenges.create', ['ranked' => 1])" action="Desafio ranqueado" />
+                @break
+            @default
+                <x-ui.empty icon="trophy" title="Nenhuma partida vinculada à sua conta." text="Entre num torneio pelo link de convite do organizador ou desafie um amigo. As partidas aparecem aqui." :href="route('challenges.create')" action="Desafiar amigo" />
+        @endswitch
+    </x-ui.card>
+@else
+    @if($open->isNotEmpty())
+        <x-ui.card title="Em andamento" icon="clock" :meta="$open->count().' '.($open->count() === 1 ? 'partida' : 'partidas')" class="mm-section">
+            @foreach($open as $row)
+                @if($row['kind'] === 'tournament')
+                    @include('matches.partials.open-match', ['row' => $row])
+                @else
+                    <div class="ui-list mm-list">@include('matches.partials.link-row', ['row' => $row])</div>
+                @endif
+            @endforeach
+        </x-ui.card>
+    @endif
+
+    @if($filter === 'torneios')
+        @foreach($groups as $tournamentId => $rows)
+            @php($t = $rows->first()['tournament'])
+            @php($rec = $records->get($tournamentId))
+            <x-ui.card :title="$t->name" icon="trophy" class="mm-section"
+                :meta="collect([$t->tournament_date?->format('d/m/Y'), $rec && $rec['played'] ? 'campanha '.$rec['label'] : null])->filter()->implode(' · ')"
+                :href="$t->public_slug ? route('arena.public', $t->public_slug) : null" link-label="Placar">
+                <div class="ui-list mm-list">
+                    @foreach($rows as $row)
+                        @include('matches.partials.history-row', ['row' => $row])
+                    @endforeach
+                </div>
+            </x-ui.card>
+        @endforeach
+    @elseif($history->isNotEmpty())
+        <x-ui.card title="Histórico" icon="calendar" :meta="$history->total().' '.($history->total() === 1 ? 'partida' : 'partidas')" class="mm-section">
+            <div class="ui-list mm-list">
+                @foreach($history as $row)
+                    @if($row['kind'] === 'tournament')
+                        @include('matches.partials.history-row', ['row' => $row, 'withTournament' => true])
+                    @else
+                        @include('matches.partials.link-row', ['row' => $row])
+                    @endif
+                @endforeach
+            </div>
+        </x-ui.card>
+    @endif
+
+    {{ $history->links() }}
 @endif
-@elseif($match->status==='pending' && $match->player_two_id && !$match->pod_player_ids)
-<p class="life-cta"><a class="btn btn-primary" href="{{ route('life.tournament',[$match->tournament,$match]) }}">❤ Abrir contador de vida</a> <small>Quando alguém zerar, o placar já vem pronto pra enviar.</small></p>
-<form method="POST" action="{{ route('matches.submissions.store',[$match->tournament,$match]) }}">@csrf
-<input type="hidden" name="idempotency_key" value="{{ (string) Illuminate\Support\Str::uuid() }}">
-<label>{{ $match->playerOne?->displayName() }} <input type="number" name="player_one_games" min="0" max="3" required></label>
-<label>{{ $match->playerTwo?->displayName() }} <input type="number" name="player_two_games" min="0" max="3" required></label>
-<button class="btn btn-primary">Enviar resultado</button></form>
-@elseif($match->pod_player_ids)@php($mySeat = $match->tournament->players->first(fn($p) => in_array($p->id, $match->pod_player_ids, true) && $p->profile?->account_user_id === auth()->id()))
-<p>Mesa Commander · @if($match->status === 'finished' && $mySeat && isset(($match->pod_scores ?? [])[$mySeat->id]))você ficou em {{ $match->pod_scores[$mySeat->id] }}º @else o organizador lança as posições ao fim da mesa @endif</p>
-@if($match->status === 'pending')<p class="life-cta"><a class="btn btn-secondary" href="{{ route('life.tournament',[$match->tournament,$match]) }}">❤ Contador de vida da mesa</a></p>@endif
-@else<p>{{ $match->player_one_games ?? '–' }} × {{ $match->player_two_games ?? '–' }} · {{ ['finished'=>'Encerrada','bye'=>'Folga (vitória automática)','pending'=>'Aguardando'][$match->status] ?? $match->status }}</p>@endif
-</article>
-@empty<p>Nenhuma partida vinculada à sua conta.</p>@endforelse
-{{ $matches->links() }}
 @endsection
