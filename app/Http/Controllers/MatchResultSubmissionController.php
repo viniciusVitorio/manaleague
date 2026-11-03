@@ -26,15 +26,7 @@ class MatchResultSubmissionController extends Controller {
   $events=\Illuminate\Support\Facades\DB::table('match_result_submission_events')->whereIn('submission_id',$submissions->pluck('id'))->orderBy('id')->get()->groupBy('submission_id');
   return response()->view('matches.queue',compact('tournament','submissions','events'))->header('Cache-Control','private, no-store');
  }
- public function index(Request $r) {
-  $id = $r->user()->id;
-  $playerIds = \App\Models\Player::whereHas('profile',fn($p)=>$p->where('account_user_id',$id))->pluck('id')->map(fn($v)=>(int)$v)->all();
-  $matches = GameMatch::with(['tournament.players.profile','playerOne.profile','playerTwo.profile'])->where(function($q) use($playerIds) {
-   $q->whereIn('player_one_id',$playerIds)->orWhereIn('player_two_id',$playerIds);
-   // Commander pods store every seat in a JSON array ([3,7,9]); match the id as a whole element.
-   foreach ($playerIds as $pid) foreach (["[$pid]","[$pid,%","%,$pid,%","%,$pid]"] as $pattern) $q->orWhere('pod_player_ids','like',$pattern);
-  })->orderByDesc('id')->paginate(30);
-  $submissions = MatchResultSubmission::whereIn('match_id',$matches->pluck('id'))->get()->keyBy('match_id');
-  return view('matches.mine',compact('matches','submissions'));
+ public function index(Request $r, \App\Services\MyMatchesService $matches) {
+  return view('matches.mine', $matches->for($r->user(), (string) $r->query('tipo', 'todas')));
  }
 }

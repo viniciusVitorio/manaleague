@@ -108,7 +108,7 @@ class TournamentSocialTest extends TestCase
         $this->actingAs($owner)->get(route('tournaments.show', $t))->assertSee($biaLink, false)
             ->assertDontSee('@else', false)->assertDontSee('Resultado travado'); // partida editável: sem aviso de travado
         // minhas partidas
-        $this->actingAs($ana)->get(route('matches.mine'))->assertSee($biaLink, false)->assertSeeText('Ana × Bia');
+        $this->actingAs($ana)->get(route('matches.mine'))->assertSee($biaLink, false)->assertSeeText('Você × Bia');
 
         // pedido de amizade recebido (página de amigos)
         $this->actingAs($bia)->patch(route('profiles.friend', $ana->playerProfile))->assertRedirect();

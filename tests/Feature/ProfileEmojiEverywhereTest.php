@@ -37,8 +37,8 @@ class ProfileEmojiEverywhereTest extends TestCase
         $t->matches()->create(['round' => 1, 'stage' => 'league', 'status' => 'pending', 'player_one_id' => $p1->id, 'player_two_id' => $p2->id]);
 
         $this->actingAs($owner)->get(route('tournaments.show', $t))->assertOk()->assertSee('🧙 Pablo');
-        // mesmo texto na tela; cada nome agora leva ao perfil
-        $this->actingAs($pablo)->get(route('matches.mine'))->assertOk()->assertSeeText('🧙 Pablo × Zeca')
+        // Minhas partidas: "Você × adversário", com o nome do adversário levando ao perfil
+        $this->actingAs($pablo)->get(route('matches.mine'))->assertOk()->assertSeeText('Você × Zeca')
             ->assertSee('href="'.route('profiles.show', $noEmoji->playerProfile).'"', false);
         $this->getJson('/t/copa-emoji/live')->assertOk()->assertJsonPath('matches.0.one', '🧙 Pablo')->assertJsonPath('matches.0.two', 'Zeca');
     }
