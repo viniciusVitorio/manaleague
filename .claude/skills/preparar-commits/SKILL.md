@@ -18,6 +18,7 @@ git log --oneline -5
 - Separe o que é do trabalho atual do que já estava pendente antes (ex.: arquivos que o dono deixou de fora de propósito,
   como `docs/patch-notes.md` ou uma skill nova). Na dúvida, pergunte; nunca inclua arquivo que você não mexeu.
 - Confira que a suíte passou depois da última mudança.
+- Confira o README com a skill `atualizar-readme`: se a mudança afeta alguma seção dele, o README entra no commit do mesmo assunto.
 
 ## 2. Propor (sem executar nada)
 

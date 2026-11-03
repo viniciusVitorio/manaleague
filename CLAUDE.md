@@ -16,7 +16,8 @@ Público: jogadores brasileiros, a maioria no celular. Produção em https://man
 | Segurança | [docs/threat-model.md](docs/threat-model.md), [docs/ssdlc.md](docs/ssdlc.md) |
 
 Skills do projeto (em `.claude/skills/`): `verificar-tela` (prints no computador e no celular), `preparar-commits`,
-`corrigir-producao` (ajustar dado em produção com segurança), `patch-notes` e `anuncio-comunidade`.
+`corrigir-producao` (ajustar dado em produção com segurança), `atualizar-readme` (README em inglês em dia com o projeto),
+`patch-notes` e `anuncio-comunidade`.
 
 ## Stack e mapa
 
@@ -57,13 +58,15 @@ Rodar código no app local: copie o arquivo para o container e use o tinker:
 - Trabalho novo vai numa branch própria (`feat/...`, `fix/...`), criada quando ele pedir.
 - Não comece tarefas da lista de adiadas sem ele pedir. Não invente funcionalidade em patch notes e anúncios.
 - Responda em português. Texto de interface em português do Brasil; nomes no código em inglês; comentários em português.
+  O `README.md` é em inglês; os docs de `docs/` seguem em português.
 
 ## Definição de pronto
 
 1. Testes novos ou ajustados para o comportamento visível, e a suíte inteira passando.
 2. Se mexeu em tela: Docker atualizado e conferido em **1280px e 390px** (skill `verificar-tela`), tema escuro e claro.
 3. Checklist do [docs/ui-rules.md](docs/ui-rules.md#checklist-antes-de-entregar) ou do [docs/backend-rules.md](docs/backend-rules.md) cumprido.
-4. Relato curto: o que mudou, o que foi testado, o que ficou de fora. Depois, proposta de commits.
+4. README conferido (skill `atualizar-readme`): funcionalidade, stack, comando ou pipeline que mudou está refletido nele.
+5. Relato curto: o que mudou, o que foi testado, o que ficou de fora. Depois, proposta de commits.
 
 ## Armadilhas conhecidas (já custaram retrabalho)
 
