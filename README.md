@@ -16,7 +16,7 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 | **Challenges** | 1v1 matches between friends, casual or ranked, with history, rivalries and your rival on your profile |
 | **Ranked** | seasons with ELO/PDL, rank on the profile and moderation ([rules](docs/ranked.md)) |
 | **Life counter** | life counter for tournament matches, challenges and Ranked |
-| **Decks** | deck building with Scryfall search, import and export (Arena format and ManaBox CSV), foils, banned-card tag, opening-hand simulator, version history and deck comparison |
+| **Decks** | deck building with Scryfall search, import and export (Arena format and ManaBox CSV), foils, banned-card tag, Pauper legality check (cards never printed at common are tagged and blocked from official-rules tournaments), opening-hand simulator, version history and deck comparison |
 | **Collection** | ManaBox CSV import, search only your own cards and see what is missing to build a deck |
 | **Profile** | personal address (`/p/your-handle`), photo or emoji, showcase, stats, recent form and achievements (some of them secret) |
 | **Community** | friends, dashboard, feed, notifications and clubs |
@@ -90,6 +90,8 @@ The pipeline in `.github/workflows/pipeline.yml` runs on every pull request to `
    - SSH is opened only during the deploy, only for the runner's IP;
    - releases are immutable and switched by symlink;
    - patch notes are synced.
+
+A second workflow, `.github/workflows/card-sync.yml`, checks the cards saved in production against Scryfall every day at 06:00 (Brasília) and on demand (**Actions → Card sync → Run workflow**): it refreshes the ban list of each format and the Pauper legality of every deck card. The deploy runs the same check. The run fails, and GitHub notifies the team, when Scryfall does not answer.
 
 Publishing, editing or deleting a GitHub Release only syncs the patch notes. It does not test or redeploy code. Each published release becomes a card in the Patch notes tab and a notification for every account ([docs/patch-notes.md](docs/patch-notes.md)).
 
