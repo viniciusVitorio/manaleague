@@ -112,12 +112,19 @@ Artisan::command('cards:sync-bans', function (): int {
     return in_array(null, $result, true) ? 1 : 0;
 })->purpose('Atualiza a lista de cartas banidas por formato (Scryfall)');
 
-\Illuminate\Support\Facades\Schedule::command('cards:sync-bans')->dailyAt('06:00');
-
 Artisan::command('cards:sync-legality', function (): int {
     $result = app(\App\Services\Decks\PauperLegalityService::class)->sync(app(\App\Services\ScryfallClient::class));
-    $this->info("Pauper: {$result['checked']} carta(s) consultada(s), {$result['updated']} linha(s) de deck atualizada(s).");
+    $this->info("Pauper: {$result['checked']} carta(s) consultada(s), {$result['found']} devolvida(s) pelo Scryfall, {$result['updated']} linha(s) de deck atualizada(s).");
+    $this->info("Cartas de deck ainda sem a legalidade: {$result['pending']}.");
+    if ($result['checked'] > 0 && $result['found'] === 0) {
+        $this->error('Scryfall não respondeu: nada foi atualizado.');
+        return 1;
+    }
+    if ($result['found'] < $result['checked']) {
+        $this->warn(($result['checked'] - $result['found']).' carta(s) não voltaram do Scryfall e ficaram como estavam.');
+    }
     return 0;
 })->purpose('Atualiza a legalidade no Pauper das cartas salvas em decks (Scryfall)');
 
-\Illuminate\Support\Facades\Schedule::command('cards:sync-legality')->dailyAt('06:10');
+// As duas conferências rodam no deploy e todo dia pelo workflow .github/workflows/card-sync.yml
+// (o Docker de produção não tem agendador do Laravel).

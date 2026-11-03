@@ -1,0 +1,100 @@
+name: Card sync
+
+# Confere as cartas salvas em produção com o Scryfall: lista de banidas por formato (tag "Banido")
+# e legalidade no Pauper (tag "Inválida"). As mesmas tags barram o deck em torneio com as regras do formato.
+# Roda todo dia e pelo botão "Run workflow" (Actions > Card sync). O deploy também roda as duas conferências.
+on:
+  schedule:
+    # 09:00 UTC = 06:00 em Brasília. O GitHub pode atrasar alguns minutos.
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+    inputs:
+      task:
+        description: Conferência a rodar
+        type: choice
+        default: all
+        options:
+          - all
+          - bans
+          - legality
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync card data with Scryfall
+    runs-on: ubuntu-latest
+    environment: production
+    # Mesmo grupo do deploy: nunca roda ao mesmo tempo que uma atualização da produção.
+    concurrency:
+      group: manaleague-production
+      cancel-in-progress: false
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Discover runner IP
+        id: runner-ip
+        run: echo "cidr=$(curl --fail --silent https://checkip.amazonaws.com)/32" >> "$GITHUB_OUTPUT"
+      - name: Temporarily allow runner SSH
+        env:
+          SECURITY_GROUP_ID: ${{ secrets.EC2_SECURITY_GROUP_ID }}
+          RUNNER_CIDR: ${{ steps.runner-ip.outputs.cidr }}
+        run: |
+          aws ec2 authorize-security-group-ingress --group-id "$SECURITY_GROUP_ID" --protocol tcp --port 22 --cidr "$RUNNER_CIDR" 2>aws-error.log || {
+            grep -q 'InvalidPermission.Duplicate' aws-error.log || { cat aws-error.log; exit 1; }
+          }
+      - name: Prepare SSH
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/manaleague
+          chmod 600 ~/.ssh/manaleague
+          for attempt in $(seq 1 12); do
+            if ssh-keyscan -T 5 -H "$EC2_HOST" > host-keys 2>/dev/null && [ -s host-keys ]; then
+              cat host-keys >> ~/.ssh/known_hosts
+              break
+            fi
+            echo "SSH ainda nao liberado (tentativa $attempt de 12), aguardando..."
+            sleep 5
+          done
+          [ -s host-keys ] || { echo "Nao foi possivel conectar na porta 22 da EC2." >&2; exit 1; }
+      - name: Run card sync
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          # Agendado nao tem input: roda as duas.
+          TASK: ${{ github.event.inputs.task || 'all' }}
+        # So comandos fixos: o input escolhe entre opcoes de uma lista, nunca vira comando.
+        # As duas conferencias rodam mesmo se a primeira falhar; o job fica vermelho se alguma falhou.
+        run: |
+          case "$TASK" in
+            all) commands="cards:sync-bans cards:sync-legality" ;;
+            bans) commands="cards:sync-bans" ;;
+            legality) commands="cards:sync-legality" ;;
+            *) echo "Tarefa desconhecida: $TASK" >&2; exit 1 ;;
+          esac
+          failed=0
+          for command in $commands; do
+            echo "::group::$command"
+            ssh -i ~/.ssh/manaleague "$EC2_USER@$EC2_HOST" \
+              "cd /opt/manaleague/current && sudo docker compose -p manaleague exec -T app php artisan $command" || {
+                echo "::error::$command falhou (Scryfall fora do ar ou app parado). Os dados anteriores foram mantidos."
+                failed=1
+              }
+            echo "::endgroup::"
+          done
+          exit "$failed"
+      - name: Remove temporary SSH access
+        if: always()
+        continue-on-error: true
+        env:
+          SECURITY_GROUP_ID: ${{ secrets.EC2_SECURITY_GROUP_ID }}
+          RUNNER_CIDR: ${{ steps.runner-ip.outputs.cidr }}
+        run: aws ec2 revoke-security-group-ingress --group-id "$SECURITY_GROUP_ID" --protocol tcp --port 22 --cidr "$RUNNER_CIDR"

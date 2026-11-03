@@ -23,6 +23,9 @@ class PauperLegalityTest extends TestCase
     /** Mini base de cartas do fake do Scryfall (nome => objeto da API). */
     private array $catalog = [];
 
+    /** true: o fake responde 500 em tudo (Scryfall fora do ar). */
+    private bool $scryfallDown = false;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -42,6 +45,9 @@ class PauperLegalityTest extends TestCase
         ];
 
         Http::fake(function (Request $request) {
+            if ($this->scryfallDown) {
+                return Http::response([], 500);
+            }
             $url = $request->url();
             if (str_contains($url, '/cards/collection')) {
                 $found = [];
@@ -207,11 +213,29 @@ class PauperLegalityTest extends TestCase
         $this->line($deck, 'Ponder', 'not_legal');
         $gone = $deck->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Gone', 'quantity' => 1, 'board' => 'main', 'pauper_legality' => 'not_legal']);
 
-        $this->artisan('cards:sync-legality')->expectsOutputToContain('3 carta(s) consultada(s), 2 linha(s) de deck atualizada(s)')->assertExitCode(0);
+        $this->artisan('cards:sync-legality')->expectsOutputToContain('3 carta(s) consultada(s), 2 devolvida(s) pelo Scryfall, 2 linha(s) de deck atualizada(s)')
+            ->expectsOutputToContain('Cartas de deck ainda sem a legalidade: 0.')
+            ->expectsOutputToContain('1 carta(s) não voltaram do Scryfall')
+            ->assertExitCode(0);
 
         $this->assertSame('not_legal', $deck->cards()->where('name', 'Swords to Plowshares')->value('pauper_legality'));
         $this->assertSame('legal', $deck->cards()->where('name', 'Ponder')->value('pauper_legality'));
         $this->assertSame('not_legal', $gone->fresh()->pauper_legality);
+    }
+
+    public function test_sync_command_fails_when_scryfall_is_down_and_keeps_the_cards(): void
+    {
+        [, $deck] = $this->deck('Pauper');
+        $this->line($deck, 'Swords to Plowshares', null);
+        $this->scryfallDown = true;
+
+        // Código 1 deixa o workflow agendado vermelho, em vez de "verde com 0 atualizadas".
+        $this->artisan('cards:sync-legality')
+            ->expectsOutputToContain('Cartas de deck ainda sem a legalidade: 1.')
+            ->expectsOutputToContain('Scryfall não respondeu')
+            ->assertExitCode(1);
+
+        $this->assertNull($deck->cards()->value('pauper_legality'));
     }
 
     public function test_adding_a_card_again_refreshes_its_legality(): void

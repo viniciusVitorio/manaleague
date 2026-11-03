@@ -68,14 +68,15 @@ class PauperLegalityService
      * Corrige cartas antigas (sem o dado) e cartas que mudaram (ganharam impressão comum).
      * Carta que o Scryfall não devolveu fica como estava.
      *
-     * @return array{checked: int, updated: int}
+     * @return array{checked: int, found: int, updated: int, pending: int} pending = linhas que seguem sem a legalidade
      */
     public function sync(ScryfallClient $scryfall): array
     {
-        $ids = DeckCard::query()->distinct()->pluck('scryfall_id')->map(fn ($id) => (string) $id)->unique()->values()->all();
+        $ids = DeckCard::query()->whereNotNull('scryfall_id')->distinct()->pluck('scryfall_id')->map(fn ($id) => (string) $id)->unique()->values()->all();
+        $cards = $scryfall->byIds($ids);
         $updated = 0;
 
-        foreach ($scryfall->byIds($ids) as $id => $card) {
+        foreach ($cards as $id => $card) {
             if ($card['pauper_legality'] === null) {
                 continue;
             }
@@ -86,6 +87,11 @@ class PauperLegalityService
                 ->update(['pauper_legality' => $card['pauper_legality']]);
         }
 
-        return ['checked' => count($ids), 'updated' => $updated];
+        return [
+            'checked' => count($ids),
+            'found' => count($cards),
+            'updated' => $updated,
+            'pending' => DeckCard::query()->whereNull('pauper_legality')->count(),
+        ];
     }
 }
