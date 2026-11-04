@@ -54,9 +54,8 @@ class PlayerProfileController extends Controller
         $ranked = $this->ranked($profile, $profile->account_user_id === $request->user()->id);
 
         $showcase = $this->showcase($decks, $summary, true);
-        $rival = app(\App\Services\RivalService::class)->for($profile);
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked', 'rival'));
+        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked'));
     }
 
     /**
@@ -112,10 +111,8 @@ class PlayerProfileController extends Controller
         $tradeBinder = ($isOwner || $friendshipStatus === FriendshipService::ACCEPTED) ? app(CollectionService::class)->tradeBinder($profile->account_user_id) : null;
 
         $showcase = $this->showcase($decks, $summary, $isOwner);
-        // Rival sai de desafios, que só acontecem entre amigos: mesma regra da lista de amigos.
-        $rival = ($isOwner || $friendshipStatus === FriendshipService::ACCEPTED) ? app(\App\Services\RivalService::class)->for($profile) : null;
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked', 'profileFriends', 'tradeBinder', 'rival'));
+        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked', 'profileFriends', 'tradeBinder'));
     }
 
     /** Patente por formato (temporadas em andamento) + historico. Visivel para quem pode ver o perfil. */

@@ -194,7 +194,6 @@
         <ul class="lp-list">
             <li><x-icon name="check-check" :size="14" /><span><b>Contador de vida</b> com veneno e dano de comandante, que envia o placar no fim da série</span></li>
             <li><x-icon name="check-check" :size="14" /><span><b>Rivalidades</b>: seu retrospecto contra cada amigo, com botão de revanche</span></li>
-            <li><x-icon name="check-check" :size="14" /><span><b>Rival</b> no perfil: o amigo que você mais desafiou, com o placar entre vocês</span></li>
         </ul>
     </div>
     <figure class="lp-shot lp-life" aria-label="Exemplo do contador de vida">
