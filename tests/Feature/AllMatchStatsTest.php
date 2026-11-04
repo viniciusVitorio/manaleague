@@ -70,7 +70,7 @@ class AllMatchStatsTest extends TestCase
             // Últimos resultados: bolinhas dentro do card de V–D–E, sem área separada.
             ->assertSeeInOrder(['data-kind="all"', 'Vitórias / derrotas / empates</span>', 'class="form-dots"', 'form-dot is-win" title="Vitória 2–1 · Ranked', 'form-dot is-loss', '<b>75%</b>'], false)
             ->assertSee('← mais recente</small>', false)->assertDontSee('Forma recente')->assertDontSee('Sequência atual');
-        $this->actingAs($ana)->get(route('dashboard'))->assertOk()->assertSee('3V · 0E · 1D em torneios, desafios e ranked');
+        $this->actingAs($ana)->get(route('dashboard'))->assertOk()->assertSee('3V · 0E · 1D no geral'); // torneios, desafios e ranked somados
     }
 
     public function test_ranked_coming_from_a_tournament_match_is_not_counted_twice(): void
