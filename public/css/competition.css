@@ -1,2 +1,168 @@
-.competition-status{padding:1.25rem;margin:1rem 0}.competition-status p{max-width:80ch}.pod-score-form{display:grid;gap:.75rem}.pod-score-form label{display:flex;align-items:center;justify-content:space-between;gap:1rem}.pod-score-form select{width:auto;min-width:7rem}.pod-score-form button{min-height:44px}@media(max-width:600px){.competition-status .btn{width:100%}.pod-score-form label{flex-wrap:wrap}}
-.qr-inline-form{display:inline}.tournament-tools .btn{margin:.25rem .25rem .25rem 0}
+.pod-score-form{display:grid;gap:.75rem}.pod-score-form label{display:flex;align-items:center;justify-content:space-between;gap:1rem}.pod-score-form select{width:auto;min-width:7rem}.pod-score-form button{min-height:44px}@media(max-width:600px){.pod-score-form label{flex-wrap:wrap}}
+
+/* Página do torneio, por fase (tournaments/show) */
+.tourney-meta{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0 0 4px;color:var(--ui-fg-muted);font-size:.9rem}
+.tourney-meta>*+*::before{content:"·";margin-right:14px;color:var(--ui-fg-faint)}
+.tourney-meta a{color:var(--ui-fg-soft)}
+.tourney-header .header-actions{align-self:flex-start;flex-wrap:wrap;justify-content:flex-end}
+.tourney-header .ui-menu{min-width:230px}
+.tourney-header .ui-menu form{margin:0}
+.ui-menu-item.is-danger,.ui-menu-item.is-danger .icon{color:var(--ui-danger)}
+.tourney-round{border-color:var(--ui-border-strong)}
+.tourney-round-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:12px 20px;margin-bottom:14px}
+.tourney-round-head h2{margin-bottom:4px}
+.tourney-round-head p{margin:0;font-size:.85rem}
+.tourney-round-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.tourney-round-actions form{margin:0}
+.tourney-timer{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;padding:12px 0 14px;margin-bottom:14px;border-bottom:1px solid var(--ui-border)}
+.tourney-timer form{margin:0}
+.tourney-timer-form{display:flex;align-items:flex-end;gap:8px}
+.tourney-timer-form label{display:flex;align-items:center;gap:8px;margin:0}
+.tourney-timer-form input{width:76px;margin:0}
+.tourney-timer small{margin-left:auto;font-size:.78rem}
+.tourney-matches{padding:0}
+.tourney-setup{display:grid;gap:18px;margin-bottom:20px;align-items:start}
+@media(min-width:900px){.tourney-setup.has-aside{grid-template-columns:minmax(0,2fr) minmax(260px,1fr)}.tourney-setup .start-card{position:sticky;top:84px}}
+.tourney-setup>.card{margin-bottom:0}
+.tourney-checkin{padding:3px 10px;border:1px solid var(--ui-border-strong);border-radius:999px;color:var(--ui-fg-soft);font-size:.8rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tourney-share-qr{display:block;width:min(240px,100%);height:auto;margin:0 auto;padding:10px;border-radius:12px;background:#fff;image-rendering:pixelated}
+.tourney-share-hint{margin:12px 0 14px;text-align:center;font-size:.86rem}
+.tourney-share label{margin:0 0 6px}
+.tourney-invite-row{display:flex;gap:8px}
+.tourney-invite-row input{margin:0;min-width:0;flex:1}
+.tourney-share-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
+.tourney-share .ui-dialog-foot small{font-size:.78rem}
+.tourney-empty{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
+.tourney-empty p{margin:0}
+.tourney-present{color:var(--ui-success);font-size:.82rem;white-space:nowrap}
+.tourney-friends{margin-top:14px;border-top:1px solid var(--ui-border);padding-top:12px}
+.tourney-friends summary{cursor:pointer;font-size:.88rem;font-weight:600}
+.tourney-friends .friend-picker{margin-top:8px;border-top:0;padding-top:0}
+.tourney-repeat{padding:16px 22px;margin:20px 0}
+.tourney-repeat summary{display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none}
+.tourney-repeat summary::-webkit-details-marker{display:none}
+.tourney-repeat summary::after{content:"";width:7px;height:7px;border-right:1.5px solid var(--ui-fg-muted);border-bottom:1.5px solid var(--ui-fg-muted);transform:rotate(45deg);transition:transform .15s}
+.tourney-repeat[open] summary::after{transform:rotate(-135deg)}
+.tourney-repeat summary .eyebrow{margin-bottom:2px}
+.tourney-repeat[open]>p{margin-top:12px}
+@media(max-width:600px){.tourney-invite-row{flex-direction:column}.tourney-header .header-actions{justify-content:flex-start}.tourney-timer small{flex-basis:100%;margin-left:0}}
+/* Classificação no celular: posição, jogador, V, SG e PTS (J, E e D só no computador), sem rolagem lateral. */
+@media(max-width:600px){.standings{min-width:0}.standings th:nth-child(3),.standings td:nth-child(3),.standings th:nth-child(5),.standings td:nth-child(5),.standings th:nth-child(6),.standings td:nth-child(6){display:none}.standings th,.standings td{padding-left:6px;padding-right:6px}}
+/* Progresso da liga no card da rodada: quantas partidas já têm resultado (libera a final). */
+.tourney-progress{margin:0 0 14px}
+.tourney-progress p{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;margin:0 0 6px;font-size:.84rem;font-variant-numeric:tabular-nums}
+.tourney-progress-bar{height:6px;border-radius:999px;background:var(--ui-muted);overflow:hidden}
+.tourney-progress-bar span{display:block;height:100%;border-radius:inherit;background:var(--ui-success);transition:width .3s var(--ui-ease)}
+
+/* Card de partida: um jogador por linha, placar ao lado do nome; o vencedor fica em verde. */
+.tmatch{display:flex;flex-direction:column;gap:10px}
+.tmatch-head{display:flex;align-items:center;gap:8px;min-height:20px;font-size:.72rem;color:var(--ui-fg-subtle)}
+.tmatch-table{font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.tmatch-stage{padding:1px 8px;border:1px solid var(--ui-border-strong);border-radius:999px;color:var(--ui-fg-soft);font-weight:600}
+.tmatch-state{display:inline-flex;align-items:center;gap:6px;margin-left:auto}
+.tmatch-state.is-live{color:var(--ui-info)}
+.tmatch-state.is-live::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;animation:tmatch-pulse 1.6s ease-in-out infinite}
+.tmatch-state.is-done{color:var(--ui-fg-muted)}
+@keyframes tmatch-pulse{50%{opacity:.3}}
+@media(prefers-reduced-motion:reduce){.tmatch-state.is-live::before{animation:none}}
+.tmatch-rows{display:grid;gap:4px}
+.tmatch-row,label.tmatch-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:42px;margin:0;padding:4px 6px 4px 12px;border-radius:var(--ui-radius-sm);background:var(--ui-muted);color:var(--ui-fg);font-size:.92rem;font-weight:500;letter-spacing:0;text-transform:none}
+.tmatch-name{min-width:0;overflow:hidden;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.tmatch-name a{color:inherit}
+.tmatch-score{min-width:34px;font-size:1.15rem;font-variant-numeric:tabular-nums;text-align:center}
+.tmatch-row.is-winner{background:color-mix(in srgb,var(--ui-success) 12%,var(--ui-muted))}
+.tmatch-row.is-winner .tmatch-score{color:var(--ui-success)}
+.tmatch-row.is-loser .tmatch-name,.tmatch-row.is-loser .tmatch-score{color:var(--ui-fg-muted)}
+.tmatch-row input{flex:0 0 auto;width:56px;height:34px;min-height:0;margin:0;padding:4px;font-size:1rem;font-weight:700;text-align:center}
+.tmatch-form{display:grid;gap:10px;margin:0}
+.tmatch-actions{display:flex;flex-wrap:wrap;gap:8px}
+.tmatch-actions .ui-btn-primary{flex:1 1 auto}
+.tmatch-note{margin:0;font-size:.78rem;color:var(--ui-fg-subtle)}
+.tmatch-fix summary{width:max-content;cursor:pointer;color:var(--ui-fg-muted);font-size:.8rem;list-style:none}
+.tmatch-fix summary::-webkit-details-marker{display:none}
+.tmatch-fix summary:hover,.tmatch-fix[open] summary{color:var(--ui-fg)}
+.tmatch-fix-form{display:flex;align-items:center;gap:8px;margin:8px 0 0}
+.tmatch-fix-form input{width:56px;height:34px;min-height:0;margin:0;padding:4px;text-align:center}
+
+/* Resumo das rodadas recolhidas: estado + número de mesas (aparece também no celular). */
+.round summary span.tround-meta{display:inline-flex;align-items:center;gap:8px;font-weight:500}
+.tround-chip{padding:1px 8px;border:1px solid var(--ui-border);border-radius:999px;font-size:.72rem;font-style:normal;white-space:nowrap}
+.tround-chip.is-done{border-color:color-mix(in srgb,var(--ui-success) 30%,transparent);color:var(--ui-success)}
+.tround-chip.is-live{border-color:color-mix(in srgb,var(--ui-info) 30%,transparent);color:var(--ui-info)}
+.tround-chip.is-next{color:var(--ui-fg-muted)}
+
+/* Classificação: colunas de número estreitas, o nome fica com o espaço. */
+.standings th:first-child,.standings td:first-child{width:44px}
+.standings th:nth-child(n+3),.standings td:nth-child(n+3){width:58px;text-align:center}
+
+/* Página pública */
+.public-hero .tourney-meta{justify-content:center}
+.public-live{display:inline-flex;align-items:center;gap:8px;margin:12px 0 0;font-size:.82rem}
+.public-live-dot{width:8px;height:8px;border-radius:50%;background:var(--ui-success);animation:tmatch-pulse 1.6s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.public-live-dot{animation:none}}
+.public-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
+.public-hero .public-timer{margin:16px 0 0}
+
+/* Resultados enviados (fila do organizador) */
+.queue-header{margin-bottom:20px}
+.queue-header h1{margin:8px 0 6px}
+.queue-header p{max-width:640px;margin:0}
+.qsub{display:grid;gap:10px;padding:18px 20px;margin-bottom:12px}
+.qsub.needs-you{border-color:color-mix(in srgb,var(--ui-danger) 45%,var(--ui-border))}
+.qsub-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.qsub-head .eyebrow{margin:0}
+.qsub-score{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px;font-weight:600}
+.qsub-score span:first-child{text-align:right}
+.qsub-score b{padding:2px 12px;border-radius:var(--ui-radius-sm);background:var(--ui-muted);font-size:1.3rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.qsub-meta,.qsub-reason{margin:0;font-size:.84rem}
+.qsub-resolve,.qsub-history{padding-top:10px;border-top:1px solid var(--ui-border)}
+.qsub-resolve summary,.qsub-history summary{width:max-content;cursor:pointer;font-size:.86rem;font-weight:600}
+.qsub-form{display:grid;gap:10px;margin:10px 0 0}
+.qsub-form-scores{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qsub-form label{margin:0}
+.qsub-form .ui-btn{justify-self:start}
+.qsub-history ol{display:grid;gap:6px;margin:8px 0 0;padding:0;list-style:none;font-size:.82rem}
+.qsub-history li{display:grid;grid-template-columns:auto 1fr;gap:10px}
+.qsub-history time{color:var(--ui-fg-subtle);font-variant-numeric:tabular-nums;white-space:nowrap}
+@media(max-width:600px){.qsub{padding:16px}.qsub-history li{grid-template-columns:1fr;gap:0}}
+/* Pódio na classificação final: faixa de ouro, prata e bronze para campeão, vice e 3º. */
+.standings,.tourney-champion{--medal-gold:#e3b23c;--medal-silver:#a9b6c6;--medal-bronze:#c9803f}
+.standings tr.is-podium-1{--medal:var(--medal-gold);--medal-tint:16%}
+.standings tr.is-podium-2{--medal:var(--medal-silver);--medal-tint:11%}
+.standings tr.is-podium-3{--medal:var(--medal-bronze);--medal-tint:11%}
+.standings tr.is-podium td{background:color-mix(in srgb,var(--medal) var(--medal-tint),transparent);border-bottom-color:color-mix(in srgb,var(--medal) 22%,var(--ui-border))}
+.standings tr.is-podium td:first-child{box-shadow:inset 4px 0 0 var(--medal)}
+.standings tr.is-podium .rank{position:relative;overflow:hidden;border:0;border-radius:50%;background:linear-gradient(135deg,color-mix(in srgb,var(--medal) 45%,#fff),var(--medal) 55%,color-mix(in srgb,var(--medal) 70%,#000));color:#1c1405;box-shadow:0 0 0 3px color-mix(in srgb,var(--medal) 25%,transparent);font-weight:800}
+.standings tr.is-podium-1 .rank::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.8) 50%,transparent 65%);transform:translateX(-120%);animation:medal-shine 3.5s ease-in-out .8s infinite}
+@keyframes medal-shine{0%{transform:translateX(-120%)}30%,100%{transform:translateX(120%)}}
+@media(prefers-reduced-motion:reduce){.standings tr.is-podium-1 .rank::after{display:none}}
+.standings-medal{display:inline-flex;align-items:center;margin-left:8px;padding:1px 8px;border:1px solid color-mix(in srgb,var(--medal) 50%,transparent);border-radius:999px;background:color-mix(in srgb,var(--medal) 18%,transparent);color:color-mix(in srgb,var(--medal) 62%,var(--ui-fg));font-size:.66rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;vertical-align:middle;white-space:nowrap}
+/* Card do campeão: pódio plano (2º, 1º no meio e mais alto, 3º), foto e nome em cima de cada degrau. */
+.tourney-champion{padding:0;margin-bottom:20px;overflow:hidden}
+.champion-head{padding:22px 24px 0;text-align:center}
+.champion-head .eyebrow{display:inline-flex;align-items:center;gap:6px;margin-bottom:6px}
+.champion-head h2{margin:0;font-size:1.3rem;letter-spacing:-.02em;text-wrap:balance}
+.champion-stage{padding:28px 16px 0}
+.podium-steps{display:flex;align-items:flex-end;justify-content:center;gap:6px;max-width:540px;margin:0 auto;padding:0;list-style:none}
+.podium-step{display:flex;flex:1 1 0;flex-direction:column;align-items:center;min-width:0}
+.podium-step.is-1{order:2;--medal:var(--medal-gold)}
+.podium-step.is-2{order:1;--medal:var(--medal-silver)}
+.podium-step.is-3{order:3;--medal:var(--medal-bronze)}
+.podium-person{display:flex;flex-direction:column;align-items:center;gap:2px;max-width:100%;min-width:0;padding:0 4px 12px;text-align:center}
+.podium-step .podium-avatar{width:56px;height:56px;margin-bottom:6px;padding:0;border:2px solid var(--medal);background:var(--ui-muted);font-size:1.4rem}
+.podium-step.is-1 .podium-avatar{width:72px;height:72px;font-size:1.8rem}
+.podium-crown{width:22px;height:22px;color:var(--medal-gold)}
+.podium-name{display:-webkit-box;max-width:100%;overflow:hidden;font-size:.92rem;font-weight:600;line-height:1.25;overflow-wrap:anywhere;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.podium-step.is-1 .podium-name{font-size:1rem}
+.podium-name a{color:inherit}
+.podium-deck{max-width:100%;overflow:hidden;color:var(--ui-fg-muted);font-size:.74rem;text-overflow:ellipsis;white-space:nowrap}
+.podium-block{display:grid;place-items:center;width:100%;border:1px solid var(--ui-border);border-bottom:0;border-top:2px solid var(--medal);border-radius:var(--ui-radius-sm) var(--ui-radius-sm) 0 0;background:var(--ui-muted);color:var(--ui-fg-muted);font-size:1.6rem;font-weight:600;font-variant-numeric:tabular-nums}
+.podium-step.is-1 .podium-block{height:112px;color:var(--ui-fg)}
+.podium-step.is-2 .podium-block{height:80px}
+.podium-step.is-3 .podium-block{height:60px}
+.champion-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0;border-top:1px solid var(--ui-border)}
+.champion-stats div{min-width:0;padding:14px 12px 16px;text-align:center}
+.champion-stats div+div{border-left:1px solid var(--ui-border)}
+.champion-stats dt{color:var(--ui-fg-subtle);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase}
+.champion-stats dd{margin:3px 0 0;overflow:hidden;font-size:1.02rem;font-weight:600;font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:480px){.champion-head{padding:18px 16px 0}.champion-head h2{font-size:1.1rem}.champion-stage{padding:22px 10px 0}.podium-step .podium-avatar{width:44px;height:44px;font-size:1.1rem}.podium-step.is-1 .podium-avatar{width:56px;height:56px;font-size:1.4rem}.podium-name{font-size:.82rem}.podium-step.is-1 .podium-name{font-size:.9rem}.podium-deck{font-size:.68rem}.podium-step.is-1 .podium-block{height:88px}.podium-step.is-2 .podium-block{height:64px}.podium-step.is-3 .podium-block{height:48px}.podium-block{font-size:1.3rem}.champion-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.champion-stats div:nth-child(3){border-left:0}.champion-stats div:nth-child(n+3){border-top:1px solid var(--ui-border)}}

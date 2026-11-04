@@ -118,6 +118,7 @@ Card · Card · Card                (mesma largura, 12–16px entre eles)
 | `.rival-card` | "um contra o outro" | avatares nas pontas, placar no meio, selo de quem lidera, barra `.rival-meter`, rodapé com resumo + ação |
 | `partials/confirm-all` | 2+ placares para confirmar | já incluso nas listas de partidas e desafios |
 | `.ui-hint` | explicação de regra | no topo da página, com ícone `info` |
+| `<dialog class="ui-dialog">` (+ `ui-dialog-head`, `ui-dialog-body`, `ui-dialog-foot`) | janela por cima da página (compartilhar link e QR) | abre com `[data-dialog-open="id"]`, inclusive de dentro de um menu; fecha no X `[data-dialog-close]`, no Esc ou no fundo (`nav.js`); ver `tournaments/show.blade.php` |
 
 ### Botões
 

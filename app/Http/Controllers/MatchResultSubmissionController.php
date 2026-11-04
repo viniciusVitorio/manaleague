@@ -22,9 +22,13 @@ class MatchResultSubmissionController extends Controller {
  }
  public function queue(Tournament $tournament) {
   $this->authorize('update',$tournament);
-  $submissions=MatchResultSubmission::whereHas('gameMatch',fn($q)=>$q->where('tournament_id',$tournament->id))->with(['gameMatch.playerOne','gameMatch.playerTwo'])->orderByDesc('id')->paginate(30);
+  // O que precisa de decisão (aguardando ou contestado) vem antes; dentro de cada grupo, o mais recente primeiro.
+  $submissions=MatchResultSubmission::whereHas('gameMatch',fn($q)=>$q->where('tournament_id',$tournament->id))->with(['gameMatch.playerOne','gameMatch.playerTwo'])
+   ->orderByRaw("CASE WHEN status IN ('pending','disputed') THEN 0 ELSE 1 END")->orderByDesc('id')->paginate(30);
   $events=\Illuminate\Support\Facades\DB::table('match_result_submission_events')->whereIn('submission_id',$submissions->pluck('id'))->orderBy('id')->get()->groupBy('submission_id');
-  return response()->view('matches.queue',compact('tournament','submissions','events'))->header('Cache-Control','private, no-store');
+  // Nomes de quem enviou, respondeu ou resolveu, para o histórico não mostrar só "Conta #id".
+  $people=\App\Models\User::whereIn('id',$events->flatten()->pluck('actor_id')->merge($submissions->pluck('submitted_by'))->unique())->pluck('name','id');
+  return response()->view('matches.queue',compact('tournament','submissions','events','people'))->header('Cache-Control','private, no-store');
  }
  public function index(Request $r, \App\Services\MyMatchesService $matches) {
   return view('matches.mine', $matches->for($r->user(), (string) $r->query('tipo', 'todas')));

@@ -37,6 +37,7 @@ body{font-family:var(--ui-font);-webkit-font-smoothing:antialiased}
 .ui-btn-sm{height:32px;padding:0 var(--s3);font-size:.8rem}
 
 /* ---------- Paginacao ---------- */
+.ui-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}.ui-btn-primary:disabled:hover{background:var(--ui-primary)}.ui-btn-outline:disabled:hover{background:var(--ui-bg)}.ui-btn-ghost:disabled:hover{background:transparent;color:var(--ui-fg-muted)}
 .ui-pagination{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s2);margin-top:var(--s4)}
 .ui-pagination-pages{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s1)}
 .ui-pagination-gap{padding:0 var(--s2);color:var(--ui-fg-subtle)}
@@ -90,6 +91,14 @@ body{font-family:var(--ui-font);-webkit-font-smoothing:antialiased}
 /* Menu mobile */
 .site-mobile{border-top:1px solid var(--ui-border);background:var(--ui-bg);max-height:calc(100dvh - 56px);overflow-y:auto}
 .site-mobile[hidden]{display:none}
+/* Janela (<dialog class="ui-dialog">): abre com [data-dialog-open="id"]; fecha no X [data-dialog-close], no Esc ou no fundo (nav.js). */
+.ui-dialog{width:min(440px,calc(100% - 32px));max-height:calc(100dvh - 48px);padding:0;border:1px solid var(--ui-border);border-radius:var(--ui-radius);background:var(--ui-card);color:var(--ui-fg);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.ui-dialog::backdrop{background:rgba(9,9,11,.6)}
+.ui-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);padding:var(--s4) var(--s4) var(--s3);border-bottom:1px solid var(--ui-border)}
+.ui-dialog-head h2{margin:0;font-size:1rem}
+.ui-dialog-body{padding:var(--s4)}
+.ui-dialog-foot{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);padding:var(--s3) var(--s4);border-top:1px solid var(--ui-border)}
+.ui-dialog-foot form{margin:0}
 .site-mobile .container{display:flex;flex-direction:column;gap:2px;padding:var(--s2) 0 var(--s4)}
 .site-mobile form{margin:0}
 .site-mobile-link{display:flex;align-items:center;gap:var(--s3);width:100%;min-height:44px;padding:0 var(--s3);border:0;border-radius:var(--ui-radius-sm);background:none;color:var(--ui-fg);font:inherit;font-size:.92rem;text-align:left;cursor:pointer}
@@ -398,11 +407,6 @@ input::-ms-reveal{display:none}
 .avatar-link{display:contents}
 
 /* ---------- Dia de evento: cronômetro (organizador) e check-in ---------- */
-.round-timer-card .section-heading{flex-wrap:wrap}
-.round-timer-actions{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--s3)}
-.round-timer-form{display:flex;align-items:flex-end;gap:var(--s2)}
-.round-timer-form label{margin:0}
-.round-timer-form input{width:96px}
 .player-actions{display:flex;align-items:center;gap:var(--s2)}
 .check-in-on{border-color:rgba(74,222,128,.35);color:var(--ui-success)}
 .check-in-summary{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s2);margin-bottom:var(--s2)}
