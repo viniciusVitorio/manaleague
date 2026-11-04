@@ -13,7 +13,7 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 | **Tournaments** | round-robin leagues, Swiss, single or double elimination and Commander pods; finals and third-place match; standard format rules or custom house rules; repeat a tournament with the same settings |
 | **Event day** | sign-up by invite link or QR code, player check-in on the event day, round timer and removal of no-shows |
 | **Live** | players submit scores from their phones, with confirmation or dispute; public tournament page (no account needed) and TV mode |
-| **Challenges** | 1v1 matches between friends, casual or ranked, with history, rivalries and your rival on your profile; a score the opponent does not confirm or dispute within 7 days is confirmed automatically |
+| **Challenges** | 1v1 matches between friends, casual or ranked, with history and rivalries; a score the opponent does not confirm or dispute within 7 days is confirmed automatically |
 | **Ranked** | seasons with ELO/PDL, rank on the profile and moderation ([rules](docs/ranked.md)) |
 | **Life counter** | life counter for tournament matches, challenges and Ranked |
 | **Decks** | deck building with Scryfall search, import and export (Arena format and ManaBox CSV), foils, banned-card tag, Pauper legality check (cards never printed at common are tagged and blocked from official-rules tournaments), opening-hand simulator, version history and deck comparison |
