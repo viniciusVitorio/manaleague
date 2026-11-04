@@ -13,7 +13,7 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 | **Tournaments** | round-robin leagues, Swiss, single or double elimination and Commander pods; finals and third-place match; standard format rules or custom house rules; repeat a tournament with the same settings |
 | **Event day** | sign-up by invite link or QR code, check-in, round timer and removal of no-shows |
 | **Live** | players submit scores from their phones, with confirmation or dispute; public tournament page (no account needed) and TV mode |
-| **Challenges** | 1v1 matches between friends, casual or ranked, with history, rivalries and your rival on your profile |
+| **Challenges** | 1v1 matches between friends, casual or ranked, with history, rivalries and your rival on your profile; a score the opponent does not confirm or dispute within 7 days is confirmed automatically |
 | **Ranked** | seasons with ELO/PDL, rank on the profile and moderation ([rules](docs/ranked.md)) |
 | **Life counter** | life counter for tournament matches, challenges and Ranked |
 | **Decks** | deck building with Scryfall search, import and export (Arena format and ManaBox CSV), foils, banned-card tag, Pauper legality check (cards never printed at common are tagged and blocked from official-rules tournaments), opening-hand simulator, version history and deck comparison |
@@ -91,7 +91,7 @@ The pipeline in `.github/workflows/pipeline.yml` runs on every pull request to `
    - releases are immutable and switched by symlink;
    - patch notes are synced.
 
-A second workflow, `.github/workflows/card-sync.yml`, checks the cards saved in production against Scryfall every day at 06:00 (Brasília) and on demand (**Actions → Card sync → Run workflow**): it refreshes the ban list of each format and the Pauper legality of every deck card. The deploy runs the same check. The run fails, and GitHub notifies the team, when Scryfall does not answer.
+A second workflow, `.github/workflows/daily-tasks.yml`, runs the production routines every day at 06:00 (Brasília) and on demand (**Actions → Daily tasks → Run workflow**): it refreshes the ban list of each format and the Pauper legality of every deck card from Scryfall, and confirms challenge scores left unanswered for 7 days. The deploy also runs the card checks. The run fails, and GitHub notifies the team, when a task fails (for example, Scryfall does not answer).
 
 Publishing, editing or deleting a GitHub Release only syncs the patch notes. It does not test or redeploy code. Each published release becomes a card in the Patch notes tab and a notification for every account ([docs/patch-notes.md](docs/patch-notes.md)).
 

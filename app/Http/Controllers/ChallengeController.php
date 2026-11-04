@@ -25,6 +25,7 @@ class ChallengeController extends Controller
             return redirect()->route('challenges.create', $request->only(['opponent', 'ranked']));
         }
         $this->service->expire();
+        $this->service->autoConfirmOverdue();
         $open = $this->query($request)->whereIn('status', ['pending', 'accepted'])->latest()->get();
         $history = $this->query($request)->whereNotIn('status', ['pending', 'accepted'])->latest()->paginate(15);
         $rows = $this->rows($request, $open->concat($history->getCollection()));
@@ -64,6 +65,7 @@ class ChallengeController extends Controller
     {
         abort_unless($challenge->involves($request->user()), 403);
         $this->service->expire();
+        $this->service->autoConfirmOverdue();
         $ranked = $challenge->is_ranked ? RankedMatch::where(['source_type' => 'challenge', 'source_id' => $challenge->id])->first() : null;
 
         return view('challenges.show', ['challenge' => $challenge->fresh(['challenger', 'opponent', 'casualMatch']), 'rankedMatch' => $ranked]);

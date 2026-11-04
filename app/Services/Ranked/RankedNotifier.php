@@ -2,6 +2,7 @@
 
 namespace App\Services\Ranked;
 
+use App\Models\Challenge;
 use App\Models\PlayerProfile;
 use App\Models\RankedMatch;
 use App\Models\RankedSeason;
@@ -26,7 +27,8 @@ class RankedNotifier
     {
         foreach ([$m->playerOne, $m->playerTwo] as $p) {
             if ($p->account_user_id !== $by->id) {
-                $this->send($p, 'ranked.result', "Confirme o placar {$m->score_one}×{$m->score_two} da partida ranqueada", $m, "ranked:{$m->id}:submitted:{$m->updated_at?->timestamp}");
+                $deadline = $m->source_type === 'challenge' ? ' em até '.Challenge::CONFIRM_DAYS.' dias' : '';
+                $this->send($p, 'ranked.result', "Confirme o placar {$m->score_one}×{$m->score_two} da partida ranqueada{$deadline}", $m, "ranked:{$m->id}:submitted:{$m->updated_at?->timestamp}");
             }
         }
     }
@@ -47,7 +49,8 @@ class RankedNotifier
     {
         foreach ([$m->playerOne, $m->playerTwo] as $p) {
             $d = $deltas[$p->id] ?? 0;
-            $this->send($p, 'ranked.result', 'Resultado confirmado: '.($d >= 0 ? '+' : '').$d.' PDL em '.$m->format, $m, "ranked:{$m->id}:confirmed");
+            $label = $m->auto_confirmed ? 'Resultado confirmado automaticamente: ' : 'Resultado confirmado: ';
+            $this->send($p, 'ranked.result', $label.($d >= 0 ? '+' : '').$d.' PDL em '.$m->format, $m, "ranked:{$m->id}:confirmed");
         }
         $actor = User::find($m->playerOne->account_user_id);
         if ($actor) {

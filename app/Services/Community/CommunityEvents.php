@@ -143,7 +143,7 @@ class CommunityEvents
         foreach ([$challenge->challenger, $challenge->opponent] as $profile) {
             $user = $this->account($profile);
             if ($user && $user->id !== $actor->id) {
-                $this->notifications->send($user, 'challenge.update', 'Confirme o placar do desafio', "/challenges/{$challenge->id}", "challenge:{$challenge->id}:reported:{$revision}:user:{$user->id}", ['challenge_id' => $challenge->id]);
+                $this->notifications->send($user, 'challenge.update', 'Confirme o placar do desafio em até '.Challenge::CONFIRM_DAYS.' dias', "/challenges/{$challenge->id}", "challenge:{$challenge->id}:reported:{$revision}:user:{$user->id}", ['challenge_id' => $challenge->id]);
             }
         }
     }
@@ -162,6 +162,25 @@ class CommunityEvents
             $m = $challenge->casualMatch;
             $title = "{$challenge->challenger->nickname} {$m->challenger_games}×{$m->opponent_games} {$challenge->opponent->nickname}";
             $this->activities->record($actor, 'challenge.completed', $title, $challenge, "challenge:{$challenge->id}:completed");
+        }
+    }
+
+    /** Placar casual confirmado sozinho depois de Challenge::CONFIRM_DAYS dias sem resposta: avisa os dois e vai para o feed. */
+    public function challengeAutoConfirmed(Challenge $challenge): void
+    {
+        $challenge->loadMissing(['challenger', 'opponent', 'casualMatch']);
+        $m = $challenge->casualMatch;
+        foreach ([$challenge->challenger, $challenge->opponent] as $profile) {
+            $user = $this->account($profile);
+            if ($user) {
+                $this->notifications->send($user, 'challenge.update', 'Placar do desafio confirmado automaticamente', "/challenges/{$challenge->id}", "challenge:{$challenge->id}:auto-confirmed:{$m->revision}:user:{$user->id}", ['challenge_id' => $challenge->id]);
+            }
+        }
+        // No feed, como na confirmação manual: quem enviou o placar aparece como autor.
+        $reporter = $m->reported_by ? User::find($m->reported_by) : null;
+        if ($reporter) {
+            $title = "{$challenge->challenger->nickname} {$m->challenger_games}×{$m->opponent_games} {$challenge->opponent->nickname}";
+            $this->activities->record($reporter, 'challenge.completed', $title, $challenge, "challenge:{$challenge->id}:completed");
         }
     }
 

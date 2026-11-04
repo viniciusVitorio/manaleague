@@ -1,8 +1,11 @@
-name: Card sync
+name: Daily tasks
 
-# Confere as cartas salvas em produção com o Scryfall: lista de banidas por formato (tag "Banido")
-# e legalidade no Pauper (tag "Inválida"). As mesmas tags barram o deck em torneio com as regras do formato.
-# Roda todo dia e pelo botão "Run workflow" (Actions > Card sync). O deploy também roda as duas conferências.
+# Tarefas diárias da produção (o Docker de lá não tem agendador do Laravel). Roda todo dia e pelo botão
+# "Run workflow" (Actions > Daily tasks):
+# - bans: lista de banidas por formato, do Scryfall (tag "Banido");
+# - legality: legalidade no Pauper das cartas dos decks, do Scryfall (tag "Inválida");
+# - challenges: confirma placares de desafio sem resposta há 7 dias (também roda ao abrir as páginas de desafios).
+# O deploy também roda as duas conferências de cartas.
 on:
   schedule:
     # 09:00 UTC = 06:00 em Brasília. O GitHub pode atrasar alguns minutos.
@@ -10,20 +13,21 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: Conferência a rodar
+        description: Tarefa a rodar
         type: choice
         default: all
         options:
           - all
           - bans
           - legality
+          - challenges
 
 permissions:
   contents: read
 
 jobs:
   sync:
-    name: Sync card data with Scryfall
+    name: Run daily tasks
     runs-on: ubuntu-latest
     environment: production
     # Mesmo grupo do deploy: nunca roda ao mesmo tempo que uma atualização da produção.
@@ -65,19 +69,20 @@ jobs:
             sleep 5
           done
           [ -s host-keys ] || { echo "Nao foi possivel conectar na porta 22 da EC2." >&2; exit 1; }
-      - name: Run card sync
+      - name: Run tasks
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
-          # Agendado nao tem input: roda as duas.
+          # Agendado nao tem input: roda todas.
           TASK: ${{ github.event.inputs.task || 'all' }}
         # So comandos fixos: o input escolhe entre opcoes de uma lista, nunca vira comando.
-        # As duas conferencias rodam mesmo se a primeira falhar; o job fica vermelho se alguma falhou.
+        # Cada tarefa roda mesmo se a anterior falhar; o job fica vermelho se alguma falhou.
         run: |
           case "$TASK" in
-            all) commands="cards:sync-bans cards:sync-legality" ;;
+            all) commands="cards:sync-bans cards:sync-legality challenges:auto-confirm" ;;
             bans) commands="cards:sync-bans" ;;
             legality) commands="cards:sync-legality" ;;
+            challenges) commands="challenges:auto-confirm" ;;
             *) echo "Tarefa desconhecida: $TASK" >&2; exit 1 ;;
           esac
           failed=0
@@ -85,7 +90,7 @@ jobs:
             echo "::group::$command"
             ssh -i ~/.ssh/manaleague "$EC2_USER@$EC2_HOST" \
               "cd /opt/manaleague/current && sudo docker compose -p manaleague exec -T app php artisan $command" || {
-                echo "::error::$command falhou (Scryfall fora do ar ou app parado). Os dados anteriores foram mantidos."
+                echo "::error::$command falhou. Os dados anteriores foram mantidos."
                 failed=1
               }
             echo "::endgroup::"

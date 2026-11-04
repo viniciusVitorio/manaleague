@@ -16,7 +16,9 @@ class RankedMatchController extends Controller
 
     public function show(Request $request, RankedMatch $match, RankTierResolver $tiers)
     {
-        $match->load(['season.formats', 'season.club', 'playerOne', 'playerTwo', 'submissions.submitter', 'transactions.profile']);
+        // Placar de desafio sem resposta há 7 dias é confirmado ao abrir a página (ChallengeService::autoConfirmOverdue).
+        app(\App\Services\ChallengeService::class)->autoConfirmOverdue();
+        $match->refresh()->load(['season.formats', 'season.club', 'playerOne', 'playerTwo', 'submissions.submitter', 'transactions.profile']);
         $this->authorize('view', $match);
         $pending = $match->submissions->where('status', 'pending')->sortByDesc('id')->first();
 

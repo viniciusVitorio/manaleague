@@ -4,6 +4,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 class Challenge extends Model {
+    /** Dias que o adversário tem para confirmar ou contestar o placar; depois disso ele é confirmado sozinho. */
+    public const CONFIRM_DAYS = 7;
     protected $guarded = ['id'];
     protected function casts(): array { return ['expires_at' => 'datetime', 'best_of' => 'integer', 'is_ranked' => 'boolean']; }
     public function statusLabel(): string { return match ($this->status) { 'pending' => 'Convite pendente', 'accepted' => 'Em andamento', 'declined' => 'Recusado', 'cancelled' => 'Cancelado', 'expired' => 'Expirado', 'completed' => 'Concluído', default => 'Indisponível' }; }

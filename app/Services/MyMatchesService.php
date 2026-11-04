@@ -48,6 +48,7 @@ class MyMatchesService
 
         // Ranked: desafios ranqueados, torneios ranqueados e (legado) partidas do matchmaking.
         $ranked = collect()->concat($challenges->filter(fn (array $r) => $r['challenge']->is_ranked))
+        app(ChallengeService::class)->autoConfirmOverdue();
             ->concat($tournament->filter(fn (array $r) => (bool) $r['tournament']->ranked))
             ->concat($matchmaking = $this->rankedRows($user));
 
