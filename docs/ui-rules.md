@@ -3,7 +3,7 @@
 Regras verificáveis para qualquer tela nova ou ajuste, feita por pessoa ou por IA.
 Se uma regra atrapalhar um caso real, **mude a regra aqui primeiro**; não abra exceção escondida na tela.
 
-Referência rápida do que já foi aprovado: card do **Rival** e estatísticas do perfil (`players/show.blade.php`),
+Referência rápida do que já foi aprovado: estatísticas do perfil (`players/show.blade.php`),
 lista e formulário de **Desafios** (`challenges/index`, `challenges/create`), **contador de vida** (`life/*`, `js/life-counter.js`).
 
 ---
@@ -140,6 +140,8 @@ Card · Card · Card                (mesma largura, 12–16px entre eles)
 ## 5. Padrões de tela já resolvidos
 
 ### Confronto (Rival)
+
+> O card do Rival **saiu do perfil** (pedido do dono). Padrão e classes `.rival-card` foram removidos; o retrospecto entre amigos fica só em Desafios → Rivalidades. Mantido aqui só como referência visual caso volte.
 
 ```
 ⚔ RIVAL                                   [Você lidera]

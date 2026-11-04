@@ -6,7 +6,7 @@ Todo comportamento que o jogador percebe tem teste. Feature test (HTTP + banco) 
 
 ```bash
 php artisan test                          # suíte inteira (≈320 testes, ~1 min)
-php artisan test --filter RivalTest       # um arquivo ou um método
+php artisan test --filter ProfileSocialTest       # um arquivo ou um método
 node --test tests/js/deck-simulator.test.cjs
 ```
 
@@ -15,7 +15,7 @@ Banco de teste: SQLite em memória (`phpunit.xml`), `RANKED_AUTO_YEARLY_SEASON=f
 
 ## Onde e como
 
-- `tests/Feature/<Assunto>Test.php`, um arquivo por funcionalidade (`RivalTest`, `ChallengesPageTest`, `AllMatchStatsTest`).
+- `tests/Feature/<Assunto>Test.php`, um arquivo por funcionalidade (`ProfileSocialTest`, `ChallengesPageTest`, `AllMatchStatsTest`).
   `tests/Unit/` para cálculo isolado (`EloCalculatorTest`).
 - Sempre `use RefreshDatabase;`. Docblock de uma linha na classe dizendo o que ela garante, em português.
 - Nome do método em inglês descrevendo a regra: `test_tie_goes_to_the_most_recent_and_ranked_challenges_count_but_ranked_tournaments_do_not`.
@@ -60,7 +60,7 @@ $season->formats()->create(['format' => 'Pauper', 'k_factor' => 32, 'starting_ra
 
 | Mudança | Testes mínimos |
 |---|---|
-| Regra de negócio | o caminho feliz, a borda (empate, zero, limite) e o que **não** conta (ex.: torneio não vira rival) |
+| Regra de negócio | o caminho feliz, a borda (empate, zero, limite) e o que **não** conta (ex.: partida de torneio não conta em desafios) |
 | Dado de outra pessoa na tela | dono vê, amigo vê, estranho **não** vê (`assertDontSee`) |
 | Tela nova ou reorganizada | a ordem (`assertSeeInOrder`), os textos principais, o link da ação (`route(...)`) e o estado vazio |
 | Formulário | envio válido grava (`assertDatabaseHas`), inválido devolve erro (`assertSessionHasErrors('campo')`) |

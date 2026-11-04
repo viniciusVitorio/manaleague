@@ -33,9 +33,9 @@ class ProfileSocialTest extends TestCase
         $challenge = Challenge::create(['challenger_id' => $ana->playerProfile->id, 'opponent_id' => $bia->playerProfile->id, 'format' => 'Pauper', 'best_of' => 3, 'status' => 'completed', 'expires_at' => now()->addDay()]);
         $challenge->casualMatch()->create(['status' => 'confirmed', 'challenger_games' => 2, 'opponent_games' => 0, 'confirmed_at' => now()]);
 
-        // O retrospecto entre os dois fica no card do Rival (e em Desafios → Rivalidades), não numa seção à parte.
+        // O retrospecto entre os dois fica em Desafios → Rivalidades, não no perfil.
         $this->actingAs($ana)->get(route('profiles.show', $bia->playerProfile))->assertOk()
-            ->assertDontSee('Confronto direto')->assertDontSee('id="h2h-title"', false)->assertSee('id="rival-title"', false);
+            ->assertDontSee('Confronto direto')->assertDontSee('id="h2h-title"', false)->assertDontSee('id="rival-title"', false);
     }
 
     public function test_back_link_returns_to_where_the_visitor_came_from(): void

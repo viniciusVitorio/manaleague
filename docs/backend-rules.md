@@ -23,9 +23,9 @@ Como organizar controller, service, model, migration e regra de negócio. Comple
 
 ## 2. Services
 
-- Um service por assunto, com nome do assunto: `ChallengeService`, `RivalService`, `PlayerStatsService`, `Ranked\RankedMatchService`.
+- Um service por assunto, com nome do assunto: `ChallengeService`, `PlayerStatsService`, `Ranked\RankedMatchService`.
 - Fonte única: um cálculo mora num lugar só e os outros chamam. Estatísticas do perfil e do painel vêm de
-  `PlayerStatsService::for()`; conquistas, de `AchievementService`; rival, de `RivalService`.
+  `PlayerStatsService::for()`; conquistas, de `AchievementService`.
 - Retorno para tela: array com chaves claras e tipadas no docblock (`@return array{played: int, wins: int, ...}`).
 - Erro de regra para o usuário: `ValidationException::withMessages(['campo' => 'Mensagem em português'])`
   (o padrão `require(bool $ok, string $msg)` de `ChallengeService`). O layout já mostra.
@@ -36,7 +36,7 @@ Como organizar controller, service, model, migration e regra de negócio. Comple
 ## 3. Visibilidade e privacidade
 
 - Perfil: `@can('view', $profile)` / `PlayerProfilePolicy`. Quem não pode ver recebe 404, não 403, em URLs adivinháveis.
-- Lista de amigos, rival, fichário de trocas: **só o dono e amigos aceitos** (`FriendshipService::ACCEPTED`).
+- Lista de amigos, fichário de trocas: **só o dono e amigos aceitos** (`FriendshipService::ACCEPTED`).
 - Decks: `DeckPolicy`; deck privado nunca aparece para terceiros, nem em contagem.
 - Dado de outra pessoa numa tela de terceiro: sempre pergunte "um estranho deveria ver isso?" e teste os três papéis
   (dono, amigo, estranho).

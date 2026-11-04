@@ -380,36 +380,6 @@ input::-ms-reveal{display:none}
 .profile-copy-status{color:var(--ui-success);font-size:.78rem}
 .profile-copy-status:empty{display:none}
 .h2h-last{margin:0;color:var(--ui-fg-muted);font-size:.85rem}
-/* Rival no perfil: voce x rival, com placar no meio e barra de vitorias/empates/derrotas */
-.rival-card{position:relative;overflow:hidden}
-.rival-card::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--ui-success),var(--ui-fg-faint) 50%,var(--ui-danger))}
-.rival-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
-.rival-top .eyebrow{display:inline-flex;align-items:center;gap:6px}
-.rival-status{padding:3px 10px;border:1px solid var(--ui-border-strong);border-radius:99px;color:var(--ui-fg-muted);font-size:.75rem;font-weight:600;white-space:nowrap}
-.rival-card.is-lead-me .rival-status{color:var(--ui-success);border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.07)}
-.rival-card.is-lead-rival .rival-status{color:var(--ui-danger);border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.07)}
-.rival-versus{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:var(--s4);margin:var(--s5) 0 var(--s4)}
-.rival-side,.rival-link{display:flex;flex-direction:column;align-items:center;gap:var(--s2);min-width:0;text-align:center}
-.rival-link{color:inherit;text-decoration:none}
-.rival-link:hover .rival-name{text-decoration:underline}
-.rival-link:hover .rival-avatar{border-color:var(--ui-fg-faint)}
-.profile-avatar.rival-avatar{width:72px;height:72px;border-radius:50%;font-size:2rem}
-.rival-name{max-width:100%;overflow:hidden;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
-.rival-score{display:grid;justify-items:center;gap:var(--s1);text-align:center}
-.rival-score-nums{display:flex;align-items:baseline;gap:var(--s3);font-variant-numeric:tabular-nums;line-height:1}
-.rival-score-nums b{font-size:2.4rem;font-weight:800}
-.rival-score-nums span{color:var(--ui-fg-faint);font-size:1.2rem}
-.rival-card.is-lead-me .rival-score-nums .is-wins{color:var(--ui-success)}
-.rival-card.is-lead-rival .rival-score-nums .is-losses{color:var(--ui-danger)}
-.rival-score small{max-width:160px;color:var(--ui-fg-subtle);font-size:.72rem}
-.rival-meter{display:flex;gap:2px;height:6px;border-radius:99px;overflow:hidden;background:var(--ui-accent)}
-.rival-meter span{min-width:6px}
-.rival-meter .is-wins{background:var(--ui-success)}
-.rival-meter .is-draws{background:var(--ui-fg-faint)}
-.rival-meter .is-losses{background:var(--ui-danger)}
-.rival-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s2) var(--s3);margin-top:var(--s3)}
-.rival-foot .btn{display:inline-flex;align-items:center;gap:6px}
-@media(max-width:480px){.rival-versus{gap:var(--s2)}.profile-avatar.rival-avatar{width:56px;height:56px;font-size:1.6rem}.rival-score-nums b{font-size:1.9rem}.rival-foot .btn{width:100%;justify-content:center}}
 /* Ultimos resultados no card de V-D-E: bolinhas (verde vitoria, vermelho derrota, cinza empate) */
 .form-row{display:flex;align-items:center;gap:10px;margin-top:10px}
 .form-dots{display:flex;align-items:center;gap:6px;margin:0;padding:0;list-style:none}
