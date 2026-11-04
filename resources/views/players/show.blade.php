@@ -24,7 +24,7 @@
                     <span class="profile-copy-status" data-copy-status role="status" aria-live="polite"></span>
                 </div>
                 <p class="profile-handle">{{ '@'.$profile->handle }}</p>
-                @if($ranked && $ranked['ratings']->isNotEmpty())<p><a href="#ranque">@include('ranked.partials.tier', ['rating' => $ranked['ratings']->first()->rating, 'tiers' => $ranked['tiers']])</a> <span class="muted">{{ $ranked['ratings']->first()->format }} · {{ $ranked['ratings']->first()->rating }} ELO</span></p>@endif
+                @if($ranked && $ranked['ratings']->isNotEmpty())<p class="profile-rank">@include('ranked.partials.rank-chip', ['rating' => $ranked['ratings']->first()->rating, 'format' => $ranked['ratings']->first()->format, 'tiers' => $ranked['tiers']])</p>@endif
 
                 @if($showPreferredDeck)<p>{{ $profile->preferred_deck_name ?: 'Deck principal não informado' }} @if($profile->preferred_deck_colors) · @include('partials.color-pips', ['colors' => $profile->preferred_deck_colors]) @endif</p>@endif
 
@@ -182,27 +182,37 @@
 @push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/ranked.css') }}">@endpush
 <section class="card section-card profile-ranked" id="ranque">
     <div class="section-heading"><div><span class="eyebrow">ELO / PDL</span><h2>Ranque</h2></div>@if($isOwner && $ranked['activeFormats']->isNotEmpty())<a class="btn btn-small btn-secondary" href="{{ route('challenges.create', ['ranked' => 1]) }}">Desafio ranqueado</a>@endif</div>
-    <div class="rank-cards">
-    @forelse($ranked['ratings'] as $rating)
-        @include('ranked.partials.rank-card', ['rating' => $rating->rating, 'tiers' => $ranked['tiers'], 'label' => $rating->format.' · '.$rating->season->name, 'record' => $rating])
-    @empty
-        @include('ranked.partials.rank-card', ['rating' => $ranked['start'], 'tiers' => $ranked['tiers'], 'label' => $ranked['currentSeason']?->name ?? 'Sem temporada ativa', 'record' => null])
-    @endforelse
+    <div @class(['ranked-profile-layout', 'has-side' => $ranked['history']->isNotEmpty() || $ranked['snapshots']->isNotEmpty()])>
+        <div class="ranked-profile-main">
+            <div class="rank-cards">
+            @forelse($ranked['ratings'] as $rating)
+                @include('ranked.partials.rank-card', ['rating' => $rating->rating, 'tiers' => $ranked['tiers'], 'label' => $rating->format.' · '.$rating->season->name, 'record' => $rating])
+            @empty
+                @include('ranked.partials.rank-card', ['rating' => $ranked['start'], 'tiers' => $ranked['tiers'], 'label' => $ranked['currentSeason']?->name ?? 'Sem temporada ativa', 'record' => null])
+            @endforelse
+            </div>
+            @if($ranked['ratings']->isEmpty())
+                <p class="muted rank-hint">@if($isOwner)@if($ranked['currentSeason'])Você ainda não jogou ranqueado. Faça um desafio ranqueado com um amigo para estrear; todos começam em {{ $ranked['start'] }} ELO em cada formato.@else O ranque abre assim que a próxima temporada começar.@endif @else Ainda sem partidas ranqueadas nesta temporada.@endif</p>
+            @endif
+            @include('ranked.partials.all-tiers', ['rating' => $ranked['ratings']->max('rating') ?? $ranked['start'], 'tiers' => $ranked['tiers']])
+        </div>
+        @if($ranked['history']->isNotEmpty() || $ranked['snapshots']->isNotEmpty())
+        <div class="ranked-profile-side">
+            @if($ranked['history']->isNotEmpty())
+                <h3 class="achievement-category">Últimas variações</h3>
+                <div class="tx-list">
+                @foreach($ranked['history'] as $tx)
+                    <div class="tx-row"><span class="delta {{ $tx->delta >= 0 ? 'up' : 'down' }}">{{ $tx->delta >= 0 ? '+' : '' }}{{ $tx->delta }}</span><div>@if($tx->event_type === 'correction')<strong>Correção da moderação</strong><small>{{ $tx->note }}</small>@else<strong>@if($isOwner)<a href="{{ route('ranked.matches.show', $tx->ranked_match_id) }}">@endif{{ $tx->rankedMatch?->playerOne?->displayName() }} {{ $tx->rankedMatch?->score_one }}×{{ $tx->rankedMatch?->score_two }} {{ $tx->rankedMatch?->playerTwo?->displayName() }}@if($isOwner)</a>@endif</strong><small>{{ $tx->format }} · {{ $tx->rating_before }} → {{ $tx->rating_after }}</small>@endif</div><time datetime="{{ $tx->effective_at->toIso8601String() }}">{{ $tx->effective_at->timezone(config('app.timezone'))->format('d/m H:i') }}</time></div>
+                @endforeach
+                </div>
+            @endif
+            @if($ranked['snapshots']->isNotEmpty())
+                <h3 class="achievement-category">Temporadas encerradas</h3>
+                @foreach($ranked['snapshots'] as $snap)<p class="muted"><strong>{{ $snap->season->name }}</strong> · {{ $snap->format }}: {{ $snap->tier }} ({{ $snap->final_rating }})@if($snap->rank) · {{ $snap->rank }}º lugar @endif</p>@endforeach
+            @endif
+        </div>
+        @endif
     </div>
-    @if($ranked['ratings']->isEmpty())
-        <p class="muted rank-hint">@if($isOwner)@if($ranked['currentSeason'])Você ainda não jogou ranqueado. Faça um desafio ranqueado com um amigo para estrear; todos começam em {{ $ranked['start'] }} ELO em cada formato.@else O ranque abre assim que a próxima temporada começar.@endif @else Ainda sem partidas ranqueadas nesta temporada.@endif</p>
-    @endif
-    @include('ranked.partials.all-tiers', ['rating' => $ranked['ratings']->max('rating') ?? $ranked['start'], 'tiers' => $ranked['tiers']])
-    @if($ranked['history']->isNotEmpty())
-        <h3 class="achievement-category">Últimas variações</h3>
-        @foreach($ranked['history'] as $tx)
-            <div class="tx-row"><span class="delta {{ $tx->delta >= 0 ? 'up' : 'down' }}">{{ $tx->delta >= 0 ? '+' : '' }}{{ $tx->delta }}</span><div>@if($tx->event_type === 'correction')<strong>Correção da moderação</strong><small>{{ $tx->note }}</small>@else<strong>@if($isOwner)<a href="{{ route('ranked.matches.show', $tx->ranked_match_id) }}">@endif{{ $tx->rankedMatch?->playerOne?->displayName() }} {{ $tx->rankedMatch?->score_one }}×{{ $tx->rankedMatch?->score_two }} {{ $tx->rankedMatch?->playerTwo?->displayName() }}@if($isOwner)</a>@endif</strong><small>{{ $tx->format }} · {{ $tx->rating_before }} → {{ $tx->rating_after }}</small>@endif</div><time datetime="{{ $tx->effective_at->toIso8601String() }}">{{ $tx->effective_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}</time></div>
-        @endforeach
-    @endif
-    @if($ranked['snapshots']->isNotEmpty())
-        <h3 class="achievement-category">Temporadas encerradas</h3>
-        @foreach($ranked['snapshots'] as $snap)<p class="muted"><strong>{{ $snap->season->name }}</strong> · {{ $snap->format }}: {{ $snap->tier }} ({{ $snap->final_rating }})@if($snap->rank) · {{ $snap->rank }}º lugar @endif</p>@endforeach
-    @endif
 </section>
 @endif
 @php($filledSlots = collect($showcase['slots'])->filter())
