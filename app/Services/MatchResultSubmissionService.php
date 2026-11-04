@@ -18,6 +18,8 @@ class MatchResultSubmissionService {
    }
    abort_if(MatchResultSubmission::where('submitted_by',$user->id)->where('idempotency_key',$data['idempotency_key'])->exists(),409);
    $this->assertOpen($tournament,$match);
+   // No todos contra todos as próximas rodadas já existem, mas ainda não começaram.
+   abort_if($match->round > $tournament->currentRound(),409,'Essa partida é de uma rodada que ainda não começou.');
    $this->scores($match,$data);
    $submission = MatchResultSubmission::create([...$data,'match_id'=>$match->id,'submitted_by'=>$user->id,'status'=>'pending']);
    $this->audit($submission,$user,'submitted',$data);

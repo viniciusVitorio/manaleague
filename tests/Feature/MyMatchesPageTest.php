@@ -53,11 +53,37 @@ class MyMatchesPageTest extends TestCase
         $this->actingAs($bia)->get(route('matches.mine'))->assertSeeText('Você × Ana')->assertSeeInOrder(['Derrota 0–2', 'Vitória 2–1']);
     }
 
+    public function test_rounds_that_have_not_started_are_listed_apart_and_cannot_get_a_score(): void
+    {
+        [$t, $ana, $bia, $pAna, $pBia] = $this->cup('Liga Longa', 'liga-longa');
+        // Todos contra todos: as rodadas 2 e 3 já existem, mas a 1 ainda não terminou.
+        $now = $t->matches()->create(['round' => 1, 'stage' => 'league', 'status' => 'pending', 'player_one_id' => $pAna->id, 'player_two_id' => $pBia->id]);
+        $next = $t->matches()->create(['round' => 2, 'stage' => 'league', 'status' => 'pending', 'player_one_id' => $pBia->id, 'player_two_id' => $pAna->id]);
+        $t->matches()->create(['round' => 3, 'stage' => 'league', 'status' => 'pending', 'player_one_id' => $pAna->id, 'player_two_id' => $pBia->id]);
+
+        $html = $this->actingAs($ana)->get(route('matches.mine'))->assertOk()
+            ->assertSeeInOrder(['Em andamento', '1 partida', 'Liga Longa · Rodada 1', 'Envie o resultado', 'Próximas partidas', '2 partidas', 'Rodada 2', 'começa depois da rodada 1', 'A jogar', 'Rodada 3', 'A jogar'])
+            ->getContent();
+        $this->assertSame(1, substr_count($html, 'name="idempotency_key"'), 'só a rodada atual tem campo de placar');
+        $this->assertStringNotContainsString('Histórico', $html);
+
+        // O servidor também recusa placar de rodada que ainda não começou; o painel só aponta a rodada atual.
+        $this->postJson(route('matches.submissions.store', [$t, $next]), ['player_one_games' => 2, 'player_two_games' => 0, 'idempotency_key' => (string) Str::uuid()])
+            ->assertStatus(409);
+        $this->get('/dashboard')->assertOk()->assertSee('Rodada 1 · Pauper')->assertDontSee('Rodada 2 · Pauper');
+
+        // Rodada 1 encerrada: a 2 vira a atual e já aceita placar.
+        $now->update(['status' => 'finished', 'player_one_games' => 2, 'player_two_games' => 0]);
+        $this->get(route('matches.mine'))->assertSeeInOrder(['Em andamento', 'Rodada 2', 'Envie o resultado', 'Próximas partidas', 'Rodada 3', 'Histórico', 'Rodada 1']);
+        $this->postJson(route('matches.submissions.store', [$t, $next]), ['player_one_games' => 0, 'player_two_games' => 2, 'idempotency_key' => (string) Str::uuid()])
+            ->assertCreated();
+    }
+
     public function test_what_needs_you_comes_first_with_inputs_on_your_side(): void
     {
         [$t, $ana, $bia, $pAna, $pBia] = $this->cup('Copa Ao Vivo', 'copa-ao-vivo');
         $t->matches()->create(['round' => 1, 'stage' => 'league', 'status' => 'pending', 'player_one_id' => $pBia->id, 'player_two_id' => $pAna->id]);
-        $toConfirm = $t->matches()->create(['round' => 2, 'stage' => 'league', 'status' => 'pending', 'player_one_id' => $pAna->id, 'player_two_id' => $pBia->id]);
+        $toConfirm = $t->matches()->create(['round' => 1, 'stage' => 'league', 'status' => 'pending', 'player_one_id' => $pAna->id, 'player_two_id' => $pBia->id]);
         $this->actingAs($bia)->postJson(route('matches.submissions.store', [$t, $toConfirm]), ['player_one_games' => 2, 'player_two_games' => 1, 'idempotency_key' => (string) Str::uuid()])->assertCreated();
 
         $page = $this->actingAs($ana)->get(route('matches.mine'))->assertOk()
