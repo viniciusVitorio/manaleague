@@ -27,6 +27,9 @@ html[data-theme="light"]{
 }
 body{font-family:var(--ui-font);-webkit-font-smoothing:antialiased}
 .icon{flex:0 0 auto;display:inline-block;vertical-align:middle}
+/* Lista de opções dos <select> nativos: no Chrome/Edge do Windows ela herda o fundo do select (transparente vira branco)
+   e a cor do texto (clara no tema escuro), e as opções somem. Fundo e texto vêm sempre do tema. */
+select option,select optgroup{background-color:var(--ui-card);color:var(--ui-fg)}
 
 /* ---------- Botoes ---------- */
 .ui-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);height:36px;padding:0 var(--s4);border-radius:var(--ui-radius-sm);border:1px solid transparent;font-size:.85rem;font-weight:500;line-height:1;white-space:nowrap;cursor:pointer;transition:background-color .15s var(--ui-ease),border-color .15s var(--ui-ease),color .15s var(--ui-ease)}
