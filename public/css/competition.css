@@ -166,3 +166,43 @@
 .champion-stats dt{color:var(--ui-fg-subtle);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase}
 .champion-stats dd{margin:3px 0 0;overflow:hidden;font-size:1.02rem;font-weight:600;font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:480px){.champion-head{padding:18px 16px 0}.champion-head h2{font-size:1.1rem}.champion-stage{padding:22px 10px 0}.podium-step .podium-avatar{width:44px;height:44px;font-size:1.1rem}.podium-step.is-1 .podium-avatar{width:56px;height:56px;font-size:1.4rem}.podium-name{font-size:.82rem}.podium-step.is-1 .podium-name{font-size:.9rem}.podium-deck{font-size:.68rem}.podium-step.is-1 .podium-block{height:88px}.podium-step.is-2 .podium-block{height:64px}.podium-step.is-3 .podium-block{height:48px}.podium-block{font-size:1.3rem}.champion-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.champion-stats div:nth-child(3){border-left:0}.champion-stats div:nth-child(n+3){border-top:1px solid var(--ui-border)}}
+/* Sua inscrição: deck e presença em linhas de status, com a ação ao lado de cada uma. */
+.my-entry-head{margin-bottom:14px}
+.my-entry-head .eyebrow{margin-bottom:4px}
+.my-entry-head h2{display:flex;align-items:center;gap:8px;margin:0}
+.my-entry-head h2 .icon{color:var(--ui-success)}
+.my-entry .alert{margin:0 0 12px}
+.entry-steps{display:grid;margin:0;padding:0;border:1px solid var(--ui-border);border-radius:var(--ui-radius);list-style:none}
+.entry-step{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 14px}
+.entry-step+.entry-step{border-top:1px solid var(--ui-border)}
+.entry-step-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--ui-muted);color:var(--ui-fg-muted)}
+.entry-step.is-done .entry-step-icon{background:color-mix(in srgb,var(--ui-success) 14%,transparent);color:var(--ui-success)}
+.entry-step.is-todo .entry-step-icon{background:color-mix(in srgb,var(--ui-warning) 16%,transparent);color:var(--ui-warning)}
+.entry-step.is-blocked .entry-step-icon{background:color-mix(in srgb,var(--ui-danger) 14%,transparent);color:var(--ui-danger)}
+.entry-step.is-todo{background:color-mix(in srgb,var(--ui-warning) 5%,transparent)}
+.entry-step-body{min-width:0}
+.entry-step-label{display:block;color:var(--ui-fg-subtle);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase}
+.entry-step-body strong{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:.95rem;font-weight:600}
+.entry-step-body small{display:block;margin-top:1px;color:var(--ui-fg-muted);font-size:.8rem}
+.entry-step form{margin:0}
+/* Janela "Trocar deck": os decks do formato como cartões selecionáveis. */
+.entry-deck-dialog{width:min(480px,calc(100% - 32px))}
+.entry-deck-form{display:flex;flex-direction:column;max-height:inherit;margin:0}
+.entry-deck-dialog .ui-dialog-body{overflow-y:auto}
+.entry-deck-hint{margin:0 0 12px;font-size:.86rem}
+.entry-deck-dialog .alert{margin:0 0 12px}
+.deck-choices{display:grid;gap:8px;margin:0;padding:0;border:0;min-width:0}
+.deck-choice{display:flex!important;align-items:center;gap:12px;margin:0;padding:12px 14px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);background:var(--ui-bg);color:var(--ui-fg);font-size:.92rem;font-weight:400;letter-spacing:0;text-transform:none;cursor:pointer;transition:border-color .15s var(--ui-ease),background-color .15s var(--ui-ease)}
+.deck-choice:hover{border-color:var(--ui-border-strong);background:var(--ui-muted)}
+.deck-choice:has(input:checked){border-color:var(--ui-fg);background:var(--ui-muted)}
+.deck-choice:has(input:focus-visible){outline:2px solid var(--ui-ring);outline-offset:2px}
+.deck-choice input{flex:0 0 auto;width:16px;height:16px;margin:0;accent-color:var(--ui-primary)}
+.deck-choice-body{display:grid;flex:1 1 auto;gap:2px;min-width:0}
+.deck-choice-body strong{overflow:hidden;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.deck-choice-body small{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;color:var(--ui-fg-muted);font-size:.78rem}
+.deck-choice.is-blocked{cursor:not-allowed}.deck-choice.is-blocked strong,.deck-choice.is-blocked input{opacity:.55}
+.deck-choice-warn{color:var(--ui-danger)}
+.deck-choice.is-blocked:hover{border-color:var(--ui-border);background:var(--ui-bg)}
+.entry-deck-note{margin:10px 0 0;font-size:.78rem}
+.entry-deck-dialog .ui-dialog-foot{justify-content:flex-end}
+@media(max-width:520px){.entry-step{grid-template-columns:32px minmax(0,1fr);align-items:start}.entry-step-icon{width:32px;height:32px}.entry-step>.ui-btn,.entry-step>form{grid-column:2;justify-self:start}}

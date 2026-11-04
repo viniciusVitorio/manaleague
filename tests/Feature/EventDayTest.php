@@ -139,11 +139,48 @@ class EventDayTest extends TestCase
         $this->actingAs($owner)->post(route('tournaments.timer.start', $setup), ['minutes' => 50])->assertStatus(409);
     }
 
+    public function test_player_check_in_opens_only_on_the_event_day(): void
+    {
+        $owner = $this->account('Org');
+        $ana = $this->account('Ana');
+        $t = $this->tournament($owner); // dia do evento: 01/11/2026
+        $deck = $ana->playerProfile->decks()->create(['name' => 'Faeries', 'format' => 'Pauper']);
+        $entry = $t->players()->create(['name' => 'Ana', 'player_profile_id' => $ana->playerProfile->id, 'deck_id' => $deck->id]);
+        $public = route('arena.public', $t->public_slug);
+        $at = fn (string $moment) => \Illuminate\Support\Carbon::parse($moment, config('app.timezone'));
+
+        // Véspera: o card diz quando abre, sem botão; o envio também é barrado.
+        $this->travelTo($at('2026-10-31 20:00'));
+        $this->actingAs($ana)->get($public)->assertOk()
+            ->assertSeeInOrder(['Sua inscrição', 'Deck', 'Faeries', 'Trocar deck', 'Presença', 'Check-in abre no dia do evento · 01/11'])
+            ->assertDontSee('Fazer check-in');
+        $this->post(route('tournaments.check-in', $t))
+            ->assertSessionHasErrors(['check_in' => 'O check-in abre no dia do evento (01/11/2026). Volte nesse dia para confirmar sua presença.']);
+        $this->assertNull($entry->fresh()->checked_in_at);
+        // O organizador continua podendo marcar (data errada, evento remarcado) e desfazer vale a qualquer hora.
+        $this->actingAs($owner)->patch(route('tournaments.players.check-in', [$t, $entry]))->assertSessionHas('status', 'Ana marcado como presente.');
+        $this->actingAs($ana)->post(route('tournaments.check-in', $t))->assertSessionHas('status', 'Check-in desfeito.');
+
+        // No dia, já de manhã cedo no fuso do app: libera.
+        $this->travelTo($at('2026-11-01 08:00'));
+        $this->get($public)->assertSee('Chegou ao local? Confirme sua presença')->assertSee('Fazer check-in');
+        $this->post(route('tournaments.check-in', $t))->assertSessionHas('status', 'Presença confirmada. Boa sorte!');
+        $this->get($public)->assertSee('Presença confirmada às 08:00')->assertSee('Desfazer check-in');
+        $this->post(route('tournaments.check-in', $t))->assertSessionHas('status', 'Check-in desfeito.');
+
+        // Dia seguinte: passou.
+        $this->travelTo($at('2026-11-02 10:00'));
+        $this->get($public)->assertSee('O check-in era no dia do evento · 01/11')->assertDontSee('Fazer check-in');
+        $this->post(route('tournaments.check-in', $t))
+            ->assertSessionHasErrors(['check_in' => 'O check-in era no dia do evento (01/11/2026). Fale com o organizador para marcar sua presença.']);
+    }
+
     public function test_check_in_by_players_and_organizer_and_removing_absent(): void
     {
         $owner = $this->account('Org');
         $ana = $this->account('Ana');
         $t = $this->tournament($owner);
+        $this->travelTo($t->tournament_date->copy()->setTime(12, 0)); // o jogador só confirma presença no dia do evento
         // inscrição antiga: o nome foi só digitado, não existe deck salvo
         $mine = $t->players()->create(['name' => 'Ana', 'player_profile_id' => $ana->playerProfile->id, 'deck_name' => 'Mono Red Blitz', 'deck_colors' => 'R']);
         $guest = $t->players()->create(['name' => 'Convidado']);

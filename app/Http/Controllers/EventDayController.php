@@ -32,11 +32,18 @@ class EventDayController extends Controller
         return back()->with('status', 'Cronômetro parado.');
     }
 
-    /** O próprio jogador confirma (ou desfaz) a presença, até o torneio começar. */
+    /** O próprio jogador confirma (só no dia do evento) ou desfaz (a qualquer hora) a presença, até o torneio começar. */
     public function checkIn(Request $request, Tournament $tournament): RedirectResponse
     {
         abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'O check-in fecha quando o torneio começa.');
         $entry = $tournament->players()->whereHas('profile', fn ($q) => $q->where('account_user_id', $request->user()->id))->firstOrFail();
+        if ($entry->checked_in_at === null && ($window = $tournament->playerCheckInWindow()) !== 'open') {
+            $day = $tournament->tournament_date->format('d/m/Y');
+
+            return back()->withErrors(['check_in' => $window === 'early'
+                ? "O check-in abre no dia do evento ({$day}). Volte nesse dia para confirmar sua presença."
+                : "O check-in era no dia do evento ({$day}). Fale com o organizador para marcar sua presença."]);
+        }
         if ($entry->checked_in_at === null && $entry->needsDeck($tournament)) {
             return back()->withErrors(['check_in' => 'Escolha um deck de '.$tournament->format.' para a sua inscrição. Depois é só fazer o check-in.']);
         }

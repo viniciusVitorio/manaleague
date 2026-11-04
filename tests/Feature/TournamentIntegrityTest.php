@@ -102,6 +102,7 @@ class TournamentIntegrityTest extends TestCase
     public function test_draft_entries_do_not_need_a_saved_deck(): void
     {
         $tournament = $this->tournament(User::factory()->create(), ['format' => 'Draft']);
+        $this->travelTo($tournament->tournament_date->copy()->setTime(12, 0)); // o jogador só confirma presença no dia do evento
         $player = User::factory()->create(['name' => 'Drafter']);
 
         $this->actingAs($player)->post(route('tournaments.invite.store', $tournament->invite_token))
