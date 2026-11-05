@@ -9,6 +9,7 @@
 
 @if($match->status === 'confirmed' || $match->status === 'invalidated')
 <section class="card section-card"><h2>{{ $match->score_one }} × {{ $match->score_two }}</h2>
+@if($match->auto_confirmed && $match->confirmed_at)<p class="muted">Confirmado automaticamente em {{ $match->confirmed_at->timezone(config('app.timezone'))->format('d/m/Y \à\s H:i') }}: o adversário não confirmou nem contestou em {{ \App\Models\Challenge::CONFIRM_DAYS }} dias.</p>@endif
 @foreach($match->transactions->where('event_type', 'match') as $tx)<p><strong><x-profile-link :of="$tx->profile">{{ $tx->profile->displayName() }}</x-profile-link></strong>: {{ $tx->rating_before }} → {{ $tx->rating_after }} <span class="delta {{ $tx->delta >= 0 ? 'up' : 'down' }}">({{ $tx->delta >= 0 ? '+' : '' }}{{ $tx->delta }})</span> · esperado {{ number_format($tx->expected_score * 100, 1) }}% @if($tx->floor_applied)<em>· piso 0 aplicado</em>@endif</p>@endforeach
 @if($match->status === 'invalidated')<div class="alert alert-danger">Invalidada em {{ $match->invalidated_at->timezone('America/Sao_Paulo')->format('d/m/Y H:i') }}: {{ $match->invalidation_reason }}. Os ratings foram recalculados com lançamentos de correção.</div>@endif
 @foreach($match->transactions->where('event_type', 'correction') as $tx)<p class="muted">Correção: <x-profile-link :of="$tx->profile">{{ $tx->profile->displayName() }}</x-profile-link> {{ $tx->rating_before }} → {{ $tx->rating_after }} ({{ $tx->delta >= 0 ? '+' : '' }}{{ $tx->delta }})</p>@endforeach
@@ -21,10 +22,11 @@
 <section class="card section-card">
 @if($match->status === 'reported' && $pending)
 <h2>Placar enviado: {{ $match->score_one }} × {{ $match->score_two }}</h2><p class="muted">Enviado por {{ $pending->submitter->name === $me->name ? 'você' : 'adversário' }} em {{ $pending->created_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}. Ordem: {{ $match->playerOne->displayName() }} / {{ $match->playerTwo->displayName() }}.</p>
+@php($autoAt = $match->autoConfirmAt($pending)?->timezone(config('app.timezone'))->format('d/m/Y \à\s H:i'))
 @if($match->involvesUser($me) && $pending->submitted_by !== $me->id)
-<form method="POST" action="{{ route('ranked.matches.confirm', $match) }}">@csrf<p>Confirmar é definitivo e atualiza o ranking.</p><button class="btn btn-primary">Confirmar placar</button></form>
+<form method="POST" action="{{ route('ranked.matches.confirm', $match) }}">@csrf<p>Confirmar é definitivo e atualiza o ranking.</p>@if($autoAt)<p class="muted">Você tem até {{ $autoAt }} para confirmar ou contestar. Depois disso, o placar é confirmado automaticamente e o ranking é atualizado.</p>@endif<button class="btn btn-primary">Confirmar placar</button></form>
 <form method="POST" action="{{ route('ranked.matches.dispute', $match) }}">@csrf<label>Motivo da contestação<textarea name="reason" minlength="3" maxlength="1000" required></textarea></label><button class="btn btn-secondary">Contestar</button></form>
-@elseif($match->involvesUser($me))<p>Aguardando o adversário confirmar ou contestar.</p>@endif
+@elseif($match->involvesUser($me))<p>Aguardando o adversário confirmar ou contestar.</p>@if($autoAt)<p class="muted">Se ele não responder até {{ $autoAt }}, o placar é confirmado automaticamente.</p>@endif @endif
 @else
 @if($match->status === 'disputed')<div class="alert alert-danger"><strong>Em disputa.</strong> Nenhum ponto muda até a resolução. Vocês podem enviar um placar corrigido (o adversário confirma de novo) ou aguardar a moderação.@php($d = $match->submissions->where('status', 'disputed')->sortByDesc('id')->first())@if($d)<p>Motivo: {{ $d->dispute_reason }}</p>@endif</div>@endif
 @if($match->involvesUser($me))
@@ -45,5 +47,5 @@
 </section>
 @endif
 
-<section class="card section-card"><h2>Auditoria</h2><ol class="audit-list">@foreach($match->submissions->sortBy('id') as $s)<li>{{ $s->created_at->timezone('America/Sao_Paulo')->format('d/m H:i') }} · {{ $s->submitter->name }} enviou {{ $s->score_one }}×{{ $s->score_two }} · {{ ['pending' => 'aguardando', 'confirmed' => 'confirmado', 'disputed' => 'contestado', 'resolved' => 'resolvido pela moderação', 'superseded' => 'substituído'][$s->status] ?? $s->status }}@if($s->dispute_reason) · “{{ $s->dispute_reason }}”@endif @if($s->resolution_reason) · decisão: “{{ $s->resolution_reason }}”@endif</li>@endforeach @if($match->submissions->isEmpty())<li>Partida criada em {{ $match->created_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}; nenhum placar enviado.</li>@endif</ol></section>
+<section class="card section-card"><h2>Auditoria</h2><ol class="audit-list">@foreach($match->submissions->sortBy('id') as $s)<li>{{ $s->created_at->timezone('America/Sao_Paulo')->format('d/m H:i') }} · {{ $s->submitter->name }} enviou {{ $s->score_one }}×{{ $s->score_two }} · {{ $s->status === 'confirmed' && ! $s->reviewed_by ? 'confirmado automaticamente' : (['pending' => 'aguardando', 'confirmed' => 'confirmado', 'disputed' => 'contestado', 'resolved' => 'resolvido pela moderação', 'superseded' => 'substituído'][$s->status] ?? $s->status) }}@if($s->dispute_reason) · “{{ $s->dispute_reason }}”@endif @if($s->resolution_reason) · decisão: “{{ $s->resolution_reason }}”@endif</li>@endforeach @if($match->submissions->isEmpty())<li>Partida criada em {{ $match->created_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}; nenhum placar enviado.</li>@endif</ol></section>
 @endsection

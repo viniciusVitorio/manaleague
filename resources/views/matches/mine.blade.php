@@ -28,7 +28,7 @@
     @endforeach
 </nav>
 
-@if($open->isEmpty() && $history->isEmpty())
+@if($open->isEmpty() && $upcoming->isEmpty() && $history->isEmpty())
     <x-ui.card>
         @switch($filter)
             @case('desafios')
@@ -51,6 +51,17 @@
                     <div class="ui-list mm-list">@include('matches.partials.link-row', ['row' => $row])</div>
                 @endif
             @endforeach
+        </x-ui.card>
+    @endif
+
+    {{-- Rodadas que ainda não começaram (todos contra todos já gera todas): só para saber quem vem pela frente. --}}
+    @if($upcoming->isNotEmpty())
+        <x-ui.card title="Próximas partidas" icon="calendar" :meta="$upcoming->count().' '.($upcoming->count() === 1 ? 'partida' : 'partidas')" class="mm-section">
+            <div class="ui-list mm-list">
+                @foreach($upcoming as $row)
+                    @include('matches.partials.history-row', ['row' => $row, 'withTournament' => true])
+                @endforeach
+            </div>
         </x-ui.card>
     @endif
 

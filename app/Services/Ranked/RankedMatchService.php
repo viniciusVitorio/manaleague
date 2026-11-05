@@ -8,8 +8,10 @@ use App\Models\RankedMatch;
 use App\Models\RankedResultSubmission;
 use App\Models\RankedSeason;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 /**
  * Ciclo da partida ranqueada: criada (com aceite previo dos dois) -> placar enviado ->
@@ -146,6 +148,61 @@ class RankedMatchService
         }
 
         return $m;
+    }
+
+    /**
+     * Desafio ranqueado com placar sem resposta desde $cutoff: confirma como se o adversário tivesse confirmado
+     * (Elo uma única vez, revisão antifraude, conquistas e avisos). O envio fica sem "reviewed_by": ninguém confirmou.
+     * Só desafios: partida ranqueada de torneio segue o fluxo do torneio. Temporada encerrada não recebe pontuação,
+     * então o placar fica para a moderação.
+     */
+    public function autoConfirmOverdue(CarbonInterface $cutoff): int
+    {
+        $ids = RankedMatch::query()->where('status', 'reported')->where('source_type', 'challenge')
+            ->whereHas('season', fn ($q) => $q->whereIn('status', ['active', 'closing']))
+            ->whereHas('submissions', fn ($q) => $q->where('status', 'pending')->where('created_at', '<=', $cutoff))
+            ->pluck('id');
+        $confirmed = 0;
+
+        foreach ($ids as $id) {
+            // Roda também ao abrir páginas: uma partida com problema é registrada no log e não derruba a tela.
+            try {
+                $confirmed += (int) $this->autoConfirmOne($id, $cutoff);
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
+
+        return $confirmed;
+    }
+
+    private function autoConfirmOne(int $id, CarbonInterface $cutoff): bool
+    {
+        $deltas = null;
+        $m = DB::transaction(function () use ($id, $cutoff, &$deltas) {
+            $m = RankedMatch::query()->with(['playerOne', 'playerTwo', 'season'])->lockForUpdate()->find($id);
+            // Alguém confirmou, contestou ou reenviou desde a busca: nada a fazer.
+            if (! $m || $m->status !== 'reported' || ! in_array($m->season->status, ['active', 'closing'], true)) {
+                return null;
+            }
+            $s = RankedResultSubmission::query()->where(['ranked_match_id' => $m->id, 'status' => 'pending'])->lockForUpdate()->latest('id')->first();
+            if (! $s || $s->created_at->gt($cutoff)) {
+                return null;
+            }
+            $s->update(['status' => 'confirmed', 'reviewed_at' => now()]);
+            $m->update(['status' => 'confirmed', 'confirmed_at' => now(), 'auto_confirmed' => true]);
+            $deltas = $this->ledger->applyMatch($m);
+
+            return $m;
+        }, 3);
+        if (! $m) {
+            return false;
+        }
+        if ($deltas) {
+            $this->afterConfirmed($m, $deltas);
+        }
+
+        return true;
     }
 
     public function dispute(RankedMatch $match, User $user, string $reason): RankedMatch

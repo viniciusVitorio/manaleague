@@ -227,7 +227,14 @@ jobs:
           WAF_MODE: ${{ vars.WAF_MODE || 'On' }}
         run: |
           printf 'APP_NAME=ManaLeague\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://manaleague.com.br\nLOG_CHANNEL=stderr\nLOG_LEVEL=warning\nDB_CONNECTION=pgsql\nDB_DATABASE=manaleague\nDB_USERNAME=manaleague\nDB_PASSWORD=%s\nSESSION_DRIVER=database\nSESSION_ENCRYPT=true\nSESSION_SECURE_COOKIE=true\nSESSION_HTTP_ONLY=true\nSESSION_SAME_SITE=lax\nCACHE_STORE=database\nQUEUE_CONNECTION=database\nAPP_PORT=80\nHTTPS_PORT=443\nCADDY_DOMAINS="manaleague.com.br, www.manaleague.com.br"\nMAIL_MAILER=%s\nMAIL_FROM_ADDRESS=nao-responda@manaleague.com.br\nMAIL_FROM_NAME=ManaLeague\nAWS_SES_REGION=%s\nAWS_SES_CONFIGURATION_SET=manaleague-transactional\nAVATAR_DISK=%s\nAWS_BUCKET=%s\nAWS_DEFAULT_REGION=%s\nWAF_MODE=%s\n' "$APP_KEY" "$DB_PASSWORD" "$MAIL_MAILER" "$AWS_REGION" "$AVATAR_DISK" "$AVATAR_BUCKET" "$AWS_REGION" "$WAF_MODE" > deploy.env
-          tar --exclude=.git --exclude=terraform --exclude=vendor --exclude=.env --exclude=deploy.env -czf /tmp/release.tar.gz .
+          # vendor e terraform so na raiz ("./"): sem o "./" o tar tira qualquer pasta com esse nome, e ja tirou
+          # resources/views/vendor (paginacao) e public/js/vendor (Idiomorph) da producao.
+          tar --exclude=.git --exclude=./terraform --exclude=./vendor --exclude=.env --exclude=deploy.env -czf /tmp/release.tar.gz .
+          # Confere o pacote antes de enviar: as pastas vendor do projeto vao, a das dependencias do Composer nao.
+          for file in ./resources/views/vendor/pagination/tailwind.blade.php ./public/js/vendor/idiomorph.min.js; do
+            tar -tzf /tmp/release.tar.gz | grep -qxF "$file" || { echo "Pacote sem $file" >&2; exit 1; }
+          done
+          if tar -tzf /tmp/release.tar.gz | grep -qE '^\./(vendor|terraform)/'; then echo "Pacote com vendor/ ou terraform/ da raiz" >&2; exit 1; fi
       - name: Upload release
         if: github.event_name == 'push'
         env:

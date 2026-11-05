@@ -14,7 +14,7 @@ class PublicArenaController extends Controller
     {
         $tournament = Tournament::query()->where('public_slug', $token)->firstOrFail();
         $tournament->load(['players.profile', 'matches' => fn ($query) => $query->orderBy('round')->orderBy('id'), 'matches.playerOne.profile', 'matches.playerTwo.profile']);
-        $ranking = $standings->for($tournament);
+        $ranking = $standings->withPodium($tournament, $standings->for($tournament));
         $rounds = $tournament->matches->groupBy('round');
         $final = $tournament->matches->firstWhere('stage', GameMatch::STAGE_FINAL);
         $thirdPlace = $tournament->matches->firstWhere('stage', GameMatch::STAGE_THIRD_PLACE);

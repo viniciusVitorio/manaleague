@@ -33,7 +33,9 @@ class AsyncFormsTest extends TestCase
         $this->assertSame(GameMatch::STATUS_FINISHED, $match->fresh()->status);
 
         $this->actingAs($organizer)->withHeaders(self::ASYNC)->get($page)
-            ->assertOk()->assertSee('Resultado salvo.')->assertSee('2 × 1');
+            ->assertOk()->assertSee('Resultado salvo.')
+            // Card da mesa: placar de cada jogador na linha dele, vencedor marcado.
+            ->assertSee('<b class="tmatch-score">2</b>', false)->assertSee('<b class="tmatch-score">1</b>', false)->assertSee('tmatch-row is-winner', false);
     }
 
     public function test_normal_form_post_still_redirects(): void

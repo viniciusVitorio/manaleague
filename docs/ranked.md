@@ -9,6 +9,7 @@ Não há mais uma seção "Ranked" no app: **o ranque aparece no perfil do jogad
 - Cálculo: `E = 1 / (1 + 10^((R_adv − R_seu)/400))`, `Δ = round(K × (S − E))` com S = 1 / 0,5 / 0. O adversário recebe `−Δ`. K = 32, gravado em cada partida.
 - Patentes: Ferro (até 799; II até 699) · Bronze · Prata · Ouro · Platina · Diamante (II e I de 100) · Mestre (1800+).
 - Só valem desafios marcados como ranqueados **antes** do jogo, com placar enviado por um e confirmado pelo outro. Casuais, BYE, torneios e Commander multiplayer não valem.
+- Se o adversário não confirmar nem contestar em **7 dias** (`Challenge::CONFIRM_DAYS`), o placar do desafio é confirmado sozinho e o ELO é aplicado como numa confirmação normal (com a revisão antifraude). A partida fica marcada com `auto_confirmed` e o envio fica sem `reviewed_by`. Temporada encerrada não recebe pontos: o placar fica para a moderação.
 - Máximo de 3 ranqueadas por dupla a cada 24h por formato.
 - Disputa congela os pontos até a moderação resolver. Invalidação recalcula o formato em ordem e grava lançamentos de correção; nada antigo é editado.
 - Privacidade: no perfil, o dono escolhe se o ranque aparece para amigos e organizadores que veem o perfil.

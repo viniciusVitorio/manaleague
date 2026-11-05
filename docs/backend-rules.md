@@ -57,7 +57,7 @@ Como organizar controller, service, model, migration e regra de negócio. Comple
   (não some duas vezes). Correção de ELO só por replay (`RatingReplayService`) dentro de transação; temporada encerrada é imutável.
   Feature flag: `config('ranked.enabled')`. Detalhes em [ranked.md](ranked.md).
 - **Desafios:** casual não tem empate na UI de estatística (V–D). Status: `pending → accepted → completed`
-  (ou `declined`, `cancelled`, `expired`, que expira de forma preguiçosa ao abrir as páginas).
+  (ou `declined`, `cancelled`, `expired`, que expira de forma preguiçosa ao abrir as páginas). Placar sem resposta por `Challenge::CONFIRM_DAYS` dias é confirmado sozinho (`ChallengeService::autoConfirmOverdue`, também ao abrir as páginas e todo dia pelo workflow `daily-tasks.yml`).
 - **Avatar:** emoji único (servidor valida 1 grafema pictográfico; `PlayerProfile::emoji()` corta valores antigos).
 
 ## 6. Banco e migrations

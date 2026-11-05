@@ -128,6 +128,7 @@ class BannedCardsTest extends TestCase
         $banned = $this->deck($ana, 'Tron Gush', ['Gush', 'High Tide', 'Counterspell']);
         $clean = $this->deck($ana, 'Faeries', ['Counterspell']);
         $t = $this->tournament($org);
+        $this->travelTo($t->tournament_date->copy()->setTime(12, 0)); // o jogador só confirma presença no dia do evento
 
         // convite: o seletor avisa e a inscrição com o deck banido é recusada, com as cartas
         $this->actingAs($ana)->get(route('tournaments.invite.show', $t->invite_token))->assertSee('Tron Gush · tem cartas banidas ou inválidas')->assertSee('não podem ser usados neste torneio');
@@ -138,9 +139,16 @@ class BannedCardsTest extends TestCase
         $this->actingAs($ana)->post(route('tournaments.invite.store', $t->invite_token), ['deck_id' => $clean->id])->assertSessionHasNoErrors();
         $entry = $t->players()->first();
 
-        // trocar para o deck banido também não passa
+        // janela "Trocar deck": os decks como cartões; o atual marcado e o banido travado
+        $html = $this->actingAs($ana)->get(route('arena.public', $t->public_slug))->assertOk()
+            ->assertSee('data-dialog-open="entry-deck-dialog"', false)->assertSee('Usar este deck')->getContent();
+        $this->assertMatchesRegularExpression('/value="'.$clean->id.'"\s+checked[^>]*>.*?Faeries.*?Atual/s', $html);
+        $this->assertMatchesRegularExpression('/deck-choice is-blocked">\s*<input type="radio" name="deck_id" value="'.$banned->id.'"[^>]*disabled.*?Tron Gush.*?· tem cartas banidas ou inválidas/s', $html);
+
+        // trocar para o deck banido também não passa, e a janela volta aberta com o erro
         $this->actingAs($ana)->patch(route('tournaments.entry.update', $t), ['deck_id' => $banned->id])->assertSessionHasErrors('deck_id');
         $this->assertSame($clean->id, $entry->fresh()->deck_id);
+        $this->assertMatchesRegularExpression('/id="entry-deck-dialog"[^>]*data-open-on-load/', $this->get(route('arena.public', $t->public_slug))->getContent());
 
         // o deck muda depois da inscrição: check-in barrado (jogadora e organizador), início barrado
         $clean->cards()->create(['scryfall_id' => (string) Str::uuid(), 'name' => 'Gush', 'quantity' => 1, 'board' => 'side', 'type_line' => 'Instant', 'cmc' => 5, 'mana_cost' => '{4}{U}']);

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -37,6 +38,18 @@ class GameMatch extends Model
     public function tournament(): BelongsTo
     {
         return $this->belongsTo(Tournament::class);
+    }
+
+    /**
+     * Partidas pendentes só da rodada que está valendo (a primeira do torneio com partida sem resultado).
+     * No todos contra todos as rodadas seguintes já existem desde o início, mas ainda não começaram.
+     */
+    public function scopeInCurrentRound(Builder $query): Builder
+    {
+        return $query->whereRaw(
+            'matches.round <= (select min(current_round.round) from matches current_round where current_round.tournament_id = matches.tournament_id and current_round.status = ?)',
+            [self::STATUS_PENDING],
+        );
     }
 
     public function playerOne(): BelongsTo
