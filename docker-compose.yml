@@ -1,8 +1,8 @@
 services:
   app:
     build: .
-    # Nome fixo da imagem: o servico reverb usa a mesma (sem build duplicado).
-    image: manaleague-app:local
+    # App e Reverb compartilham a imagem; CI/deploy usam a tag do commit testado.
+    image: "${APP_IMAGE:-manaleague-app:local}"
     restart: unless-stopped
     environment:
       APP_NAME: "${APP_NAME:-ManaLeague}"
@@ -88,7 +88,7 @@ services:
     # (/apps/*, usada pelo app para publicar) fica na rede interna. Nao fala com o banco.
     # build igual ao do app: o compose reaproveita o cache (nao tenta baixar uma imagem que so existe aqui).
     build: .
-    image: manaleague-app:local
+    image: "${APP_IMAGE:-manaleague-app:local}"
     restart: unless-stopped
     command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080", "--no-interaction"]
     environment:
