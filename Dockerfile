@@ -6,9 +6,10 @@ RUN composer install --no-dev --prefer-dist --no-interaction --no-scripts --opti
 FROM php:8.4-fpm-alpine
 # gd (JPEG/PNG/WebP) + exif: reencodar fotos de perfil e corrigir a rotacao de fotos de celular.
 # pdo_pgsql: banco de producao. pdo_sqlite continua so para importar o banco antigo (db:import-sqlite).
+# pcntl: sinais SIGINT/SIGTERM usados pelo Reverb no Linux (a imagem tambem atende o WebSocket).
 RUN apk add --no-cache libzip-dev sqlite-dev libpq-dev icu-dev oniguruma-dev libpng-dev libjpeg-turbo-dev libwebp-dev \
     && docker-php-ext-configure gd --with-jpeg --with-webp \
-    && docker-php-ext-install pdo_pgsql pdo_sqlite intl mbstring opcache gd exif \
+    && docker-php-ext-install pdo_pgsql pdo_sqlite intl mbstring opcache gd exif pcntl \
     && rm -rf /tmp/*
 WORKDIR /var/www/html
 COPY --from=vendor /app/vendor ./vendor
