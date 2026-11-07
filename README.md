@@ -86,16 +86,26 @@ The pipeline in `.github/workflows/pipeline.yml` runs on every pull request to `
 2. **Dependency and filesystem scan:** Composer Audit and Trivy.
 3. **SonarQube Cloud:** a required Quality Gate.
 4. **WAF:**
-   - starts the full stack;
-   - checks that legitimate traffic passes and that classic attacks (SQLi, XSS, LFI, RCE...) are blocked.
+   - builds the app image once, tagged with the commit SHA, and starts app/Reverb from that same image without rebuilding;
+   - checks legitimate traffic, classic attacks (SQLi, XSS, LFI, RCE...), forged IP headers and the Reverb WebSocket;
+   - after all smoke tests pass, exports that image with a SHA256 checksum as `app-image-<commit SHA>` (also on pull requests; retained for one day).
 5. **Deploy to EC2:**
    - SSH is opened only during the deploy, only for the runner's IP;
-   - releases are immutable and switched by symlink;
+   - downloads the tested image artifact from the same workflow run and transfers it alongside the source and production environment;
+   - checks SHA256, imports the image and verifies the expected commit tag before switching the release symlink;
+   - starts Compose with `--no-build`: no PHP extension or Composer compilation runs on EC2, and no new registry or secret is needed;
    - patch notes are synced.
 
 A second workflow, `.github/workflows/daily-tasks.yml`, runs the production routines every day at 06:00 (Brasília) and on demand (**Actions → Daily tasks → Run workflow**): it refreshes the ban list of each format and the Pauper legality of every deck card from Scryfall, and confirms challenge scores left unanswered for 7 days. The deploy also runs the card checks. The run fails, and GitHub notifies the team, when a task fails (for example, Scryfall does not answer).
 
 Publishing, editing or deleting a GitHub Release only syncs the patch notes. It does not test or redeploy code. Each published release becomes a card in the Patch notes tab and a notification for every account ([docs/patch-notes.md](docs/patch-notes.md)).
+
+Deployment regression checks run in the WAF job and can also run locally (Bash and Node.js required):
+
+```bash
+bash docker/deploy/test-load-image.sh
+node --test tests/js/deploy-pipeline.test.cjs
+```
 
 ## Project structure
 
