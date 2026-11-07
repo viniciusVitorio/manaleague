@@ -47,6 +47,29 @@ class LiveVersionService
         }
     }
 
+    /**
+     * Canais de tempo real dos escopos de uma tela. O layout so chama depois de version() aceitar os escopos,
+     * e cada canal privado e autorizado de novo em routes/channels.php. O canal so avisa "mudou";
+     * a tela confere a versao por aqui antes de se atualizar.
+     *
+     * @return list<string>
+     */
+    public function channels(?User $user, string $scopes): array
+    {
+        if (! app(\App\Services\Realtime\RealtimeService::class)->enabled()) {
+            return [];
+        }
+        $channels = [];
+        foreach (array_unique(array_filter(array_map('trim', explode(',', $scopes)))) as $scope) {
+            $channel = \App\Services\Realtime\LiveChannels::forScope($user?->id, $scope);
+            if ($channel !== null) {
+                $channels[] = $channel;
+            }
+        }
+
+        return array_slice($channels, 0, self::MAX_SCOPES);
+    }
+
     private function scope(?User $user, string $scope): array
     {
         [$type, $key] = array_pad(explode(':', $scope, 2), 2, '');

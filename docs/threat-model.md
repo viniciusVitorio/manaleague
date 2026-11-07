@@ -42,6 +42,12 @@
 | Information Disclosure | bucket S3 publico / enumerar fotos | Medio | Block Public Access + `BucketOwnerEnforced`, leitura so por URL assinada (ate ~2h), nome do objeto e UUID aleatorio, policy nega acesso sem TLS |
 | Elevation of Privilege | credencial da EC2 usada para mexer no bucket inteiro | Medio | IAM Role so com `Put/Get/DeleteObject` em `avatars/*` (sem listar, sem ACL/policy) |
 | Denial of Service | imagem gigante ("bomba de descompressao") ou upload em massa | Medio | limite de 5 MB e 16 MP checado antes de decodificar, `throttle:10,1` nas rotas de foto |
+| Information Disclosure | escutar o canal de tempo real de outra pessoa (notificacoes, mesa do contador, painel do torneio) | Alto | canais privados assinados pelo Laravel em `/broadcasting/auth` (sessao + CSRF + `throttle:120,1`) com as mesmas regras das paginas (`routes/channels.php`); o aviso "mudou" nao leva dado: a tela busca pelo endpoint HTTP que ja autoriza; so a notificacao (titulo + link interno, conferidos por `NotificationService::canRead`) e as jogadas da mesa trafegam com conteudo |
+| Spoofing | outro site abrir WebSocket em nome do visitante (CSWSH) | Medio | `allowed_origins` do Reverb travado no dominio do app (sem `*`); canal privado ainda exige a assinatura feita com a sessao do proprio site |
+| Tampering | navegador mandar mensagem direto para o outro (whisper) ou jogada forjada na mesa do contador | Medio | client events desligados (`accept_client_events_from = none`); jogada so entra por `POST /life/tables/{id}/ops` autenticado, validada campo a campo (tipo, lugar existente, limites) e gravada com o autor; mesa de outra partida = 404 |
+| Denial of Service | abrir milhares de conexoes WebSocket ou inundar mensagens | Medio | teto de 500 conexoes no app do Reverb, rate limit de 60 mensagens/min por conexao (derruba a conexao), mensagens de ate 2 KB, `mem_limit` de 128 MB; acima do teto as telas voltam ao polling |
+| Elevation of Privilege | publicar avisos falsos pela API HTTP do Reverb | Medio | o Caddy so encaminha `/app/*` (WebSocket); `/apps/*` (API) fica na rede interna do Docker e exige assinatura com o segredo derivado do `APP_KEY` (conferido pela CI) |
+| Business logic | dois celulares confirmarem o mesmo fim de game e contarem duas vitorias | Medio | jogadas de fim de game/desfazer levam o game e a pilha esperados; o servidor da a ordem (seq, com lock) e a jogada atrasada vira nada; reenvio offline nao duplica (`client_id` unico por mesa) |
 
 ## Abusos testados
 
@@ -58,7 +64,12 @@
 11. foto SVG, texto disfarcado de PNG, GIF, imagem pequena ou grande demais: rejeitada sem gravar nada;
 12. JPEG com EXIF "GPS" e payload `<?php`/`<script>` no fim: o arquivo salvo nao contem nenhum dos dois;
 13. caminho adulterado no banco (`../../.env`): nunca vira URL; rota `/avatars/` so aceita `<uuid>.webp`;
-14. S3 fora do ar no upload: mensagem amigavel, sem HTTP 500 e sem perder a foto atual.
+14. S3 fora do ar no upload: mensagem amigavel, sem HTTP 500 e sem perder a foto atual;
+15. jogador A pede autorizacao do canal pessoal do jogador B, do painel de torneio alheio ou da mesa de outra partida: HTTP 403;
+16. estranho le ou envia jogadas para a mesa do contador de outra partida: HTTP 404, nada gravado;
+17. jogada com lugar inexistente, variacao zero, texto no lugar de numero, tipo inventado ou lote com mais de 50: HTTP 422, nada gravado;
+18. Reverb fora do ar: a pagina responde normalmente (falha so registrada no log) e as telas seguem no polling;
+19. pagina com tempo real nao expoe o segredo do Reverb; a API do Reverb nao responde pela borda (CI).
 
 ## Riscos residuais
 
@@ -67,4 +78,6 @@
 - PostgreSQL roda na mesma EC2 do app (sem replica nem failover); migrar para RDS em crescimento;
 - backups e monitoramento gerenciado ficam como evolucao futura;
 - fotos de perfil nao passam por moderacao de conteudo (evolucao: Amazon Rekognition ou denuncia/remocao por admin);
-- uma URL assinada vazada continua valida ate expirar (no maximo ~2h); objetos orfaos (falha ao apagar a foto antiga) ficam no bucket ate limpeza manual.
+- uma URL assinada vazada continua valida ate expirar (no maximo ~2h); objetos orfaos (falha ao apagar a foto antiga) ficam no bucket ate limpeza manual;
+- o WebSocket (`/app/*`) nao passa pela ModSecurity (o CRS nao inspeciona quadros de WebSocket); a superficie e pequena (so assinar canal e ping), mas fica fora do WAF;
+- canal publico da arena (`arena.{slug}`) avisa "mudou" para quem tem o link, como a propria pagina publica; o aviso nao leva dado;

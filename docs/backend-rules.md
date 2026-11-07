@@ -48,6 +48,10 @@ Como organizar controller, service, model, migration e regra de negócio. Comple
 - Conquistas: depois de um resultado confirmado, `AchievementService::sync($profile)` para os dois jogadores
   (avisa no sino; `notify: false` quando for só leitura de página).
 - Telas ao vivo: `LiveVersionService` (escopo `me`, `challenge:{id}`...) e `@section('live-scope', ...)` na view.
+  Com o Reverb ligado, o aviso chega na hora sozinho: o `LiveChangeObserver` observa os models dessas telas. Model novo
+  que aparece numa tela ao vivo entra no `AppServiceProvider` e no `LiveChannels::affectedBy()`. Canal privado novo
+  ganha regra em `routes/channels.php` (a mesma da página) e teste de quem pode e quem não pode assinar.
+  O aviso não leva dado; mensagem com conteúdo (`RealtimeService::send`) só em canal privado já autorizado.
 
 ## 5. Domínios com regra especial
 

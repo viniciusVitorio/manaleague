@@ -9,13 +9,24 @@
 # Caddy = borda TLS (Let's Encrypt automatico, HTTP->HTTPS, compressao, headers).
 # Toda requisicao segue para o WAF: Nginx + ModSecurity v3 + OWASP CRS (servico "waf" do compose),
 # que serve o public/ e passa o PHP para o PHP-FPM. O Caddy nao fala direto com o app.
+# Excecao: /app/* e o WebSocket do tempo real (Laravel Reverb). A ModSecurity nao inspeciona quadros de
+# WebSocket; a conexao so recebe avisos, a origem e conferida pelo Reverb e cada canal privado e autorizado
+# pelo Laravel (/broadcasting/auth, que passa pelo WAF). A API do Reverb (/apps/*) nao e exposta.
 {$CADDY_DOMAINS:http://localhost} {
 	encode zstd gzip
 
-	reverse_proxy {$WAF_UPSTREAM:waf:8080} {
-		# IP real do visitante (client_ip ja considera so os proxies confiaveis): a ModSecurity
-		# registra o IP certo e o throttle do Laravel continua por pessoa, nao por servidor da Cloudflare.
-		header_up X-Real-IP {client_ip}
+	handle /app/* {
+		reverse_proxy {$REVERB_UPSTREAM:reverb:8080} {
+			header_up X-Real-IP {client_ip}
+		}
+	}
+
+	handle {
+		reverse_proxy {$WAF_UPSTREAM:waf:8080} {
+			# IP real do visitante (client_ip ja considera so os proxies confiaveis): a ModSecurity
+			# registra o IP certo e o throttle do Laravel continua por pessoa, nao por servidor da Cloudflare.
+			header_up X-Real-IP {client_ip}
+		}
 	}
 
 	header {

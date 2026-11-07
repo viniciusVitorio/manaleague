@@ -12,10 +12,10 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 |---|---|
 | **Tournaments** | round-robin leagues, Swiss, single or double elimination and Commander pods; finals and third-place match; standard format rules or custom house rules; repeat a tournament with the same settings |
 | **Event day** | sign-up by invite link or QR code, player check-in on the event day, round timer and removal of no-shows |
-| **Live** | players submit scores from their phones, with confirmation or dispute; public tournament page (no account needed) and TV mode |
+| **Live** | players submit scores from their phones, with confirmation or dispute; public tournament page (no account needed) and TV mode; pairings, scores, the round timer and notifications show up in real time (WebSocket) |
 | **Challenges** | 1v1 matches between friends, casual or ranked, with history and rivalries; a score the opponent does not confirm or dispute within 7 days is confirmed automatically |
 | **Ranked** | seasons with ELO/PDL, rank on the profile and moderation ([rules](docs/ranked.md)) |
-| **Life counter** | life counter for tournament matches, challenges and Ranked |
+| **Life counter** | life counter for tournament matches, challenges and Ranked, shared between the players' phones in real time (works offline and syncs back); counters are only available from their registered match |
 | **Decks** | deck building with Scryfall search, import and export (Arena format and ManaBox CSV), foils, banned-card tag, Pauper legality check (cards never printed at common are tagged and blocked from official-rules tournaments), opening-hand simulator, version history and deck comparison |
 | **Collection** | ManaBox CSV import, search only your own cards and see what is missing to build a deck |
 | **Profile** | personal address (`/p/your-handle`), photo or emoji, showcase, stats, recent form and achievements (some of them secret) |
@@ -30,6 +30,7 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 - **Infrastructure:**
   - Docker Compose, with the same runtime locally and in production;
   - Caddy (TLS) and a WAF: Nginx + ModSecurity with the OWASP CRS;
+  - Laravel Reverb for real time (WebSocket), with a polling fallback;
   - AWS: EC2, S3 for profile photos and SES for e-mail;
   - Cloudflare at the edge.
 - **Integrations:** the [Scryfall API](https://scryfall.com/docs/api) for card data, images and ban lists.
@@ -37,6 +38,7 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 
 ```text
 Internet → Cloudflare → Caddy (TLS) → Nginx + ModSecurity/OWASP CRS → PHP-FPM/Laravel → PostgreSQL
+                               └→ /app/* (WebSocket) → Laravel Reverb
 ```
 
 Details and past decisions are in [docs/architecture.md](docs/architecture.md).
@@ -70,7 +72,7 @@ docker compose exec app php artisan db:seed --class=DemoSeeder
 ```bash
 php artisan test                           # PHPUnit suite (feature and unit)
 php artisan test --filter TestName         # a single file or method
-node --test tests/js/deck-simulator.test.cjs
+node --test tests/js/deck-simulator.test.cjs tests/js/life-core.test.cjs
 composer lint                              # Pint in check mode
 ```
 

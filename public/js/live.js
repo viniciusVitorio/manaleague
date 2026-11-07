@@ -17,15 +17,27 @@
             const matches = data.matches.map(match => { const p = document.createElement('p'); p.textContent = `R${match.round} · ${match.one} ${match.one_score ?? '–'} × ${match.two_score ?? '–'} ${match.two} · ${statusLabel[match.status] ?? match.status}`; return p; });
             board.querySelector('[data-live-matches]').replaceChildren(...matches);
         };
+        // Tempo real: o canal publico da arena avisa quando um placar, a rodada ou o cronometro muda e o painel
+        // busca na hora (o mesmo endpoint, com ETag). Com o aviso assinado, a consulta fixa cai para 60s.
+        const realtime = window.ManaLeagueRealtime, channel = board.dataset.liveChannel;
+        const live = () => !!(realtime && channel && realtime.subscribed(channel));
+        let next = null, running = false, again = false;
+        const schedule = (ms) => { clearTimeout(next); next = setTimeout(poll, ms); };
         async function poll() {
-            if (document.hidden) { setTimeout(poll, 10000); return; }
+            if (running) { again = true; return; }
+            if (document.hidden) { schedule(10000); return; }
+            running = true;
             const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 8000);
             try {
-                const response = await fetch(board.dataset.liveUrl, {credentials:'omit',headers:etag ? {'If-None-Match':etag,'Accept':'application/json'} : {'Accept':'application/json'},signal:controller.signal});
+                const response = await fetch(board.dataset.liveUrl, {credentials:'omit',cache:'no-store',headers:etag ? {'If-None-Match':etag,'Accept':'application/json'} : {'Accept':'application/json'},signal:controller.signal});
                 if (response.status !== 304) { if (!response.ok) throw new Error('offline'); const data = await response.json(); const date = response.headers.get('Date'); render(data, date ? new Date(date).toISOString() : null); etag = response.headers.get('ETag'); }
-                state.textContent = 'Ao vivo · atualizado ' + new Date().toLocaleTimeString('pt-BR'); delay = 10000;
+                state.textContent = 'Ao vivo · atualizado ' + new Date().toLocaleTimeString('pt-BR'); delay = live() ? 60000 : 10000;
             } catch { state.textContent = 'Conexão interrompida · tentando novamente; exibindo último placar.'; delay = Math.min(delay * 2, 60000); }
-            finally { clearTimeout(timeout); setTimeout(poll,delay); }
+            finally { clearTimeout(timeout); running = false; if (again) { again = false; schedule(0); } else schedule(delay); }
+        }
+        if (realtime && channel) {
+            realtime.on(channel, 'changed', () => schedule(200));
+            realtime.on(channel, 'subscribed', () => schedule(200));
         }
         poll();
     });

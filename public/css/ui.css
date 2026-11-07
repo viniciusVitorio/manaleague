@@ -591,3 +591,7 @@ a.mm-link:hover .mm-go{transform:translateX(2px)}
   .mm-section .ui-card-header{flex-wrap:wrap;row-gap:2px}
   .mm-section .ui-card-meta{order:3;flex-basis:100%;margin:0 0 0 22px!important}
 }
+
+/* Aviso de notificação nova (live-notify.js): o toast inteiro é o link. */
+a.live-toast{display:block;color:var(--ui-fg);text-decoration:none}
+a.live-toast:hover{border-color:var(--ui-border-strong)}

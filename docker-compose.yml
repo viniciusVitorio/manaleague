@@ -1,6 +1,8 @@
 services:
   app:
     build: .
+    # Nome fixo da imagem: o servico reverb usa a mesma (sem build duplicado).
+    image: manaleague-app:local
     restart: unless-stopped
     environment:
       APP_NAME: "${APP_NAME:-ManaLeague}"
@@ -33,6 +35,13 @@ services:
       AVATAR_DISK: "${AVATAR_DISK:-local}"
       AWS_BUCKET: "${AWS_BUCKET:-}"
       AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION:-us-east-1}"
+      # Tempo real: o app publica no Reverb pela rede interna (sem TLS); chave e segredo saem do APP_KEY.
+      # BROADCAST_CONNECTION=null desliga (as telas voltam ao polling).
+      BROADCAST_CONNECTION: "${BROADCAST_CONNECTION:-reverb}"
+      REVERB_HOST: reverb
+      REVERB_PORT: "8080"
+      REVERB_SCHEME: http
+      REVERB_ALLOWED_ORIGINS: "${REVERB_ALLOWED_ORIGINS:-}"
     volumes:
       # O volume guarda logs, avatares locais e o banco SQLite antigo (importado e renomeado no 1o boot).
       - app_storage:/var/www/html/storage
@@ -72,6 +81,41 @@ services:
       timeout: 5s
       retries: 6
       start_period: 20s
+
+  reverb:
+    # Tempo real: Laravel Reverb (WebSocket, protocolo do Pusher). Mesma imagem do app, outro comando.
+    # Sem porta publicada: o Caddy encaminha so /app/* (conexao do navegador); a API HTTP do Reverb
+    # (/apps/*, usada pelo app para publicar) fica na rede interna. Nao fala com o banco.
+    # build igual ao do app: o compose reaproveita o cache (nao tenta baixar uma imagem que so existe aqui).
+    build: .
+    image: manaleague-app:local
+    restart: unless-stopped
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080", "--no-interaction"]
+    environment:
+      APP_NAME: "${APP_NAME:-ManaLeague}"
+      APP_ENV: "${APP_ENV:-local}"
+      APP_KEY: "${APP_KEY:?Defina APP_KEY no .env (php artisan key:generate --show)}"
+      APP_DEBUG: "${APP_DEBUG:-true}"
+      APP_URL: "${APP_URL:-http://localhost:8080}"
+      LOG_CHANNEL: "${LOG_CHANNEL:-stderr}"
+      LOG_LEVEL: "${LOG_LEVEL:-debug}"
+      BROADCAST_CONNECTION: reverb
+      REVERB_ALLOWED_ORIGINS: "${REVERB_ALLOWED_ORIGINS:-}"
+      # Migrations ficam com o servico app (dois containers migrando ao mesmo tempo disputam o banco).
+      SKIP_MIGRATIONS: "1"
+    depends_on:
+      app:
+        condition: service_healthy
+    # Um processo PHP com o loop do ReactPHP: ~30-50 MB com poucas centenas de conexoes.
+    mem_limit: 128m
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "php -r \"exit(@file_get_contents('http://127.0.0.1:8080/up') === false ? 1 : 0);\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   waf:
     # WAF: imagem oficial da OWASP = Nginx + ModSecurity v3 + OWASP Core Rule Set v4 (tag LTS fixa;
@@ -130,6 +174,8 @@ services:
     depends_on:
       waf:
         condition: service_healthy
+      reverb:
+        condition: service_started
     ports:
       - "${APP_PORT:-8080}:80"
       - "${HTTPS_PORT:-8443}:443"
