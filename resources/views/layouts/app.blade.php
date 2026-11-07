@@ -30,6 +30,7 @@
     <script src="{{ \App\Support\VersionedAsset::url('js/release-notice.js') }}" defer></script>
     <script src="{{ \App\Support\VersionedAsset::url('js/vendor/idiomorph.min.js') }}" defer></script>
     <script src="{{ \App\Support\VersionedAsset::url('js/async-forms.js') }}" defer></script>
+    @include('partials.realtime')
     @stack('head')
 </head>
 <body>
@@ -60,10 +61,17 @@
 @php($liveVersion = app(\App\Services\LiveVersionService::class)->versionOrNull(auth()->user(), $liveScope))
 @if($liveVersion)
 {{-- Tela ao vivo: live-refresh.js compara esta versão com a atual e atualiza a página quando muda. --}}
-<div id="live-refresh" hidden data-url="{{ route('live.version', ['scope' => $liveScope]) }}" data-version="{{ $liveVersion }}"></div>
+<div id="live-refresh" hidden data-url="{{ route('live.version', ['scope' => $liveScope]) }}" data-version="{{ $liveVersion }}" data-channels="{{ implode(' ', app(\App\Services\LiveVersionService::class)->channels(auth()->user(), $liveScope)) }}"></div>
 <script src="{{ \App\Support\VersionedAsset::url('js/live-refresh.js') }}" defer></script>
 @endif
 @endif
+@auth
+@if(config('reverb.client.enabled'))
+{{-- Canal pessoal: notificação nova aparece no sino e num aviso, em qualquer página. --}}
+<div id="live-user" hidden data-channel="{{ \App\Services\Realtime\LiveChannels::user(auth()->id()) }}"></div>
+<script src="{{ \App\Support\VersionedAsset::url('js/live-notify.js') }}" defer></script>
+@endif
+@endauth
 <footer class="footer">ManaLeague &middot; Decks, coleção, partidas e torneios de Magic.</footer>
 </body>
 </html>

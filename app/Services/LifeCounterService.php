@@ -10,6 +10,8 @@ use App\Models\RankedMatch;
 use App\Models\Tournament;
 use App\Models\User;
 use App\Policies\MatchResultSubmissionPolicy;
+use App\Services\Life\LifeTableService;
+use App\Services\Realtime\LiveChannels;
 use App\Support\LifeColor;
 use Illuminate\Support\Str;
 
@@ -17,6 +19,7 @@ use Illuminate\Support\Str;
  * Monta a configuracao do contador de vida (estilo Lotus) vinculado a uma partida.
  * O contador so le dados e aponta para o endpoint canonico de resultado de cada tipo
  * de partida: a gravacao continua passando pelas mesmas regras/validacoes de antes.
+ * Vida e contadores ficam numa mesa compartilhada (LifeTableService): os celulares dos jogadores veem o mesmo placar.
  *
  * Retorno: ['open' => bool, 'resultUrl' => string, ...config para o JS].
  */
@@ -25,6 +28,10 @@ class LifeCounterService
     public const POISON_LIMIT = 10;
 
     public const COMMANDER_DAMAGE_LIMIT = 21;
+
+    public function __construct(
+        private readonly LifeTableService $tables,
+    ) {}
 
     public function startingLife(?string $format, bool $pod = false): int
     {
@@ -158,13 +165,27 @@ class LifeCounterService
     }
 
     /** Um lugar na mesa: id, nome e a cor que o dono da conta escolheu nas preferências (null = automática). */
+    /** Um lugar na mesa: id, nome, a cor que o dono da conta escolheu (null = automatica) e a conta (quem mandou cada jogada). */
     private function seat(?int $id, ?string $name, ?PlayerProfile $profile): array
     {
-        return ['id' => $id, 'name' => $name, 'color' => LifeColor::of($profile?->account)];
+        return ['id' => $id, 'name' => $name, 'color' => LifeColor::of($profile?->account), 'user' => $profile?->account_user_id];
     }
 
     private function config(array $config, User $user): array
     {
+        // Mesa compartilhada: so quando o contador abre (partida encerrada nao cria mesa).
+        $table = null;
+        if ($config['open']) {
+            $table = $this->tables->forSubject($config['type'], (int) $config['id'], count($config['players']));
+        }
+        $config['sync'] = $table ? [
+            'table' => $table->id,
+            'url' => route('life.tables.sync', $table),
+            'opsUrl' => route('life.tables.ops', $table),
+            'channel' => LiveChannels::life($table->id),
+            'me' => $user->id,
+        ] : null;
+
         return $config + [
             'bestOf' => 1,
             'winsNeeded' => 1,
@@ -173,8 +194,8 @@ class LifeCounterService
             'poisonLimit' => self::POISON_LIMIT,
             'commanderLimit' => self::COMMANDER_DAMAGE_LIMIT,
             'idempotencyKey' => (string) Str::uuid(),
-            // Estado salvo no aparelho: um por partida e por conta (o celular fica na mesa).
-            'storageKey' => 'ml-life:'.$config['type'].':'.$config['id'].':'.$user->id,
+            // Estado salvo no aparelho (copia da mesa + jogadas ainda nao enviadas): um por mesa e por conta.
+            'storageKey' => $table ? LifeTableService::storageKey($table, $user) : 'ml-life:'.$config['type'].':'.$config['id'].':'.$user->id,
         ];
     }
 }

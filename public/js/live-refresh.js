@@ -3,10 +3,13 @@
 // (o amigo aceitou o desafio, o adversario mandou o placar, a rodada virou...), a pagina e atualizada no lugar
 // com ManaLeague.refresh(), sem recarregar. Se a pessoa estiver digitando num formulario, aparece um aviso
 // com o botao "Atualizar" em vez de mexer na tela. Aba escondida nao pergunta nada.
+// Com tempo real (Reverb), os canais da tela (data-channels) avisam na hora que algo mudou e a pergunta e feita
+// logo; o intervalo vira so uma garantia (30s). Sem socket, volta aos 5s de sempre.
 (function () {
     'use strict';
 
     var INTERVAL = 5000;
+    var LIVE_INTERVAL = 30000;
     var MAX_DELAY = 60000;
     var timer = null;
     var delay = INTERVAL;
@@ -16,6 +19,15 @@
     if (!window.fetch) return;
 
     function source() { return document.getElementById('live-refresh'); }
+
+    var realtime = window.ManaLeagueRealtime;
+    var channels = ((source() && source().dataset.channels) || '').split(' ').filter(Boolean);
+
+    // Intervalo normal: maior quando todos os canais da tela estao assinados (o aviso chega sozinho).
+    function interval() {
+        if (realtime && channels.length && channels.every(function (name) { return realtime.subscribed(name); })) return LIVE_INTERVAL;
+        return INTERVAL;
+    }
 
     function schedule(ms) {
         clearTimeout(timer);
@@ -61,7 +73,7 @@
         var el = source();
         if (!el || !el.dataset.url || !el.dataset.version) return; // a tela nao e ao vivo (ou deixou de ser)
         if (document.hidden) return; // volta quando a aba aparecer
-        if (busy) { schedule(INTERVAL); return; }
+        if (busy) { schedule(1000); return; }
 
         fetch(el.dataset.url, { credentials: 'same-origin', cache: 'no-store', headers: { 'Accept': 'application/json' } })
             .then(function (response) {
@@ -71,7 +83,7 @@
             })
             .then(function (data) {
                 if (!data) return;
-                delay = INTERVAL;
+                delay = interval();
                 var current = source();
                 if (current && data.v && data.v !== current.dataset.version) {
                     current.dataset.version = data.v; // a nova pagina traz a mesma versao (ou uma mais nova)
@@ -89,8 +101,17 @@
         if (event.target && event.target.closest && event.target.closest('form')) dirty = true;
     }, true);
     // Depois de um envio (ou de uma atualizacao) a tela e nova: o que estava digitado foi enviado ou descartado.
-    document.addEventListener('manaleague:updated', function () { dirty = false; clearNotice(); schedule(INTERVAL); });
+    document.addEventListener('manaleague:updated', function () { dirty = false; clearNotice(); schedule(interval()); });
     document.addEventListener('visibilitychange', function () { if (!document.hidden) schedule(300); });
+
+    // Aviso do servidor: pergunta a versao ja (um pouco depois, para juntar varios avisos seguidos).
+    // Assinatura (re)feita: tambem pergunta, porque algo pode ter mudado enquanto a conexao estava fora.
+    if (realtime) {
+        channels.forEach(function (name) {
+            realtime.on(name, 'changed', function () { schedule(250); });
+            realtime.on(name, 'subscribed', function () { schedule(250); });
+        });
+    }
 
     schedule(INTERVAL);
 })();

@@ -135,9 +135,19 @@ jobs:
           if [[ -z "$line" || "$line" == *6.6.6.6* ]]; then
             echo "IP forjado chegou ao WAF/app (ou a requisicao nao apareceu no log)"; exit 1
           fi
+      - name: Realtime (Reverb) behind Caddy
+        run: |
+          # O WebSocket abre pela mesma origem (Caddy -> Reverb) e a API HTTP do Reverb nao e publica.
+          key="$(docker compose exec -T app php artisan tinker --execute 'echo config("reverb.apps.apps.0.key");' | tr -d '[:space:]')"
+          handshake() { curl -s -o /dev/null -w '%{http_code}' --max-time 5 -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' -H "Origin: $1" "http://localhost:8080/app/$key?protocol=7&client=js&version=8.4.0" || true; }
+          ok="$(handshake http://localhost:8080)"
+          echo "handshake mesma origem: $ok"; [[ "$ok" == "101" ]]
+          api="$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8080/apps/manaleague/events)"
+          echo "API do Reverb pela borda: $api"; [[ "$api" != "200" && "$api" != "401" ]]
+          docker compose exec -T reverb php -r 'exit(@file_get_contents("http://127.0.0.1:8080/up") === false ? 1 : 0);'
       - name: Stack logs
         if: always()
-        run: docker compose logs --no-color --tail=150 waf web app db
+        run: docker compose logs --no-color --tail=150 waf web app db reverb
 
   deploy:
     name: Deploy to AWS EC2
@@ -254,7 +264,8 @@ jobs:
             sleep 10
           done
           sudo docker info >/dev/null
-          # Caddy e WAF (owasp/modsecurity-crs) sao imagens oficiais com tag fixa; so o app e construido aqui.
+          # Caddy e WAF (owasp/modsecurity-crs) sao imagens oficiais com tag fixa; so o app e construido aqui
+          # (o servico reverb usa a mesma imagem do app).
           sudo docker compose -p manaleague pull --quiet waf web db
           sudo docker compose -p manaleague build app
           # Copia de seguranca do SQLite antes do 1o boot com PostgreSQL (o app importa e renomeia o arquivo).

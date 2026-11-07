@@ -7,6 +7,7 @@
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_KEY" value="base64:Zwg8Vi58yyja0i2uMfYZRw0klTp/PKUmMTUpo/EppbY="/>
+        <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="RANKED_AUTO_YEARLY_SEASON" value="false"/>
         <env name="CACHE_STORE" value="array"/>

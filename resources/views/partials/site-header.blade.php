@@ -37,7 +37,7 @@
         </nav>
 
         <div class="site-actions">
-            <a class="ui-icon-btn" href="{{ route('notifications.index') }}" @if(request()->routeIs('notifications.*')) aria-current="page" @endif aria-label="Notificações{{ $unreadNotifications ? ', '.$unreadNotifications.' não lidas' : '' }}">
+            <a class="ui-icon-btn" data-bell href="{{ route('notifications.index') }}" @if(request()->routeIs('notifications.*')) aria-current="page" @endif aria-label="Notificações{{ $unreadNotifications ? ', '.$unreadNotifications.' não lidas' : '' }}">
                 <x-icon name="bell" />@if($unreadNotifications)<span class="ui-count" aria-hidden="true">{{ $unreadNotifications > 99 ? '99+' : $unreadNotifications }}</span>@endif
             </a>
             @php($isLight = \App\Support\Theme::current() === 'light')

@@ -80,6 +80,8 @@ Toda cor nova tem que funcionar nos dois.
 
 ## 3. Estrutura de página
 
+- **Contador de vida só dentro da partida:** desafios, torneios e Ranked usam seus contadores vinculados. Não criar contador avulso no menu, mesa rápida ou entrada por código/QR.
+
 ```
 ← Voltar                         (back-link, fora de card, só em páginas de detalhe/formulário)
 [eyebrow]
@@ -222,7 +224,9 @@ Campo com regra rígida também ajuda no cliente (ex.: `emoji-input.js` mantém 
 - **JS:** arquivo pequeno por comportamento em `public/js/`, IIFE com `'use strict'`, carregado com `defer` via
   `VersionedAsset::url`, ligado por `data-*` (ex.: `data-single-emoji`, `data-copy-link`). Eventos delegados no `document`;
   para reagir à atualização da página use o evento `manaleague:updated`.
-- Formulários POST já são enviados sem recarregar (`async-forms.js`); telas "ao vivo" usam `@section('live-scope', ...)`.
+- Formulários POST já são enviados sem recarregar (`async-forms.js`); telas "ao vivo" usam `@section('live-scope', ...)`
+  (com o Reverb, o aviso chega na hora; sem ele, o polling segue igual). Script que precisa de tempo real usa
+  `window.ManaLeagueRealtime` (pode ser `null`: sempre tenha o plano B do polling).
 - Sem CDN e sem bibliotecas novas no front (a CSP só libera `'self'`).
 
 ---

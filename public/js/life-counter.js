@@ -1,29 +1,44 @@
 /* Contador de vida (estilo Lotus) vinculado a uma partida do ManaLeague.
- * Estado salvo no aparelho (localStorage) por partida; o resultado final vai para o
- * endpoint canonico da partida (mesmas validacoes do formulario manual). */
+ * A mesa e compartilhada: cada toque vira uma jogada (life-core.js) que vai para o servidor e chega aos outros
+ * celulares pelo Reverb (realtime.js). Sem internet, as jogadas ficam salvas no aparelho (localStorage) e sao
+ * enviadas quando a conexao volta; sem tempo real, o contador pergunta ao servidor de poucos em poucos segundos.
+ * O resultado final vai para o endpoint canonico da partida (mesmas validacoes do formulario manual). */
 (function () {
     'use strict';
 
     const root = document.getElementById('life-counter');
-    if (!root) return;
+    if (!root || !window.LifeCore) return;
+    const core = window.LifeCore;
     const cfg = JSON.parse(root.dataset.config);
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
     const n = cfg.players.length;
     const isPod = cfg.mode === 'pod';
+    const sync = cfg.sync || null;
+    const me = sync ? sync.me : null;
+    const realtime = window.ManaLeagueRealtime || null;
     const COLORS = ['#7c3aed', '#0891b2', '#d97706', '#059669', '#dc2626', '#db2777'];
     const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // ---------- estado ----------
-    const freshPlayers = () => cfg.players.map(() => ({ life: cfg.startingLife, poison: 0, cmd: {}, out: false, ack: false }));
-    const freshState = () => ({ v: 1, game: 1, wins: cfg.players.map(() => 0), winners: [], elim: [], players: freshPlayers(), finished: false, undo: [], key: cfg.idempotencyKey });
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(cfg.storageKey) || 'null'); } catch (e) { saved = null; }
+    const store = new core.Store(cfg, saved);
+    // Chave de idempotencia do envio do resultado: a mesma em todas as tentativas deste aparelho.
+    const submitKey = (saved && saved.key) || cfg.idempotencyKey;
+    let state = store.view();
+    // Aparelho sem copia da mesa (abriu agora, ou e o segundo celular): a primeira leva de jogadas so monta o placar.
+    let firstCopy = !(saved && saved.v === 2);
+    // "Ainda nao (corrigir)": vale so neste aparelho, ate a vida sair da zona de derrota.
+    const acks = cfg.players.map(() => false);
 
-    let state;
-    try { state = JSON.parse(localStorage.getItem(cfg.storageKey) || 'null'); } catch (e) { state = null; }
-    if (!state || state.v !== 1 || !Array.isArray(state.players) || state.players.length !== n) state = freshState();
-    state.key = state.key || cfg.idempotencyKey;
+    const save = () => {
+        try { localStorage.setItem(cfg.storageKey, JSON.stringify(Object.assign(store.serialize(), { key: submitKey }))); } catch (e) { /* aba anonima cheia: segue em memoria */ }
+    };
+
     // Cor do fundo: a que cada jogador escolheu nas preferências do perfil. Sem escolha (ou repetida na mesa),
     // pega a primeira cor padrão que ninguém está usando, para os lados nunca ficarem iguais.
-    const seatColors = (() => {
+    let seatColors = [];
+    function computeColors() {
         const taken = new Set(), out = [];
         cfg.players.forEach((p, i) => { if (p.color && !taken.has(p.color)) { out[i] = p.color; taken.add(p.color); } });
         cfg.players.forEach((_, i) => {
@@ -31,8 +46,9 @@
             out[i] = COLORS.find((c) => !taken.has(c)) || COLORS[i % COLORS.length];
             taken.add(out[i]);
         });
-        return out;
-    })();
+        seatColors = out;
+    }
+    computeColors();
     const colorOf = (i) => seatColors[i];
     // Fundo claro (ex.: branco) pede texto escuro; a conta segue a luminância relativa do WCAG.
     function isLight(hex) {
@@ -45,8 +61,6 @@
         return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5;
     }
 
-    const save = () => { try { localStorage.setItem(cfg.storageKey, JSON.stringify(state)); } catch (e) { /* aba anonima cheia: segue em memoria */ } };
-    const clone = (v) => JSON.parse(JSON.stringify(v));
     const name = (i) => cfg.players[i].name || ('Jogador ' + (i + 1));
 
     // ---------- helpers de DOM ----------
@@ -87,8 +101,8 @@
     function seatLayout() {
         const landscape = window.innerWidth > window.innerHeight;
         if (!isPod) {
-            const me = cfg.meIndex || 0;
-            return { rows: 2, seats: [{ i: 1 - me, rot: 180, row: 1, col: 1, span: 6 }, { i: me, rot: 0, row: 2, col: 1, span: 6 }] };
+            const mine = cfg.meIndex || 0;
+            return { rows: 2, seats: [{ i: 1 - mine, rot: 180, row: 1, col: 1, span: 6 }, { i: mine, rot: 0, row: 2, col: 1, span: 6 }] };
         }
         const seats = [];
         if (landscape) {
@@ -115,22 +129,20 @@
 
     cfg.players.forEach((_, i) => {
         const seat = el('section', 'life-seat');
-        seat.style.setProperty('--c', colorOf(i));
-        seat.classList.toggle('is-light', isLight(colorOf(i)));
         const panel = el('div', 'life-panel');
         const head = el('div', 'life-head');
-        const nm = el('strong', 'life-name', name(i));
+        const nm = el('strong', 'life-name');
         const pips = el('span', 'life-pips');
         head.append(nm, pips);
         const total = el('div', 'life-total');
         total.setAttribute('aria-live', 'polite');
         const delta = el('div', 'life-delta');
-        const minus = button('life-zone minus', '−', 'Tirar vida de ' + name(i));
-        const plus = button('life-zone plus', '+', 'Dar vida para ' + name(i));
+        const minus = button('life-zone minus', '−');
+        const plus = button('life-zone plus', '+');
         bindHold(minus, (s) => changeLife(i, -s));
         bindHold(plus, (s) => changeLife(i, s));
         const tools = el('div', 'life-tools');
-        const poison = button('life-chip', '', 'Veneno e dano de comandante de ' + name(i));
+        const poison = button('life-chip', '');
         poison.addEventListener('click', () => openTray(i));
         tools.append(poison);
         const outBadge = el('div', 'life-out');
@@ -140,8 +152,22 @@
         panel.append(minus, plus, head, total, delta, tools, outBadge, roll, tray);
         seat.append(panel);
         board.append(seat);
-        panels[i] = { seat, panel, pips, total, delta, poison, outBadge, roll, tray };
+        panels[i] = { seat, panel, nm, minus, plus, pips, total, delta, poison, outBadge, roll, tray };
     });
+
+    // Nome, cor e rotulos dos jogadores da partida.
+    function paintSeats() {
+        cfg.players.forEach((_, i) => {
+            const ui = panels[i];
+            ui.seat.style.setProperty('--c', colorOf(i));
+            ui.seat.classList.toggle('is-light', isLight(colorOf(i)));
+            ui.nm.textContent = name(i);
+            ui.minus.setAttribute('aria-label', 'Tirar vida de ' + name(i));
+            ui.plus.setAttribute('aria-label', 'Dar vida para ' + name(i));
+            ui.poison.setAttribute('aria-label', 'Veneno e dano de comandante de ' + name(i));
+        });
+    }
+    paintSeats();
 
     function layout() {
         const { rows, seats } = seatLayout();
@@ -166,6 +192,7 @@
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
     root.append(board, hub, toastEl, modal);
+    let modalInfo = null; // o que o modal aberto mostra: { kind: 'loss', seat, game } | { kind: 'result' } | ...
 
     // ---------- render ----------
     function placeOf(i) {
@@ -202,12 +229,14 @@
             const place = placeOf(i);
             ui.outBadge.textContent = p.out ? 'Eliminado · ' + place + 'º' : (place === 1 ? '🏆 Vencedor · 1º' : (champion === i ? '🏆 Vencedor' : ''));
             ui.outBadge.hidden = !ui.outBadge.textContent;
+            if (!ui.tray.hidden && ui.tray.refresh) ui.tray.refresh();
         });
         hub.textContent = isPod ? '☰' : 'G' + Math.min(state.game, cfg.bestOf);
         hub.classList.toggle('done', state.finished);
     }
 
     function showDelta(i, d) {
+        if (!d) return;
         const box = deltas[i], ui = panels[i];
         box.sum += d;
         ui.delta.textContent = (box.sum > 0 ? '+' : box.sum < 0 ? '−' : '±') + Math.abs(box.sum);
@@ -225,6 +254,72 @@
         toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
     }
 
+    // ---------- jogadas ----------
+    // Toda mudança passa por aqui: vira jogada, aparece na hora e vai para o servidor logo depois.
+    function act(op) {
+        const prev = state;
+        const last = store.pending[store.pending.length - 1];
+        // Só agrega se comprovadamente nunca enviada; falha/reload nao reabre o mesmo client_id.
+        if (op.type === 'life' && last && last.op.type === 'life' && last.op.seat === op.seat && last.attempted === false
+            && Math.abs(last.op.d + op.d) <= 999 && last.op.d + op.d !== 0) {
+            last.op.d += op.d;
+        } else {
+            store.local(op, me);
+        }
+        state = store.view();
+        save();
+        afterChange(prev, []);
+        flushSoon();
+    }
+
+    function changeLife(i, d) {
+        const p = state.players[i];
+        if (state.finished || p.out) return;
+        act({ type: 'life', seat: i, d });
+        showDelta(i, d);
+        if (navigator.vibrate) navigator.vibrate(8);
+    }
+
+    // Depois de qualquer mudança (deste ou de outro celular): tela, animações e avisos que dependem dela.
+    // quiet = primeira cópia da mesa num aparelho novo: mostra o placar sem festejar games antigos.
+    function afterChange(prev, remote, quiet) {
+        render();
+        if (quiet) {
+            closeModal();
+            if (state.finished) showResult(); else checkAll();
+            return;
+        }
+        // Desfeito no outro celular: quem voltou para a zona de derrota não pergunta de novo na hora.
+        if (remote.some((e) => e.op.type === 'undo')) state.players.forEach((p, i) => { if (!p.out && lossReason(i)) acks[i] = true; });
+        remote.forEach((e) => {
+            if (e.op.type === 'life') showDelta(e.op.seat, e.op.d);
+            if (e.op.type === 'cmd') showDelta(e.op.seat, -e.op.d);
+        });
+        const fromOther = remote.length > 0;
+        if (state.game > prev.game && !state.finished) {
+            const w = state.winners[state.winners.length - 1];
+            acks.fill(false);
+            celebrate(w, false);
+            toast('Game ' + (state.game - 1) + ' para ' + name(w) + ' · ' + scoreText() + ' · Game ' + state.game + ' valendo!');
+        } else if (isPod && state.elim.length > prev.elim.length && !state.finished) {
+            const out = state.elim[state.elim.length - 1];
+            toast(name(out) + ' fica em ' + (n - state.elim.length + 1) + 'º');
+        }
+        if (state.roll && state.roll.key !== (prev.roll && prev.roll.key)) showRolls(state.roll.rolls);
+        if (!prev.finished && state.finished) finishUI();
+        else if (prev.finished && !state.finished) {
+            closeModal();
+            if (fromOther) toast('Placar corrigido no outro celular.');
+        }
+        if (state.finished && state.submitted && !(prev.submitted) && state.submitted.by !== me) showResult();
+        // Modal de fim de game aberto, mas a mesa já andou (o outro celular confirmou ou corrigiu): fecha.
+        if (modalInfo && modalInfo.kind === 'loss') {
+            const p = state.players[modalInfo.seat];
+            if (state.finished || state.game !== modalInfo.game || !p || p.out || !lossReason(modalInfo.seat)) closeModal();
+        }
+        if (!state.finished) checkAll();
+    }
+
     // ---------- regras ----------
     function lossReason(i) {
         const p = state.players[i];
@@ -239,20 +334,11 @@
     function check(i) {
         const p = state.players[i];
         const reason = lossReason(i);
-        if (!reason) { p.ack = false; return; }
-        if (p.out || p.ack || state.finished || !modal.hidden) return;
+        if (!reason) { acks[i] = false; return; }
+        if (p.out || acks[i] || state.finished || !modal.hidden) return;
         askLoss(i, reason);
     }
     const checkAll = () => cfg.players.forEach((_, i) => check(i));
-
-    function changeLife(i, d) {
-        const p = state.players[i];
-        if (state.finished || p.out) return;
-        p.life += d;
-        showDelta(i, d);
-        save(); render(); check(i);
-        if (navigator.vibrate) navigator.vibrate(8);
-    }
 
     function askLoss(i, reason) {
         const winner = isPod ? null : 1 - i;
@@ -260,54 +346,25 @@
         const text = isPod
             ? reason + (last ? ' A mesa termina aqui.' : ' Confirmar eliminação?')
             : reason + ' Confirmar vitória de ' + name(winner) + ' no game ' + state.game + '?';
-        showModal(isPod ? 'Eliminar ' + name(i) + '?' : 'Fim do game ' + state.game, text, [
-            { label: isPod ? 'Confirmar eliminação' : 'Confirmar', cls: 'primary', fn: () => confirmLoss(i) },
-            { label: 'Ainda não (corrigir)', fn: () => { state.players[i].ack = true; save(); } },
-        ]);
-    }
-
-    function snapshot() {
-        state.undo.push(clone({ game: state.game, wins: state.wins, winners: state.winners, elim: state.elim, players: state.players }));
-        if (state.undo.length > 15) state.undo.shift();
-    }
-
-    function confirmLoss(i) {
-        snapshot();
-        if (isPod) {
-            state.players[i].out = true;
-            state.elim.push(i);
-            const alive = cfg.players.map((_, k) => k).filter((k) => !state.players[k].out);
-            if (alive.length <= 1) return finish();
-            save(); render();
-            toast(name(i) + ' fica em ' + (n - state.elim.length + 1) + 'º');
-            return checkAll();
-        }
-        const w = 1 - i;
-        state.wins[w]++;
-        state.winners.push(w);
-        if (state.wins[w] >= cfg.winsNeeded) return finish();
-        state.game++;
-        state.players = freshPlayers();
-        save(); render();
-        celebrate(w, false);
-        toast('Game ' + (state.game - 1) + ' para ' + name(w) + ' · ' + scoreText() + ' · Game ' + state.game + ' valendo!');
+        const game = state.game;
+        showModal(isPod ? 'Eliminar ' + name(i) + '?' : 'Fim do game ' + game, text, [
+            { label: isPod ? 'Confirmar eliminação' : 'Confirmar', cls: 'primary', fn: () => act({ type: 'loss', seat: i, game }) },
+            { label: 'Ainda não (corrigir)', fn: () => { acks[i] = true; } },
+        ], null, null, { kind: 'loss', seat: i, game });
     }
 
     function undo() {
-        const snap = state.undo.pop();
-        if (!snap) return toast('Nada para desfazer.');
-        Object.assign(state, snap, { finished: false });
+        if (!state.undo.length) return toast('Nada para desfazer.');
         // Quem estava zerado nao dispara o aviso de novo na hora: corrija com o "+".
-        state.players.forEach((p, i) => { if (!p.out && lossReason(i)) p.ack = true; });
-        save(); render(); closeModal();
+        act({ type: 'undo', depth: state.undo.length });
+        state.players.forEach((p, i) => { if (!p.out && lossReason(i)) acks[i] = true; });
+        closeModal();
         toast('Desfeito.');
     }
 
     const scoreText = () => state.wins[0] + ' × ' + state.wins[1];
 
-    function finish() {
-        state.finished = true;
-        save(); render();
+    function finishUI() {
         const champion = seriesWinner();
         if (champion === null || reduceMotion) return showResult();
         // Primeiro a festa no lado de quem ganhou; o resumo aparece logo depois, por cima.
@@ -321,7 +378,7 @@
     const UP = { 0: [0, -1], 180: [0, 1], 90: [1, 0], '-90': [-1, 0] };
     let party = null;
     function celebrate(i, big) {
-        if (reduceMotion) return;
+        if (reduceMotion || i === undefined || i === null || !panels[i]) return;
         const rect = panels[i].seat.getBoundingClientRect();
         const [ux, uy] = UP[panels[i].rot] || UP[0];
         const rx = -uy, ry = ux; // "direita" de quem está sentado ali
@@ -441,22 +498,37 @@
         return box;
     }
 
+    // Quem mandou o resultado pelo outro celular (pela conta de quem está sentado).
+    function submitterName() {
+        const by = state.submitted && state.submitted.by;
+        const seat = cfg.players.findIndex((p) => p.user && p.user === by);
+        return seat >= 0 ? name(seat) : 'Seu adversário';
+    }
+
     function showResult(error) {
         const actions = [];
         let title, text;
+        const sentByOther = state.submitted && state.submitted.by !== me;
         if (isPod) {
             title = 'Mesa encerrada';
-            text = cfg.submit ? 'Confira as posições e lance o resultado.' : 'Só o organizador lança as posições. Mostre esta tela para ele.';
+            text = cfg.submit ? 'Confira as posições e lance o resultado.' : (cfg.type === 'quick' ? 'Boa partida!' : 'Só o organizador lança as posições. Mostre esta tela para ele.');
         } else {
             const [a, b] = state.wins;
             title = 'Fim da partida';
             text = a === b ? 'Empate na série.' : name(a > b ? 0 : 1) + ' venceu a série.';
-            if (cfg.submit && cfg.submit.kind !== 'tournament_admin') text += ' O adversário confirma o placar depois.';
+            if (cfg.submit && cfg.submit.kind !== 'tournament_admin' && !sentByOther) text += ' O adversário confirma o placar depois.';
         }
-        if (cfg.submit) actions.push({ label: isPod ? 'Lançar posições' : 'Enviar resultado', cls: 'primary', keep: true, fn: submit });
-        actions.push({ label: isPod ? 'Desfazer última eliminação' : 'Corrigir último game', fn: undo, keep: true });
-        actions.push({ label: cfg.submit ? 'Sair sem enviar' : 'Voltar para a partida', href: cfg.resultUrl });
-        showModal(title, text, actions, resultBody(), error);
+        if (sentByOther) {
+            // O outro celular já enviou: aqui só falta conferir e confirmar na página da partida.
+            text += ' ' + submitterName() + ' enviou o resultado. Confira e confirme na partida.';
+            actions.push({ label: 'Ver e confirmar', cls: 'primary', href: cfg.resultUrl });
+        } else if (cfg.submit) {
+            actions.push({ label: isPod ? 'Lançar posições' : 'Enviar resultado', cls: 'primary', keep: true, fn: submit });
+        }
+        if (cfg.type === 'quick') actions.push({ label: 'Jogar de novo', cls: cfg.submit ? '' : 'primary', fn: () => act({ type: 'reset_all' }) });
+        if (!sentByOther) actions.push({ label: isPod ? 'Desfazer última eliminação' : 'Corrigir último game', fn: undo, keep: true });
+        if (!sentByOther) actions.push({ label: cfg.submit ? 'Sair sem enviar' : 'Voltar', href: cfg.resultUrl });
+        showModal(title, text, actions, resultBody(), error, { kind: 'result' });
     }
 
     let sending = false;
@@ -469,9 +541,9 @@
             const placements = {};
             cfg.players.forEach((p, i) => { placements[p.id] = placeOf(i); });
             body = { placements };
-        } else if (kind === 'tournament') body = { player_one_games: a, player_two_games: b, idempotency_key: state.key };
+        } else if (kind === 'tournament') body = { player_one_games: a, player_two_games: b, idempotency_key: submitKey };
         else if (kind === 'tournament_admin') body = { player_one_games: a, player_two_games: b };
-        else if (kind === 'ranked') body = { score_one: a, score_two: b, idempotency_key: state.key };
+        else if (kind === 'ranked') body = { score_one: a, score_two: b, idempotency_key: submitKey };
         else body = { challenger_games: a, opponent_games: b, game_order: state.winners.map((w) => w + 1).join(',') };
 
         sending = true;
@@ -486,6 +558,9 @@
             });
             // Endpoints JSON respondem 200/201; os de formulario redirecionam (opaqueredirect).
             if (res.ok || res.type === 'opaqueredirect') {
+                // Avisa os outros celulares da mesa ("Fulano enviou o resultado") antes de sair.
+                act({ type: 'submitted' });
+                await Promise.race([flush(), new Promise((r) => setTimeout(r, 2500))]);
                 try { localStorage.removeItem(cfg.storageKey); } catch (e) { /* ok */ }
                 window.location.assign(cfg.resultUrl);
                 return;
@@ -508,8 +583,9 @@
     const setBusy = (on) => modal.querySelectorAll('button').forEach((b) => { b.disabled = on; });
 
     // ---------- modal / menus ----------
-    function showModal(title, text, actions, extra, error) {
+    function showModal(title, text, actions, extra, error, info) {
         modal.textContent = '';
+        modalInfo = info || { kind: 'menu' };
         const card = el('div', 'life-modal-card');
         card.append(el('h2', '', title));
         if (text) card.append(el('p', '', text));
@@ -518,7 +594,7 @@
         const row = el('div', 'life-actions');
         actions.forEach((a) => {
             let node;
-            if (a.href) { node = el('a', 'life-btn', a.label); node.href = a.href; }
+            if (a.href) { node = el('a', 'life-btn ' + (a.cls || ''), a.label); node.href = a.href; }
             else {
                 node = button('life-btn ' + (a.cls || ''), a.label);
                 node.addEventListener('click', () => { if (!a.keep) closeModal(); a.fn(); if (!a.keep) render(); });
@@ -533,7 +609,8 @@
     function closeModal() {
         modal.hidden = true;
         modal.textContent = '';
-        setTimeout(checkAll, 0);
+        modalInfo = null;
+        setTimeout(() => { if (!state.finished) checkAll(); }, 0);
     }
     modal.addEventListener('click', (e) => { if (e.target === modal && !state.finished) closeModal(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.hidden && !state.finished) closeModal(); });
@@ -543,40 +620,47 @@
         const info = el('div', 'life-menu-info');
         info.append(el('p', 'life-muted', cfg.title + ' · ' + cfg.subtitle));
         if (!isPod) info.append(el('p', 'life-score-small', name(0) + ' ' + scoreText() + ' ' + name(1) + ' · Game ' + state.game));
+        if (sync) info.append(el('p', 'life-muted life-sync-line', syncText()));
         const actions = [
             { label: 'Continuar', cls: 'primary', fn: () => {} },
-            { label: 'Sortear quem começa (D20)', fn: highRoll },
-            { label: 'Reiniciar vidas deste game', fn: () => confirmThen('Reiniciar as vidas deste game?', () => { snapshot(); state.players = state.players.map((p) => ({ life: cfg.startingLife, poison: 0, cmd: {}, out: p.out, ack: false })); }) },
         ];
+        actions.push({ label: 'Sortear quem começa (D20)', fn: highRoll });
+        actions.push({ label: 'Reiniciar vidas deste game', fn: () => confirmThen('Reiniciar as vidas deste game?', () => act({ type: 'reset_game', game: state.game })) });
         if (state.undo.length) actions.push({ label: 'Desfazer última ação', fn: undo });
         if (!isPod && cfg.earlyEnd) actions.push({ label: 'Encerrar série agora (' + scoreText() + ')', fn: endEarly });
-        actions.push({ label: 'Zerar tudo', fn: () => confirmThen('Apagar o placar e as vidas desta partida?', () => { state = freshState(); }) });
+        actions.push({ label: 'Zerar tudo', fn: () => confirmThen('Apagar o placar e as vidas desta partida' + (sync ? ' (em todos os celulares)' : '') + '?', () => act({ type: 'reset_all' })) });
         actions.push({ label: 'Sair (o placar fica salvo)', href: cfg.resultUrl });
         showModal(isPod ? 'Mesa' : 'Partida', '', actions, info);
     }
 
     function confirmThen(question, fn) {
         setTimeout(() => showModal('Tem certeza?', question, [
-            { label: 'Sim', cls: 'primary', fn: () => { fn(); save(); render(); } },
+            { label: 'Sim', cls: 'primary', fn: () => { fn(); } },
             { label: 'Cancelar', fn: () => {} },
         ]), 0);
     }
 
     function endEarly() {
         if (state.wins[0] + state.wins[1] === 0) return toast('Nenhum game decidido ainda.');
-        confirmThen('Encerrar a série em ' + scoreText() + ' (por tempo)? O servidor confere se esse placar vale para a partida.', () => { snapshot(); finish(); });
+        confirmThen('Encerrar a série em ' + scoreText() + ' (por tempo)? O servidor confere se esse placar vale para a partida.', () => act({ type: 'end_early', game: state.game }));
     }
 
+    // O sorteio é feito aqui e vai como jogada: todos os celulares mostram os mesmos números.
     function highRoll() {
-        const alive = cfg.players.map((_, i) => i).filter((i) => !state.players[i].out);
         const rolls = {};
-        alive.forEach((i) => { rolls[i] = 1 + Math.floor(Math.random() * 20); });
-        const top = Math.max(...Object.values(rolls));
-        const winners = alive.filter((i) => rolls[i] === top);
-        alive.forEach((i) => {
+        cfg.players.forEach((_, i) => { if (!state.players[i].out) rolls[i] = 1 + Math.floor(Math.random() * 20); });
+        act({ type: 'roll', rolls });
+    }
+
+    function showRolls(rolls) {
+        const entries = Object.entries(rolls || {}).map(([i, v]) => [+i, v]).filter(([i]) => panels[i]);
+        if (!entries.length) return;
+        const top = Math.max(...entries.map(([, v]) => v));
+        const winners = entries.filter(([, v]) => v === top).map(([i]) => i);
+        entries.forEach(([i, v]) => {
             const r = panels[i].roll;
-            r.textContent = 'D20: ' + rolls[i];
-            r.classList.toggle('best', winners.length === 1 && rolls[i] === top);
+            r.textContent = 'D20: ' + v;
+            r.classList.toggle('best', winners.length === 1 && v === top);
             r.classList.add('show');
             setTimeout(() => r.classList.remove('show'), 3200);
         });
@@ -589,34 +673,154 @@
         const tray = panels[i].tray;
         tray.textContent = '';
         const close = button('life-tray-close', '✕', 'Fechar');
-        close.addEventListener('click', () => { tray.hidden = true; });
+        close.addEventListener('click', () => { tray.hidden = true; tray.refresh = null; });
         tray.append(close, el('h3', '', 'Contadores de ' + name(i)));
-        const row = (label, get, set, limit) => {
+        const values = [];
+        const row = (label, get, op, limit) => {
             const line = el('div', 'life-tray-row');
             const val = el('b', '', get());
             const minus = button('life-mini', '−', label + ' menos');
             const plus = button('life-mini', '+', label + ' mais');
-            const upd = (d) => { set(d); val.textContent = String(get()); save(); render(); check(i); };
+            const upd = (d) => {
+                const before = state.players[i].life;
+                act(op(d));
+                showDelta(i, state.players[i].life - before);
+            };
             minus.addEventListener('click', () => upd(-1));
             plus.addEventListener('click', () => upd(1));
             line.append(el('span', '', label + ' (' + limit + ')'), minus, val, plus);
             tray.append(line);
+            values.push(() => { val.textContent = String(get()); });
         };
-        const p = state.players[i];
-        row('☠ Veneno', () => p.poison, (d) => { p.poison = Math.max(0, p.poison + d); }, cfg.poisonLimit);
+        row('☠ Veneno', () => state.players[i].poison, (d) => ({ type: 'poison', seat: i, d }), cfg.poisonLimit);
         if (cfg.commanderDamage) {
             cfg.players.forEach((_, from) => {
                 if (from === i) return;
-                // Dano de comandante tambem tira vida (como no Lotus).
-                row('⚔ de ' + name(from), () => p.cmd[from] || 0, (d) => {
-                    const cur = p.cmd[from] || 0, next = Math.max(0, cur + d);
-                    p.cmd[from] = next;
-                    p.life -= next - cur;
-                    if (next !== cur) showDelta(i, -(next - cur));
-                }, cfg.commanderLimit);
+                row('⚔ de ' + name(from), () => state.players[i].cmd[from] || 0, (d) => ({ type: 'cmd', seat: i, from, d }), cfg.commanderLimit);
             });
         }
+        // Atualiza os números quando a jogada vem do outro celular com a bandeja aberta.
+        tray.refresh = () => values.forEach((fn) => fn());
         tray.hidden = false;
+    }
+
+    // ---------- sincronia com a mesa ----------
+    // Envio: junta os toques por um instante e manda em lote. Resposta = tudo que entrou na mesa depois
+    // do que este aparelho tinha (inclusive do outro celular). Falhou: tenta de novo com espera crescente.
+    const net = { sending: null, timer: null, backoff: 0, ok: true, pulling: false, poll: null, stopped: false };
+
+    function flushSoon(ms) {
+        if (!sync || net.stopped) return;
+        clearTimeout(net.timer);
+        net.timer = setTimeout(flush, ms === undefined ? 150 : ms);
+    }
+
+    function headers() {
+        return { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' };
+    }
+
+    function flush() {
+        if (!sync || net.stopped || !store.pending.length) return Promise.resolve();
+        if (net.sending) return net.sending;
+        const batch = store.outbox(50);
+        save(); // Persiste a primeira tentativa ANTES de fetch, mesmo se a resposta nunca chegar.
+        net.sending = fetch(sync.opsUrl, { method: 'POST', credentials: 'same-origin', headers: headers(), body: JSON.stringify({ after: store.seq, ops: batch }) })
+            .then(async (res) => {
+                if (res.status === 422) {
+                    // Jogada recusada (ex.: mesa no limite): sai da fila para não travar as próximas.
+                    const data = await res.json().catch(() => ({}));
+                    const prev = state;
+                    store.drop(batch.map((o) => o.id));
+                    state = store.view();
+                    save();
+                    afterChange(prev, []);
+                    toast((data.errors && Object.values(data.errors).flat()[0]) || 'Jogada recusada pelo servidor.');
+                    return;
+                }
+                if (res.status === 419 || res.status === 401) { net.stopped = true; setNet(false, 'Sua sessão expirou. Recarregue a página: as jogadas ficam salvas.'); return; }
+                if (res.status === 404 || res.status === 403) { net.stopped = true; setNet(false, 'Esta mesa não está mais disponível.'); return; }
+                if (!res.ok) throw new Error('http ' + res.status);
+                ingest(await res.json());
+                net.backoff = 0;
+                setNet(true);
+            })
+            .catch(() => {
+                setNet(false);
+                net.backoff = Math.min(30000, (net.backoff || 1000) * 2);
+                flushSoon(net.backoff);
+            })
+            .finally(() => {
+                net.sending = null;
+                if (store.pending.length && net.ok) flushSoon(30);
+            });
+        return net.sending;
+    }
+
+    function ingest(data) {
+        if (!data) return;
+        if (typeof data.seq === 'number' && data.seq < store.seq) {
+            // A mesa no servidor está atrás deste aparelho (foi recriada): recomeça da cópia do servidor.
+            store.reset();
+            pull();
+            return;
+        }
+        const prev = state;
+        const quiet = firstCopy && store.seq === 0;
+        const result = store.receive(Array.isArray(data.ops) ? data.ops : []);
+        if (result.remote.length || store.seq > 0) firstCopy = false;
+        state = store.view();
+        save();
+        afterChange(prev, result.remote, quiet && result.remote.length > 0);
+        if (result.gap) pull();
+    }
+
+    function pull() {
+        if (!sync || net.pulling || net.stopped) return;
+        net.pulling = true;
+        fetch(sync.url + '?after=' + store.seq, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } })
+            .then((res) => {
+                if (res.status === 404 || res.status === 403) { net.stopped = true; setNet(false, 'Esta mesa não está mais disponível.'); return null; }
+                if (!res.ok) throw new Error('http ' + res.status);
+                return res.json();
+            })
+            .then((data) => { if (data) { ingest(data); setNet(true); } })
+            .catch(() => setNet(false))
+            .finally(() => { net.pulling = false; });
+    }
+
+    // Plano B sem socket: pergunta a cada 3s (aba visível). Com o canal assinado, só uma conferência a cada 20s.
+    function pollLoop() {
+        clearTimeout(net.poll);
+        const live = realtime && realtime.subscribed(sync.channel);
+        net.poll = setTimeout(() => { if (!document.hidden) pull(); pollLoop(); }, live ? 20000 : 3000);
+    }
+
+    let netMessage = null;
+    function setNet(ok, message) {
+        net.ok = ok;
+        netMessage = message || null;
+        const live = ok && realtime && realtime.subscribed(sync.channel);
+        hub.classList.toggle('is-offline', !ok);
+        hub.classList.toggle('is-live', !!live);
+        hub.title = syncText();
+        if (message) toast(message);
+    }
+
+    function syncText() {
+        if (netMessage) return netMessage;
+        const waiting = store.pending.length;
+        if (!net.ok) return 'Sem conexão: ' + (waiting ? waiting + (waiting === 1 ? ' jogada esperando' : ' jogadas esperando') + ' para enviar. ' : '') + 'O placar fica salvo neste aparelho.';
+        return realtime && realtime.subscribed(sync.channel) ? 'Ao vivo: o placar aparece igual nos outros celulares.' : 'Sincronizando com os outros celulares a cada poucos segundos.';
+    }
+
+    if (sync) {
+        if (realtime) {
+            realtime.on(sync.channel, 'ops', (data) => ingest({ ops: data && data.ops }));
+            realtime.on(sync.channel, 'subscribed', () => { pull(); setNet(net.ok); pollLoop(); });
+            realtime.onState(() => setNet(net.ok));
+        }
+        window.addEventListener('online', () => { if (!net.stopped) { net.backoff = 0; flushSoon(0); pull(); } });
+        document.addEventListener('visibilitychange', () => { if (!document.hidden && !net.stopped) { pull(); flushSoon(0); } });
     }
 
     // Tela acesa durante a partida, quando o navegador permite.
@@ -629,4 +833,11 @@
     render();
     keepAwake();
     if (state.finished) showResult(); else checkAll();
+    if (sync) {
+        hub.classList.add('has-sync');
+        setNet(true);
+        pull();
+        flushSoon(0);
+        pollLoop();
+    }
 })();
