@@ -73,8 +73,9 @@ class LiveMatchesTest extends TestCase
         $this->actingAs($one)->postJson("/tournaments/{$t->id}/matches/{$m->id}/submissions",['player_one_games'=>2,'player_two_games'=>1,'idempotency_key'=>(string) Str::uuid()])->assertCreated();
         $this->actingAs($two)->get('/me/matches')->assertOk()->assertSee('Confirmar placar')->assertSee('Contestar');
         $this->get('/tournaments/'.$t->id.'/submissions')->assertForbidden();
-        $this->actingAs($owner)->get('/tournaments/'.$t->id.'/submissions')->assertOk()->assertSee('Resolver e publicar')->assertSee('Auditoria')->assertSee('submitted');
-        $this->get('/t/'.$t->public_slug)->assertOk()->assertSee('data-live-url',false)->assertSee('Modo TV');
+        $this->actingAs($owner)->get('/tournaments/'.$t->id.'/submissions')->assertOk()->assertSee('Resolver e publicar')->assertSee('Aguardando o adversário')->assertSee('Histórico')->assertSee($one->name.'</strong> enviou 2 × 1',false)->assertDontSee('Conta #');
+        // A página pública atualiza sozinha (live-refresh) e não repete a classificação numa lista "ao vivo" separada.
+        $this->get('/t/'.$t->public_slug)->assertOk()->assertSee('id="live-refresh"',false)->assertDontSee('data-live-url',false)->assertSee('Modo TV')->assertSee('Rodada atual');
     }
 
     private function fixture(): array

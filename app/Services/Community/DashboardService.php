@@ -30,6 +30,7 @@ class DashboardService
             ->where(fn ($q) => $q->whereIn('player_one_id', $myPlayerIds)->orWhereIn('player_two_id', $myPlayerIds))
             ->whereHas('tournament', fn ($q) => $q->whereIn('status', ['league', 'finals']))
             ->whereDoesntHave('submission')
+            ->inCurrentRound()
             ->with(['tournament', 'playerOne', 'playerTwo'])->orderBy('round')->limit(10)->get();
 
         $challenges = $profileId ? Challenge::query()
@@ -72,7 +73,7 @@ class DashboardService
 
         // Todas as partidas de torneio em aberto em que estou sentado (inclui assentos de mesas Commander).
         $myIds = $myPlayerIds->map(fn ($id) => (int) $id)->all();
-        $openTournamentMatches = $myIds === [] ? collect() : GameMatch::query()->where('status', 'pending')
+        $openTournamentMatches = $myIds === [] ? collect() : GameMatch::query()->where('status', 'pending')->inCurrentRound()
             ->whereHas('tournament', fn ($q) => $q->whereIn('status', ['league', 'finals']))
             ->where(function ($q) use ($myIds) {
                 $q->whereIn('player_one_id', $myIds)->orWhereIn('player_two_id', $myIds);

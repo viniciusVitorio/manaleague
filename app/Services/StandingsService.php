@@ -106,6 +106,55 @@ class StandingsService
             });
     }
 
+    /**
+     * Classificação final com o pódio no topo: campeão e vice pela final (na eliminação, pela última partida),
+     * 3º pela disputa de 3º lugar; sem essas partidas (suíço, pods), vale a própria classificação.
+     * As linhas do pódio ganham 'podium' => 1, 2 ou 3 e o resto segue a ordem da liga.
+     * Fora do torneio encerrado, devolve a classificação como veio.
+     */
+    public function withPodium(Tournament $tournament, Collection $ranking): Collection
+    {
+        if ($tournament->status !== Tournament::STATUS_FINISHED || $ranking->isEmpty()) {
+            return $ranking;
+        }
+
+        $matches = $tournament->relationLoaded('matches') ? $tournament->matches : $tournament->matches()->get();
+        // [vencedor, perdedor] de uma partida encerrada entre dois jogadores.
+        $result = fn (?GameMatch $match): ?array => $match && $match->status === GameMatch::STATUS_FINISHED && $match->player_two_id
+            ? ($match->player_one_games > $match->player_two_games ? [$match->player_one_id, $match->player_two_id] : [$match->player_two_id, $match->player_one_id])
+            : null;
+
+        $final = $matches->firstWhere('stage', GameMatch::STAGE_FINAL);
+        if (! $final && in_array($tournament->system, ['single_elimination', 'double_elimination'], true)) {
+            $final = $matches->where('status', GameMatch::STATUS_FINISHED)->sortBy([['round', 'desc'], ['id', 'desc']])->first();
+        }
+
+        $podium = $result($final) ?? [];
+        if ($podium && ($third = $result($matches->firstWhere('stage', GameMatch::STAGE_THIRD_PLACE)))) {
+            $podium[] = $third[0];
+        }
+        foreach ($ranking as $row) {
+            if (count($podium) >= 3) {
+                break;
+            }
+            if (! in_array($row['player']->id, $podium, true)) {
+                $podium[] = $row['player']->id;
+            }
+        }
+
+        $byPlayer = $ranking->keyBy(fn (array $row) => $row['player']->id);
+        $top = collect($podium)->filter(fn ($id) => $byPlayer->has($id))->values()
+            ->map(fn ($id, int $index) => [...$byPlayer[$id], 'podium' => $index + 1]);
+
+        return $top->concat($ranking->reject(fn (array $row) => in_array($row['player']->id, $podium, true)))
+            ->values()
+            ->map(function (array $row, int $index): array {
+                $row['rank'] = $index + 1;
+
+                return $row;
+            });
+    }
+
     /** Vitorias seguidas mais recentes no torneio (partidas em ordem de rodada); empate ou derrota zera. */
     private function streak(array &$row, bool $won): void
     {

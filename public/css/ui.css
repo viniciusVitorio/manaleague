@@ -27,6 +27,9 @@ html[data-theme="light"]{
 }
 body{font-family:var(--ui-font);-webkit-font-smoothing:antialiased}
 .icon{flex:0 0 auto;display:inline-block;vertical-align:middle}
+/* Lista de opções dos <select> nativos: no Chrome/Edge do Windows ela herda o fundo do select (transparente vira branco)
+   e a cor do texto (clara no tema escuro), e as opções somem. Fundo e texto vêm sempre do tema. */
+select option,select optgroup{background-color:var(--ui-card);color:var(--ui-fg)}
 
 /* ---------- Botoes ---------- */
 .ui-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);height:36px;padding:0 var(--s4);border-radius:var(--ui-radius-sm);border:1px solid transparent;font-size:.85rem;font-weight:500;line-height:1;white-space:nowrap;cursor:pointer;transition:background-color .15s var(--ui-ease),border-color .15s var(--ui-ease),color .15s var(--ui-ease)}
@@ -34,6 +37,7 @@ body{font-family:var(--ui-font);-webkit-font-smoothing:antialiased}
 .ui-btn-outline{background:var(--ui-bg);border-color:var(--ui-border);color:var(--ui-fg)}.ui-btn-outline:hover{background:var(--ui-muted)}
 .ui-btn-ghost{background:transparent;color:var(--ui-fg-muted)}.ui-btn-ghost:hover{background:var(--ui-muted);color:var(--ui-fg)}
 .ui-btn:active{transform:translateY(.5px)}
+.ui-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}.ui-btn-primary:disabled:hover{background:var(--ui-primary)}.ui-btn-outline:disabled:hover{background:var(--ui-bg)}.ui-btn-ghost:disabled:hover{background:transparent;color:var(--ui-fg-muted)}
 .ui-btn-sm{height:32px;padding:0 var(--s3);font-size:.8rem}
 
 /* ---------- Paginacao ---------- */
@@ -87,6 +91,14 @@ body{font-family:var(--ui-font);-webkit-font-smoothing:antialiased}
 .ui-menu-label{display:flex;flex-direction:column;padding:var(--s2);font-size:.82rem}.ui-menu-label span{color:var(--ui-fg-subtle);font-size:.75rem;overflow:hidden;text-overflow:ellipsis}
 .ui-menu-sep{height:1px;margin:var(--s1) calc(var(--s1) * -1);background:var(--ui-border)}
 
+/* Janela (<dialog class="ui-dialog">): abre com [data-dialog-open="id"]; fecha no X [data-dialog-close], no Esc ou no fundo (nav.js). */
+.ui-dialog{width:min(440px,calc(100% - 32px));max-height:calc(100dvh - 48px);padding:0;border:1px solid var(--ui-border);border-radius:var(--ui-radius);background:var(--ui-card);color:var(--ui-fg);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.ui-dialog::backdrop{background:rgba(9,9,11,.6)}
+.ui-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);padding:var(--s4) var(--s4) var(--s3);border-bottom:1px solid var(--ui-border)}
+.ui-dialog-head h2{margin:0;font-size:1rem}
+.ui-dialog-body{padding:var(--s4)}
+.ui-dialog-foot{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);padding:var(--s3) var(--s4);border-top:1px solid var(--ui-border)}
+.ui-dialog-foot form{margin:0}
 /* Menu mobile */
 .site-mobile{border-top:1px solid var(--ui-border);background:var(--ui-bg);max-height:calc(100dvh - 56px);overflow-y:auto}
 .site-mobile[hidden]{display:none}
@@ -146,9 +158,13 @@ a.ui-row:hover .ui-chevron{transform:translateX(2px);color:var(--ui-fg-muted)}
 .dash-head p{margin:0;color:var(--ui-fg-muted);font-size:.9rem}
 .dash-actions{display:flex;flex-wrap:wrap;gap:var(--s2)}
 .dash-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s3)}
-.dash-main{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:var(--s4);align-items:start}
-.dash-col{display:flex;flex-direction:column;gap:var(--s4);min-width:0}
-.dash-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s4);align-items:start}
+/* Meio do painel: grade 2×2 (próxima partida | notificações / precisa de você | clubes).
+   As linhas são da grade inteira, então os cards da esquerda e da direita começam e terminam juntos. */
+.dash-main{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);grid-template-areas:"next notifs" "next clubs";gap:var(--s4);align-items:stretch}
+.dash-main.has-needs{grid-template-areas:"next notifs" "needs clubs"}
+.dash-main>*{min-width:0}
+.dash-next{grid-area:next}.dash-needs{grid-area:needs}.dash-notifs{grid-area:notifs}.dash-clubs{grid-area:clubs}
+.dash-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s4);align-items:stretch}
 
 /* Proxima partida */
 .next-match{gap:var(--s5)}
@@ -164,12 +180,19 @@ a.ui-row:hover .ui-chevron{transform:translateX(2px);color:var(--ui-fg-muted)}
 .versus-mid{color:var(--ui-fg-subtle);font-size:.78rem;font-weight:600;letter-spacing:.08em}
 .next-match-actions{display:flex;flex-wrap:wrap;gap:var(--s2)}
 
-/* Ranked compacto */
-.rank-line{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);font-size:.84rem}
-.rank-line b{font-variant-numeric:tabular-nums}
+/* "Precisa de você": com o "Confirmar todos", os placares ficam recolhidos em "Conferir um por um" */
+.dash-confirm-each{margin:0 0 var(--s3);padding:0 0 var(--s3);border-bottom:1px solid var(--ui-border)}
+.dash-confirm-each summary{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ui-fg-muted);font-size:.84rem;font-weight:500;list-style:none}
+.dash-confirm-each summary::-webkit-details-marker{display:none}
+.dash-confirm-each summary .icon{transition:transform .15s var(--ui-ease)}
+.dash-confirm-each[open] summary .icon{transform:rotate(180deg)}
+.dash-confirm-each summary .count{padding:0 7px;border-radius:999px;background:var(--ui-muted);color:var(--ui-fg-soft);font-size:.74rem;font-variant-numeric:tabular-nums}
+.dash-confirm-each summary:hover,.dash-confirm-each[open] summary{color:var(--ui-fg)}
+.dash-confirm-each .ui-list{margin-top:var(--s2)}
+.dash-confirm-each+.ui-list:empty{display:none}
 
-@media(max-width:1100px){.dash-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:900px){.dash-main{grid-template-columns:1fr}.dash-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1100px){.dash-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-grid>:last-child{grid-column:1/-1}}
+@media(max-width:900px){.dash-main{grid-template-columns:1fr;grid-template-areas:"next" "notifs" "clubs"}.dash-main.has-needs{grid-template-areas:"next" "needs" "notifs" "clubs"}.dash-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){
   .dash{gap:var(--s5)}
   .dash-head{flex-direction:column;align-items:stretch}
@@ -177,6 +200,7 @@ a.ui-row:hover .ui-chevron{transform:translateX(2px);color:var(--ui-fg-muted)}
   .dash-actions{display:grid;grid-template-columns:1fr 1fr}
   .dash-actions .ui-btn{height:40px}
   .dash-grid{grid-template-columns:1fr}
+  .dash-grid>:last-child{grid-column:auto}
   .ui-card{padding:var(--s4)}
   .ui-stat{padding:var(--s3) var(--s4)}
   .ui-stat-value{font-size:1.35rem}
@@ -368,11 +392,6 @@ input::-ms-reveal{display:none}
 .avatar-link{display:contents}
 
 /* ---------- Dia de evento: cronômetro (organizador) e check-in ---------- */
-.round-timer-card .section-heading{flex-wrap:wrap}
-.round-timer-actions{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--s3)}
-.round-timer-form{display:flex;align-items:flex-end;gap:var(--s2)}
-.round-timer-form label{margin:0}
-.round-timer-form input{width:96px}
 .player-actions{display:flex;align-items:center;gap:var(--s2)}
 .check-in-on{border-color:rgba(74,222,128,.35);color:var(--ui-success)}
 .check-in-summary{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s2);margin-bottom:var(--s2)}

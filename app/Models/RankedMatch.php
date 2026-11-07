@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,11 +11,19 @@ class RankedMatch extends Model
 {
     public const STATUSES = ['pending' => 'Aguardando resultado', 'reported' => 'Aguardando confirmação', 'disputed' => 'Em disputa', 'confirmed' => 'Confirmada', 'invalidated' => 'Invalidada', 'cancelled' => 'Cancelada'];
 
-    protected $fillable = ['season_id', 'format', 'player_one_profile_id', 'player_two_profile_id', 'source_type', 'source_id', 'status', 'best_of', 'is_ranked', 'k_factor', 'rules_version', 'score_one', 'score_two', 'played_at', 'confirmed_at', 'invalidated_at', 'invalidated_by', 'invalidation_reason'];
+    protected $fillable = ['season_id', 'format', 'player_one_profile_id', 'player_two_profile_id', 'source_type', 'source_id', 'status', 'best_of', 'is_ranked', 'k_factor', 'rules_version', 'score_one', 'score_two', 'played_at', 'confirmed_at', 'auto_confirmed', 'invalidated_at', 'invalidated_by', 'invalidation_reason'];
 
     protected function casts(): array
     {
-        return ['is_ranked' => 'boolean', 'played_at' => 'datetime', 'confirmed_at' => 'datetime', 'invalidated_at' => 'datetime', 'best_of' => 'integer', 'k_factor' => 'integer', 'score_one' => 'integer', 'score_two' => 'integer'];
+        return ['is_ranked' => 'boolean', 'played_at' => 'datetime', 'confirmed_at' => 'datetime', 'auto_confirmed' => 'boolean', 'invalidated_at' => 'datetime', 'best_of' => 'integer', 'k_factor' => 'integer', 'score_one' => 'integer', 'score_two' => 'integer'];
+    }
+
+    /** Quando o placar pendente de um desafio é confirmado sozinho (partida de torneio segue o torneio). */
+    public function autoConfirmAt(?RankedResultSubmission $pending): ?CarbonInterface
+    {
+        return $this->status === 'reported' && $this->source_type === 'challenge' && $pending?->created_at
+            ? $pending->created_at->copy()->addDays(Challenge::CONFIRM_DAYS)
+            : null;
     }
 
     public function season(): BelongsTo

@@ -27,6 +27,38 @@ class ChallengeService {
     public function expire(): int {
         return Challenge::query()->where('status', 'pending')->where('expires_at', '<=', now())->update(['status' => 'expired']);
     }
+    /**
+     * Confirma os placares de desafio sem resposta há Challenge::CONFIRM_DAYS dias, casuais e ranqueados.
+     * Roda ao abrir as páginas de desafios e todo dia pelo workflow (challenges:auto-confirm). Placar contestado não entra:
+     * só o que segue "aguardando confirmação". Cada placar é conferido de novo dentro da transação.
+     *
+     * @return array{casual: int, ranked: int}
+     */
+    public function autoConfirmOverdue(): array {
+        $cutoff = now()->subDays(Challenge::CONFIRM_DAYS);
+        $casual = 0;
+        foreach (CasualMatch::query()->where('status', 'reported')->where('reported_at', '<=', $cutoff)->pluck('challenge_id') as $challengeId) {
+            // Roda também ao abrir páginas: um placar com problema é registrado no log e não derruba a tela.
+            try { $casual += (int) $this->autoConfirmCasual($challengeId, $cutoff); } catch (\Throwable $e) { report($e); }
+        }
+        return ['casual' => $casual, 'ranked' => app(Ranked\RankedMatchService::class)->autoConfirmOverdue($cutoff)];
+    }
+    private function autoConfirmCasual(int $challengeId, CarbonInterface $cutoff): bool {
+        $challenge = DB::transaction(function () use ($challengeId, $cutoff) {
+            $challenge = Challenge::query()->lockForUpdate()->find($challengeId);
+            $match = $challenge?->casualMatch()->lockForUpdate()->first();
+            // Alguém confirmou, contestou ou reenviou o placar desde a busca: nada a fazer.
+            if (! $match || $challenge->status !== 'accepted' || $match->status !== 'reported' || ! $match->reported_at || $match->reported_at->gt($cutoff)) return null;
+            $match->update(['status' => 'confirmed', 'confirmed_at' => now(), 'auto_confirmed' => true]);
+            $challenge->update(['status' => 'completed']);
+            return $challenge;
+        });
+        if (! $challenge) return false;
+        $challenge = $challenge->fresh(['challenger', 'opponent', 'casualMatch']);
+        foreach ([$challenge->challenger, $challenge->opponent] as $profile) app(AchievementService::class)->sync($profile);
+        app(CommunityEvents::class)->challengeAutoConfirmed($challenge);
+        return true;
+    }
     public function report(Challenge $challenge, User $actor, int $one, int $two, array $order = []): CasualMatch {
         $match = DB::transaction(function () use ($challenge, $actor, $one, $two, $order) {
             $challenge = Challenge::query()->lockForUpdate()->findOrFail($challenge->id);
@@ -45,7 +77,7 @@ class ChallengeService {
                 }
                 $this->require($counts[1] === $one && $counts[2] === $two, 'A ordem não corresponde ao placar.');
             }
-            $match->update(['status' => 'reported', 'challenger_games' => $one, 'opponent_games' => $two, 'game_order' => $order ?: null, 'reported_by' => $actor->id, 'dispute_reason' => null, 'revision' => $match->revision + 1]);
+            $match->update(['status' => 'reported', 'challenger_games' => $one, 'opponent_games' => $two, 'game_order' => $order ?: null, 'reported_by' => $actor->id, 'reported_at' => now(), 'dispute_reason' => null, 'revision' => $match->revision + 1]);
             return $match;
         });
         app(CommunityEvents::class)->challengeReported($challenge->fresh(), $actor, (int) $match->revision);

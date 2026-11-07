@@ -84,6 +84,29 @@ class Tournament extends Model
         return $this->round_ends_at !== null && in_array($this->status, [self::STATUS_LEAGUE, self::STATUS_FINALS], true);
     }
 
+    /** Rodada que está valendo: a primeira com partida sem resultado (null quando não há nenhuma pendente). */
+    public function currentRound(): ?int
+    {
+        $round = $this->matches()->where('status', GameMatch::STATUS_PENDING)->min('round');
+
+        return $round === null ? null : (int) $round;
+    }
+
+    /**
+     * Quando o jogador pode confirmar a própria presença: só no dia do evento (no fuso do app).
+     * 'open' no dia (ou sem data marcada), 'early' antes, 'late' depois. Desfazer e a marcação do organizador não dependem disso.
+     */
+    public function playerCheckInWindow(): string
+    {
+        if (! $this->tournament_date) {
+            return 'open';
+        }
+        $day = $this->tournament_date->toDateString();
+        $today = now(config('app.timezone'))->toDateString();
+
+        return $day === $today ? 'open' : ($day > $today ? 'early' : 'late');
+    }
+
     /** Sugestão para "Repetir torneio": "Liga #4" vira "Liga #5"; a data é a semana seguinte, nunca no passado. */
     public function nextEditionDefaults(): array
     {

@@ -144,7 +144,42 @@
         });
     }
 
-    function boot() { init(); initToggles(); initMenus(); initMuteSwitches(); initConfirmAndCopy(); }
+    // [data-dialog-open="id"] abre o <dialog class="ui-dialog" id>; o X [data-dialog-close] ou um clique no fundo fecha.
+    // Aberto de dentro de um menu, fecha o menu e devolve o foco ao botao dele.
+    function initDialogs() {
+        var opener = null;
+        document.addEventListener('click', function (event) {
+            if (!event.target.closest) return;
+            var trigger = event.target.closest('[data-dialog-open]');
+            if (trigger) {
+                var target = document.getElementById(trigger.dataset.dialogOpen);
+                if (!target || typeof target.showModal !== 'function') return;
+                opener = trigger;
+                var menu = trigger.closest('.ui-menu');
+                if (menu) {
+                    menu.hidden = true;
+                    var menuButton = document.querySelector('[aria-controls="' + menu.id + '"]');
+                    if (menuButton) { menuButton.setAttribute('aria-expanded', 'false'); opener = menuButton; }
+                }
+                target.showModal();
+                return;
+            }
+            var dialog = event.target.closest('dialog.ui-dialog');
+            if (dialog && (event.target === dialog || event.target.closest('[data-dialog-close]'))) dialog.close();
+        });
+        // Janela que precisa aparecer ja aberta (ex.: a troca de deck voltou com erro): data-open-on-load.
+        document.querySelectorAll('dialog.ui-dialog[data-open-on-load]').forEach(function (dialog) {
+            if (typeof dialog.showModal === 'function' && !dialog.open) dialog.showModal();
+        });
+        // 'close' nao borbulha: escuta na captura.
+        document.addEventListener('close', function (event) {
+            if (!event.target.matches || !event.target.matches('dialog.ui-dialog')) return;
+            if (opener && document.contains(opener)) opener.focus();
+            opener = null;
+        }, true);
+    }
+
+    function boot() { init(); initToggles(); initMenus(); initMuteSwitches(); initConfirmAndCopy(); initDialogs(); }
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', boot);

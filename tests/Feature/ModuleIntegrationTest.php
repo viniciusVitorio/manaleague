@@ -173,7 +173,7 @@ class ModuleIntegrationTest extends TestCase
         foreach (['/dashboard', '/me/matches', '/challenges', '/me/collection', '/feed', '/notifications'] as $path) $page->assertSee(url($path), false);
         $page->assertSee('Exibir QR em tela cheia')->assertSee('Modo TV');
         $this->post(route('tournaments.start', $t));
-        $this->get(route('tournaments.show', $t))->assertOk()->assertSee('Salvar posições')->assertSee('Mesa do organizador')->assertDontSee('Exibir QR em tela cheia');
+        $this->get(route('tournaments.show', $t))->assertOk()->assertSee('Salvar posições')->assertSee('Rodada atual')->assertSee('Resultados enviados')->assertDontSee('Exibir QR em tela cheia');
         $this->post('/logout');
         $this->post('/login', ['email' => $owner->email, 'password' => 'Password123'])->assertRedirect('/dashboard');
     }

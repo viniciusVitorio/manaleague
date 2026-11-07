@@ -126,5 +126,12 @@ Artisan::command('cards:sync-legality', function (): int {
     return 0;
 })->purpose('Atualiza a legalidade no Pauper das cartas salvas em decks (Scryfall)');
 
-// As duas conferências rodam no deploy e todo dia pelo workflow .github/workflows/card-sync.yml
-// (o Docker de produção não tem agendador do Laravel).
+Artisan::command('challenges:auto-confirm', function (): int {
+    $result = app(\App\Services\ChallengeService::class)->autoConfirmOverdue();
+    $days = \App\Models\Challenge::CONFIRM_DAYS;
+    $this->info("Desafios confirmados automaticamente (sem resposta há {$days} dias): {$result['casual']} casual(is), {$result['ranked']} ranqueado(s).");
+    return 0;
+})->purpose('Confirma os placares de desafio que ficaram sem resposta do adversário por 7 dias');
+
+// Estas tarefas rodam todo dia pelo workflow .github/workflows/daily-tasks.yml (o Docker de produção não tem
+// agendador do Laravel). As conferências de cartas também rodam no deploy; a dos desafios também ao abrir as páginas.

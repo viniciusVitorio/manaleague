@@ -475,7 +475,14 @@ class RankedEloTest extends TestCase
         $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('Sem ranque')->assertSee('Começa em Ferro II');
         $this->play($this->match($s, $a, $b), $a, $b, 2, 0); // 616 = Ferro II, 16/25 PDL
         $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('rank-card tier-ferro', false)->assertSee('16/25 PDL')
-            ->assertSee('faltam 9 para Ferro I')->assertDontSee('Progressão')->assertDontSee('rank-ladder', false)->assertSee('Ver todas as patentes');
+            ->assertSee('faltam 9 para Ferro I')->assertDontSee('Progressão')->assertDontSee('rank-ladder', false)->assertSee('Ver todas as patentes')
+            // Retrospecto no card, selo no topo do perfil e variações ao lado do card no computador.
+            ->assertSeeInOrder(['Vitórias', '1', 'Derrotas', '0', 'Aproveitamento', '100%'])
+            ->assertSee('<a class="rank-chip tier-ferro" href="#ranque"', false)->assertSee('616 ELO · Pauper')
+            ->assertSee('ranked-profile-layout has-side', false);
+        // Mestre não tem barra de PDL: mostra a patente máxima.
+        PlayerRating::where('player_profile_id', $a->playerProfile->id)->update(['rating' => 935]);
+        $this->actingAs($a)->get('/me/profile')->assertOk()->assertSee('rank-card tier-mestre', false)->assertSee('35 PDL acima de Mestre · patente máxima');
     }
 
     public function test_rivalries_count_confirmed_ranked_challenges(): void

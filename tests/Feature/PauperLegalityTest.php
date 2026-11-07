@@ -133,6 +133,7 @@ class PauperLegalityTest extends TestCase
         [, $clean] = $this->deck('Pauper', $ana, 'Bolt Deck');
         $this->line($clean, 'Lightning Bolt', 'legal');
         $t = $this->tournament($org);
+        $this->travelTo($t->tournament_date->copy()->setTime(12, 0)); // o jogador só confirma presença no dia do evento
         $this->assertSame('Regras padrão do Pauper · sem cartas banidas ou inválidas', $t->rulesLabel());
 
         // Convite: o seletor avisa e a inscrição com o deck inválido é recusada, com as cartas.

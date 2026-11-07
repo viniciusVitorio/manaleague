@@ -32,14 +32,23 @@ class MyMatchesService
         // Torneio
         $matches = $this->mine($playerIds)->with(self::RELATIONS)->orderBy('round')->orderBy('id')->get();
         $submissions = MatchResultSubmission::whereIn('match_id', $matches->pluck('id')->all())->get()->keyBy('match_id');
-        $tournament = $matches->map(fn (GameMatch $m) => $this->row($m, $playerIds, $submissions->get($m->id), $user) + [
-            'kind' => 'tournament', 'open' => $m->status === GameMatch::STATUS_PENDING,
-            'date' => $m->played_at ?? $m->updated_at,
-            'result' => $m->status === GameMatch::STATUS_FINISHED && ! $m->pod_player_ids ? $this->resultOf($m, $playerIds) : null,
-        ]);
+        // Rodada que está valendo em cada torneio: no todos contra todos as seguintes já existem, mas ainda não começaram.
+        $currentRounds = GameMatch::query()->whereIn('tournament_id', $matches->pluck('tournament_id')->unique()->all())
+            ->where('status', GameMatch::STATUS_PENDING)->groupBy('tournament_id')->selectRaw('tournament_id, min(round) as current_round')
+            ->pluck('current_round', 'tournament_id');
+        $tournament = $matches->map(function (GameMatch $m) use ($playerIds, $submissions, $user, $currentRounds) {
+            $upcoming = $m->status === GameMatch::STATUS_PENDING && $m->round > (int) $currentRounds->get($m->tournament_id);
+
+            return $this->row($m, $playerIds, $submissions->get($m->id), $user, $upcoming ? (int) $currentRounds->get($m->tournament_id) : null) + [
+                'kind' => 'tournament', 'open' => $m->status === GameMatch::STATUS_PENDING && ! $upcoming, 'upcoming' => $upcoming,
+                'date' => $upcoming ? null : ($m->played_at ?? $m->updated_at),
+                'result' => $m->status === GameMatch::STATUS_FINISHED && ! $m->pod_player_ids ? $this->resultOf($m, $playerIds) : null,
+            ];
+        });
 
         // Desafios (casuais e ranqueados): as mesmas linhas da tela de Desafios.
         app(ChallengeService::class)->expire();
+        app(ChallengeService::class)->autoConfirmOverdue();
         $rowsService = app(ChallengeRowsService::class);
         $challenges = collect($rowsService->rows($user, $rowsService->query($user)->get()))->values()->map(fn (array $r) => array_merge($r, [
             'kind' => 'challenge', 'open' => in_array($r['challenge']->status, ['pending', 'accepted'], true),
@@ -59,7 +68,9 @@ class MyMatchesService
         $open = $shown->where('open', true)->sortBy(fn (array $r) => ($r['needs_me'] ? 0 : 2) + ($r['kind'] === 'tournament' ? 0 : 1))->values();
         // Mais recente primeiro; no mesmo dia, a rodada/serie mais nova primeiro.
         $key = fn (array $r) => [$r['date']?->format('Ymd') ?? '0', $r['kind'] === 'tournament' ? $r['match']->round : 0, $r['date']?->getTimestamp() ?? 0];
-        $past = $shown->where('open', false)->sort(fn (array $a, array $b) => $key($b) <=> $key($a))->values();
+        // Próximas: partidas de rodadas que ainda não começaram (sem placar para enviar), na ordem em que vão acontecer.
+        $upcoming = $shown->filter(fn (array $r) => $r['upcoming'] ?? false)->values();
+        $past = $shown->where('open', false)->reject(fn (array $r) => $r['upcoming'] ?? false)->sort(fn (array $a, array $b) => $key($b) <=> $key($a))->values();
         $page = Paginator::resolveCurrentPage();
         $history = new LengthAwarePaginator($past->forPage($page, $perPage)->values(), $past->count(), $perPage, $page,
             ['path' => Paginator::resolveCurrentPath(), 'query' => array_filter(['tipo' => $filter === 'todas' ? null : $filter])]);
@@ -71,6 +82,7 @@ class MyMatchesService
             'filters' => self::FILTERS,
             'counts' => ['todas' => $all->count(), 'torneios' => $tournament->count(), 'desafios' => $challenges->count(), 'ranked' => $ranked->count()],
             'open' => $open,
+            'upcoming' => $upcoming,
             'history' => $history,
             // Filtro Torneios: historico agrupado por torneio, com a campanha de cada um.
             'groups' => $filter === 'torneios' ? collect($history->items())->groupBy(fn (array $r) => $r['match']->tournament_id) : collect(),
@@ -146,7 +158,8 @@ class MyMatchesService
     }
 
     /** @param list<int> $playerIds */
-    private function row(GameMatch $m, array $playerIds, ?MatchResultSubmission $submission, User $user): array
+    /** $waitsForRound: rodada atual do torneio quando esta partida é de uma rodada seguinte (ainda não começou). */
+    private function row(GameMatch $m, array $playerIds, ?MatchResultSubmission $submission, User $user, ?int $waitsForRound = null): array
     {
         $iAmTwo = ! in_array((int) $m->player_one_id, $playerIds, true) && in_array((int) $m->player_two_id, $playerIds, true);
         $me = $iAmTwo ? $m->playerTwo : $m->playerOne;
@@ -166,6 +179,16 @@ class MyMatchesService
                 default => 'Rodada '.$m->round,
             },
         ];
+
+        if ($waitsForRound !== null) {
+            if ($pod) {
+                $row['podPlayers'] = $m->tournament->players->whereIn('id', $m->pod_player_ids)->values();
+                $row['me'] = $row['podPlayers']->first(fn ($p) => in_array((int) $p->id, $playerIds, true));
+            }
+            [$row['label'], $row['tone'], $row['note']] = ['A jogar', 'neutral', 'começa depois da rodada '.$waitsForRound];
+
+            return $row;
+        }
 
         if ($pod) {
             $row['podPlayers'] = $m->tournament->players->whereIn('id', $m->pod_player_ids)->values();

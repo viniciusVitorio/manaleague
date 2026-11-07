@@ -12,6 +12,29 @@ class DashboardLayoutTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_scores_to_confirm_are_grouped_under_confirm_all_instead_of_repeated(): void
+    {
+        $ana = User::factory()->create(['name' => 'Ana']);
+        $ana->ensurePlayerProfile()->update(['nickname' => 'Ana']);
+        $service = app(\App\Services\ChallengeService::class);
+        foreach (['Bia', 'Caio'] as $name) {
+            $friend = User::factory()->create(['name' => $name]);
+            $friend->ensurePlayerProfile()->update(['nickname' => $name]);
+            $ana->friendProfiles()->attach($friend->playerProfile, ['status' => 'accepted']);
+            $friend->friendProfiles()->attach($ana->fresh()->playerProfile, ['status' => 'accepted']);
+            $challenge = $service->create($friend->fresh(), $ana->fresh()->playerProfile, 'Pauper', 3, now()->addDay());
+            $service->transition($challenge, $ana, 'accept');
+            $service->report($challenge->fresh(), $friend, 2, 1);
+        }
+
+        // Dois placares: o "Confirmar todos" resume e as linhas ficam recolhidas, sem repetir embaixo.
+        $html = $this->actingAs($ana)->get('/dashboard')->assertOk()
+            ->assertSeeInOrder(['Precisa de você', 'placares esperando a sua confirmação', 'Confirmar todos (2)', 'Conferir um por um', 'Confirmar placar do desafio', 'Confirmar placar do desafio', '</details>'], false)
+            ->getContent();
+        $this->assertSame(2, substr_count($html, 'Confirmar placar do desafio'), 'cada placar aparece uma vez só');
+        $this->assertStringNotContainsString('rank-line', $html);
+    }
+
     public function test_empty_dashboard_shows_compact_empty_states_and_no_fake_numbers(): void
     {
         $user = User::factory()->create(['name' => 'Novato']);
