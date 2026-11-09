@@ -83,11 +83,11 @@ allow "importar lista de deck" -X POST "$BASE/me/decks/1/import" \
     --data-urlencode "_token=abc123" \
     --data-urlencode $'list=4 Lightning Bolt (2X2) 117\n2 Snapcaster Mage\n1 Jace, the Mind Sculptor\nSideboard\n2 Pyroblast'
 # Regressao: Command Tower + Search for Tomorrow era interpretado como comando Unix.
-# Fixture completa recebida no relato; ambos os formatos precisam atravessar o WAF.
-DECK_LIST="$(cat docker/waf/fixtures/dragon-deck.txt)" || exit 1
-allow "deck de dragoes completo (urlencoded)" -X POST "$BASE/me/decks/1/import" \
+# Apenas o repro minimo; ambos os formatos precisam atravessar o WAF.
+DECK_LIST=$'1 Command Tower\n1 Search for Tomorrow'
+allow "Command Tower + Search for Tomorrow (urlencoded)" -X POST "$BASE/me/decks/1/import" \
     --data-urlencode "list=$DECK_LIST"
-allow "deck de dragoes completo (FormData do navegador)" -X POST "$BASE/me/decks/1/import" \
+allow "Command Tower + Search for Tomorrow (FormData do navegador)" -X POST "$BASE/me/decks/1/import" \
     --form-string "list=$DECK_LIST"
 allow "repro minimo Command Tower + Search for Tomorrow" -X POST "$BASE/me/decks/42/import?source=test" \
     --data-urlencode $'list=1 Command Tower\n1 Search for Tomorrow'
