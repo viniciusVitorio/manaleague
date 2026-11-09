@@ -82,6 +82,15 @@ allow "cadastro com senha e confirmacao com simbolos" -X POST "$BASE/register" \
 allow "importar lista de deck" -X POST "$BASE/me/decks/1/import" \
     --data-urlencode "_token=abc123" \
     --data-urlencode $'list=4 Lightning Bolt (2X2) 117\n2 Snapcaster Mage\n1 Jace, the Mind Sculptor\nSideboard\n2 Pyroblast'
+# Regressao: Command Tower + Search for Tomorrow era interpretado como comando Unix.
+# Fixture completa recebida no relato; ambos os formatos precisam atravessar o WAF.
+DECK_LIST="$(cat docker/waf/fixtures/dragon-deck.txt)" || exit 1
+allow "deck de dragoes completo (urlencoded)" -X POST "$BASE/me/decks/1/import" \
+    --data-urlencode "list=$DECK_LIST"
+allow "deck de dragoes completo (FormData do navegador)" -X POST "$BASE/me/decks/1/import" \
+    --form-string "list=$DECK_LIST"
+allow "repro minimo Command Tower + Search for Tomorrow" -X POST "$BASE/me/decks/42/import?source=test" \
+    --data-urlencode $'list=1 Command Tower\n1 Search for Tomorrow'
 allow "post de clube com texto livre" -X POST "$BASE/clubs/1/posts" \
     --data-urlencode "_token=abc123" \
     --data-urlencode "body=Alguém topa jogar sexta? Vou selecionar as mesas e atualizar a tabela depois :) #magic"
@@ -96,6 +105,18 @@ allow "upload da foto de perfil" -X POST "$BASE/me/profile/photo" \
     -F "_token=abc123" -F "photo=@${UPLOAD_PATH};filename=foto.jpg;type=image/jpeg"
 
 echo "== Ataques (precisam ser bloqueados pela ModSecurity) =="
+block "decklist fora da rota de importacao continua inspecionada" -X POST "$BASE/clubs/1/posts" \
+    --data-urlencode $'list=1 Command Tower\n1 Search for Tomorrow'
+block "decklist GET nao recebe excecao" -G "$BASE/me/decks/1/import" \
+    --data-urlencode $'list=1 Command Tower\n1 Search for Tomorrow'
+block "rota parecida nao recebe excecao" -X POST "$BASE/me/decks/1/import/other" \
+    --data-urlencode $'list=1 Command Tower\n1 Search for Tomorrow'
+block "outro campo na importacao continua inspecionado" -X POST "$BASE/me/decks/1/import" \
+    --data-urlencode 'list=1 Sol Ring' --data-urlencode 'host=127.0.0.1;cat /etc/passwd'
+block "XSS na decklist continua bloqueado" -X POST "$BASE/me/decks/1/import" \
+    --data-urlencode 'list=<img src=x onerror=alert(1)>'
+block "SQL injection na decklist continua bloqueada" -X POST "$BASE/me/decks/1/import" \
+    --data-urlencode "list=1' OR '1'='1"
 block "SQL injection na query" "$BASE/cards/search?q=1%27%20OR%20%271%27%3D%271"
 block "SQL injection UNION" "$BASE/players?id=1%20UNION%20SELECT%20password%20FROM%20users--"
 block "XSS refletido" "$BASE/cards/search?q=%3Cscript%3Ealert(document.cookie)%3C%2Fscript%3E"

@@ -1,0 +1,90 @@
+1 Command Tower
+1 Path of Ancestry
+1 Evolving Wilds
+1 Terramorphic Expanse
+1 Opal Palace
+1 Crystal Grotto
+1 Rupture Spire
+1 Gateway Plaza
+1 Thriving Grove
+1 Thriving Bluff
+1 Shimmerdrift Vale
+1 Jungle Hollow
+1 Rugged Highlands
+1 Blossoming Sands
+1 Thornwood Falls
+1 Bloodfell Caves
+1 Swiftwater Cliffs
+1 Dismal Backwater
+1 Wind-Scarred Crag
+1 Cabaretti Courtyard
+1 Riveteers Overlook
+1 Brokers Hideout
+1 Maestros Theater
+1 Obscura Storefront
+1 Scoured Barrens
+6 Mountain
+5 Forest
+1 Plains
+1 Island
+1 Swamp
+1 Dragonlord's Servant
+1 Dragonspeaker Shaman
+1 Scaled Nurturer
+1 Dragon Egg
+1 Dragon Hatchling
+1 Dragon Whelp
+1 Furnace Whelp
+1 Sparktongue Dragon
+1 Patron of the Arts
+1 Reckless Barbarian
+1 Lurking Green Dragon
+1 Ganax, Astral Hunter
+1 Young Red Dragon
+1 Fang Dragon
+1 Red Dragon
+1 Black Dragon
+1 Blue Dragon
+1 Green Dragon
+1 White Dragon
+1 Mindscour Dragon
+1 Shivan Dragon
+1 Volcanic Dragon
+1 Rapacious Dragon
+1 Territorial Hellkite
+1 Akoum Hellkite
+1 Destructor Dragon
+1 Dragon Mage
+1 Savage Ventmaw
+1 Drakuseth, Maw of Flames
+1 Korlessa, Scale Singer
+1 Sol Ring
+1 Arcane Signet
+1 Gruul Signet
+1 Golgari Signet
+1 Izzet Signet
+1 Simic Signet
+1 Rampant Growth
+1 Explosive Vegetation
+1 Cultivate
+1 Kodama's Reach
+1 Search for Tomorrow
+1 Migration Path
+1 Prismatic Lens
+1 Traveler's Amulet
+1 Garruk's Uprising
+1 Garruk's Packleader
+1 Hunter's Insight
+1 Painful Truths
+1 Harmonize
+1 Dragon's Hoard
+1 Colossal Majesty
+1 Fires of Yavimaya
+1 Soul's Majesty
+1 Big Score
+1 Feed the Swarm
+1 Return to Nature
+1 Abrade
+1 Terminate
+1 Putrefy
+1 Crux of Fate
