@@ -53,9 +53,11 @@ Rodar código no app local: copie o arquivo para o container e use o tinker:
 - **Git:** quem roda git é o dono. Leitura (`status`, `diff`, `log`, `show`) pode. `add`, `commit` e criar branch
   **só quando ele pedir**. Nunca `push`, PR, `reset`, `checkout --`/`restore` em arquivo dele, nem reescrever histórico.
 - **Antes de commitar, peça aprovação** mostrando a lista de commits propostos. Um commit por assunto.
-- Mensagens de commit e descrição de PR **em inglês**, no padrão Conventional Commits (`feat(profile): ...`),
+- Branches: `<ticket>-<type>-<english-description>`, por exemplo `ML-102-feat-email-verification`.
+- Mensagens de commit **em inglês**, no padrão `<ticket> - <type>: <English description>`
+  (ex.: `ML-102 - feat: require email verification for new accounts`); descrição de PR também em inglês,
   no nome do usuário do git. **Sem** `Co-Authored-By` e sem "Generated with Claude Code".
-- Trabalho novo vai numa branch própria (`feat/...`, `fix/...`), criada quando ele pedir.
+- Trabalho novo vai numa branch própria com o prefixo do ticket (`ML-102-feat-email-verification`), criada quando ele pedir.
 - Não comece tarefas da lista de adiadas sem ele pedir. Não invente funcionalidade em patch notes e anúncios.
 - Responda em português. Texto de interface em português do Brasil; nomes no código em inglês; comentários em português.
   O `README.md` é em inglês; os docs de `docs/` seguem em português.

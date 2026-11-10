@@ -38,6 +38,10 @@ Commit → PHPUnit → Composer Audit/Trivy → Sonar → Quality Gate
                                     SSH → EC2: verifica/importa → Compose --no-build
 ```
 
+## Confirmacao de e-mail (ML-102)
+
+Novos cadastros criam conta/perfil e enviam um link temporario assinado pelo transporte de e-mail existente. Recursos autenticados, inclusive canais privados, exigem confirmacao; tela de espera, reenvio e logout continuam acessiveis. A migration preserva o acesso das contas anteriores por uma flag controlada pelo servidor, sem inventar uma data de confirmacao. Falha no envio mantem a conta pendente com erro recuperavel. Fluxo, compatibilidade e requisitos do provedor em [email-verification.md](email-verification.md).
+
 ## Decisoes
 
 - **PostgreSQL no Compose:** substituiu o SQLite (escrita concorrente, tipos rigidos e backup com `pg_dump`) sem custo extra de RDS: roda na propria EC2, ajustado para a t3.micro (`shared_buffers=64MB`, `max_connections=40`, `mem_limit` 256 MB), so na rede interna do Docker e com senha SCRAM vinda do secret `DB_PASSWORD`. A CI roda a suite inteira no PostgreSQL; localmente o `phpunit.xml` continua em SQLite em memoria (rapido), e `DB_CONNECTION=pgsql` no ambiente troca o banco dos testes.

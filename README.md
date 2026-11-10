@@ -10,6 +10,7 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 
 | Area | What you can do |
 |---|---|
+| **Account** | e-mail confirmation for new accounts, signed expiring links and resend with cooldown; existing accounts keep access |
 | **Tournaments** | round-robin leagues, Swiss, single or double elimination and Commander pods; finals and third-place match; standard format rules or custom house rules; repeat a tournament with the same settings |
 | **Event day** | sign-up by invite link or QR code, player check-in on the event day, round timer and removal of no-shows |
 | **Live** | players submit scores from their phones, with confirmation or dispute; public tournament page (no account needed) and TV mode; pairings, scores, the round timer and notifications show up in real time (WebSocket) |
@@ -127,14 +128,15 @@ The docs are written in Portuguese.
 
 - **Architecture and modules:** [architecture.md](docs/architecture.md)
 - **Development rules:** [UI](docs/ui-rules.md) · [back end](docs/backend-rules.md) · [testing](docs/testing.md)
+- **Account verification:** [ML-102 flow and mail configuration](docs/email-verification.md)
 - **Ranked:** [ELO/PDL and rules](docs/ranked.md)
 - **Security:** [SSDLC](docs/ssdlc.md) · [requirements](docs/requirements.md) · [threat model](docs/threat-model.md)
 - **Releases:** [patch notes](docs/patch-notes.md)
 
 ## Contributing
 
-- **Branches:** new work goes on its own branch (`feat/...`, `fix/...`, `docs/...`) and reaches `main` through a pull request.
-- **Commits:** in English, following [Conventional Commits](https://www.conventionalcommits.org/) (`feat(profile): ...`), one commit per topic.
+- **Branches:** `<ticket>-<type>-<english-description>`, for example `ML-102-feat-email-verification`; one ticket per branch, reaching `main` through a pull request.
+- **Commits:** `<ticket> - <type>: <English description>`, for example `ML-102 - feat: require email verification for new accounts`; one commit per topic.
 - **Before opening a PR:**
   - the full test suite passes;
   - UI changes are checked on desktop (1280px) and mobile (390px), in dark and light themes;

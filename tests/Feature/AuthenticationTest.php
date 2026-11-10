@@ -19,7 +19,7 @@ class AuthenticationTest extends TestCase
             'password_confirmation' => 'Secure123',
         ]);
 
-        $response->assertRedirect('/dashboard');
+        $response->assertRedirect('/email/verify');
         $this->assertAuthenticated();
         $this->assertDatabaseHas('users', ['email' => 'vini@example.com']);
     }

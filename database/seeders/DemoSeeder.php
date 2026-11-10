@@ -32,6 +32,8 @@ class DemoSeeder extends Seeder
             ['email' => 'demo@manaleague.test'],
             ['name' => 'Organizador Demo', 'password' => 'manaleague123'],
         );
+        // Enderecos .test sao ficticios; a demo local nao depende de recebimento de e-mail.
+        $organizer->forceFill(['email_verification_required' => false])->save();
         $organizer->ensurePlayerProfile();
 
         $roster = [
@@ -93,6 +95,7 @@ class DemoSeeder extends Seeder
                 ['email' => Str::lower($name).'@manaleague.test'],
                 ['name' => $name, 'password' => 'manaleague123'],
             );
+            $user->forceFill(['email_verification_required' => false])->save();
             $profile = $user->ensurePlayerProfile();
             $saved = $profile->decks()->firstOrCreate(['name' => $deck], ['colors' => $colors, 'is_primary' => true]);
             $profile->update(['preferred_deck_name' => $deck, 'preferred_deck_colors' => $colors]);

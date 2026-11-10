@@ -13,6 +13,9 @@
 
 | STRIDE | Ameaca | Risco | Controle |
 |---|---|---:|---|
+| Spoofing | cadastrar e-mail sem acesso a caixa postal | Alto | ML-102: contas novas ficam restritas a confirmacao/reenvio/logout ate validar link assinado, autenticado e com expiracao; a exigencia nao e removivel via formulario |
+| Tampering | alterar ID, hash, assinatura ou prazo do link de confirmacao | Alto | assinatura temporaria do Laravel e hash do e-mail vinculados a conta autenticada; testes de adulteracao, expiracao e outra conta |
+| Denial of Service | disparar e-mails de confirmacao em massa | Medio | cadastro limitado por IP; reenvio autenticado com cooldown por conta e throttle; falha no transporte mantem conta pendente, sem erro 500 |
 | Spoofing | adivinhar senha | Alto | hash forte, senha minima, rate limit, sessao regenerada e log de falhas de login |
 | Tampering | alterar torneio/placar de outro organizador | Alto | TournamentPolicy, escopo por torneio e teste 403 |
 | Tampering | reescrever resultado da liga depois das finais para mudar finalistas | Medio | liga travada apos gerar as finais; cada partida so e editavel na sua fase |
