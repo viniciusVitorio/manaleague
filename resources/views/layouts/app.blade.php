@@ -30,7 +30,9 @@
     <script src="{{ \App\Support\VersionedAsset::url('js/release-notice.js') }}" defer></script>
     <script src="{{ \App\Support\VersionedAsset::url('js/vendor/idiomorph.min.js') }}" defer></script>
     <script src="{{ \App\Support\VersionedAsset::url('js/async-forms.js') }}" defer></script>
+    @unless($__env->hasSection('verification-pending'))
     @include('partials.realtime')
+    @endunless
     @stack('head')
 </head>
 <body>
@@ -39,16 +41,18 @@
     <button type="button" class="btn btn-small btn-secondary" data-release-reload>Atualizar página</button>
     <button type="button" class="btn btn-small btn-ghost" data-release-dismiss>Depois</button>
 </div>
-@auth
+@if(auth()->check() && ! $__env->hasSection('verification-pending'))
 @include('partials.site-header')
 @else
 <nav class="topbar">
     <div class="container nav-inner">
         <a class="brand" href="{{ route('home') }}"><span class="brand-mark">M</span><span>ManaLeague</span></a>
+        @guest
         <div class="nav-actions"><a class="btn btn-ghost btn-small" href="{{ route('login') }}">Entrar</a><a class="btn btn-primary btn-small nav-create" href="{{ route('register') }}">Criar conta</a></div>
+        @endguest
     </div>
 </nav>
-@endauth
+@endif
 <main class="container page">
     @if(session('status'))<div class="alert alert-success">{{ session('status') }}</div>@endif
     @if($errors->any())
@@ -66,7 +70,7 @@
 @endif
 @endif
 @auth
-@if(config('reverb.client.enabled'))
+@if(config('reverb.client.enabled') && ! $__env->hasSection('verification-pending'))
 {{-- Canal pessoal: notificação nova aparece no sino e num aviso, em qualquer página. --}}
 <div id="live-user" hidden data-channel="{{ \App\Services\Realtime\LiveChannels::user(auth()->id()) }}"></div>
 <script src="{{ \App\Support\VersionedAsset::url('js/live-notify.js') }}" defer></script>
