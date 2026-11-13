@@ -1,6 +1,7 @@
 @extends('layouts.app')
 {{-- Tela ao vivo: atualiza sozinha quando algo muda (live-refresh.js). --}}
 @section('live-scope', 'ranked:'.$match->id)
+@push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/life-chart.css') }}"><script defer src="{{ \App\Support\VersionedAsset::url('js/life-chart.js') }}"></script>@endpush
 @section('content')
 @include('ranked.partials.head')
 @php($me = auth()->user())
@@ -48,4 +49,8 @@
 @endif
 
 <section class="card section-card"><h2>Auditoria</h2><ol class="audit-list">@foreach($match->submissions->sortBy('id') as $s)<li>{{ $s->created_at->timezone('America/Sao_Paulo')->format('d/m H:i') }} · {{ $s->submitter->name }} enviou {{ $s->score_one }}×{{ $s->score_two }} · {{ $s->status === 'confirmed' && ! $s->reviewed_by ? 'confirmado automaticamente' : (['pending' => 'aguardando', 'confirmed' => 'confirmado', 'disputed' => 'contestado', 'resolved' => 'resolvido pela moderação', 'superseded' => 'substituído'][$s->status] ?? $s->status) }}@if($s->dispute_reason) · “{{ $s->dispute_reason }}”@endif @if($s->resolution_reason) · decisão: “{{ $s->resolution_reason }}”@endif</li>@endforeach @if($match->submissions->isEmpty())<li>Partida criada em {{ $match->created_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}; nenhum placar enviado.</li>@endif</ol></section>
+{{-- Gráfico da partida: só quando ela foi jogada com o contador de vida. --}}
+@if($lifeChart)
+<section class="card section-card" aria-labelledby="life-chart-heading"><h2 id="life-chart-heading">Gráfico da partida</h2>@include('life.partials.chart', ['chart' => $lifeChart])</section>
+@endif
 @endsection

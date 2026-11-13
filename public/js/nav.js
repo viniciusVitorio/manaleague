@@ -146,6 +146,18 @@
 
     // [data-dialog-open="id"] abre o <dialog class="ui-dialog" id>; o X [data-dialog-close] ou um clique no fundo fecha.
     // Aberto de dentro de um menu, fecha o menu e devolve o foco ao botao dele.
+    function loadInto(dialog, url) {
+        var box = dialog.querySelector('[data-dialog-content]');
+        if (!box || !url || !window.fetch) return;
+        box.setAttribute('aria-busy', 'true');
+        box.textContent = 'Carregando…';
+        fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'text/html' } })
+            .then(function (res) { if (!res.ok) throw new Error(String(res.status)); return res.text(); })
+            .then(function (html) { box.innerHTML = html; })
+            .catch(function () { box.textContent = 'Não foi possível carregar. Tente de novo.'; })
+            .finally(function () { box.removeAttribute('aria-busy'); });
+    }
+
     function initDialogs() {
         var opener = null;
         document.addEventListener('click', function (event) {
@@ -154,6 +166,12 @@
             if (trigger) {
                 var target = document.getElementById(trigger.dataset.dialogOpen);
                 if (!target || typeof target.showModal !== 'function') return;
+                // Link com data-dialog-src: carrega a página (só o pedaço, via X-Requested-With) dentro da janela.
+                // Sem JavaScript o link abre a página inteira.
+                if (trigger.hasAttribute('data-dialog-src')) {
+                    event.preventDefault();
+                    loadInto(target, trigger.getAttribute('data-dialog-src') || trigger.getAttribute('href'));
+                }
                 opener = trigger;
                 var menu = trigger.closest('.ui-menu');
                 if (menu) {

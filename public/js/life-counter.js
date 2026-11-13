@@ -15,12 +15,16 @@
 
     // ---------- estado ----------
     const freshPlayers = () => cfg.players.map(() => ({ life: cfg.startingLife, poison: 0, cmd: {}, out: false, ack: false }));
-    const freshState = () => ({ v: 1, game: 1, wins: cfg.players.map(() => 0), winners: [], elim: [], players: freshPlayers(), finished: false, undo: [], key: cfg.idempotencyKey });
+    // Histórico de cada game para o gráfico da partida: at = início do game; cada ponto é { t: segundos, s: lugar, l: vida, p: veneno }.
+    const freshGame = () => LifeLog.freshGame(Date.now());
+    const freshState = () => ({ v: 1, game: 1, wins: cfg.players.map(() => 0), winners: [], elim: [], players: freshPlayers(), finished: false, undo: [], key: cfg.idempotencyKey, log: [freshGame()] });
 
     let state;
     try { state = JSON.parse(localStorage.getItem(cfg.storageKey) || 'null'); } catch (e) { state = null; }
     if (!state || state.v !== 1 || !Array.isArray(state.players) || state.players.length !== n) state = freshState();
     state.key = state.key || cfg.idempotencyKey;
+    // Partida salva antes do histórico existir: começa a gravar daqui.
+    if (!Array.isArray(state.log) || !state.log.length) state.log = [freshGame()];
     // Cor do fundo: a que cada jogador escolheu nas preferências do perfil. Sem escolha (ou repetida na mesa),
     // pega a primeira cor padrão que ninguém está usando, para os lados nunca ficarem iguais.
     const seatColors = (() => {
@@ -48,6 +52,30 @@
     const save = () => { try { localStorage.setItem(cfg.storageKey, JSON.stringify(state)); } catch (e) { /* aba anonima cheia: segue em memoria */ } };
     const clone = (v) => JSON.parse(JSON.stringify(v));
     const name = (i) => cfg.players[i].name || ('Jogador ' + (i + 1));
+
+    // ---------- histórico (sem misclick) ----------
+    // 1) A mudança só entra quando a vida do jogador fica parada por SETTLE_MS: toques seguidos viram um ponto só,
+    //    e −1 seguido de +1 não grava nada.
+    // 2) Desfazer e reiniciar voltam o histórico junto (ele faz parte do estado e do snapshot).
+    // 3) Correção atrasada (em life-log.js): voltou ao valor anterior logo depois, sem nada no meio, o ponto sai.
+    const settle = cfg.players.map(() => null);
+    const curGame = () => state.log[state.log.length - 1];
+    const seconds = (g) => LifeLog.seconds(g, Date.now());
+
+    function touched(i) {
+        clearTimeout(settle[i]);
+        settle[i] = setTimeout(() => commit(i), LifeLog.SETTLE_MS);
+    }
+
+    function commit(i) {
+        clearTimeout(settle[i]);
+        settle[i] = null;
+        const p = state.players[i];
+        if (LifeLog.commit(curGame(), i, { l: p.life, p: p.poison }, cfg.startingLife, Date.now())) { save(); logChanged(); }
+    }
+
+    const flushLog = () => cfg.players.forEach((_, i) => commit(i));
+    const dropPending = () => cfg.players.forEach((_, i) => { clearTimeout(settle[i]); settle[i] = null; });
 
     // ---------- helpers de DOM ----------
     function el(tag, cls, text) {
@@ -164,6 +192,7 @@
     exit.href = cfg.resultUrl;
     exit.setAttribute('aria-label', 'Sair do contador (o placar fica salvo)');
     exit.title = 'Sair (o placar fica salvo)';
+    exit.addEventListener('click', () => { flushLog(); save(); syncLog(true); });
     const toastEl = el('div', 'life-toast');
     toastEl.setAttribute('role', 'status');
     const modal = el('div', 'life-modal');
@@ -255,6 +284,7 @@
         if (state.finished || p.out) return;
         p.life += d;
         showDelta(i, d);
+        touched(i);
         save(); render(); check(i);
         if (navigator.vibrate) navigator.vibrate(8);
     }
@@ -271,8 +301,10 @@
         ]);
     }
 
+    // O histórico vai no snapshot: desfazer um game desfaz também o que ele mudou no gráfico.
     function snapshot() {
-        state.undo.push(clone({ game: state.game, wins: state.wins, winners: state.winners, elim: state.elim, players: state.players }));
+        flushLog();
+        state.undo.push(clone({ game: state.game, wins: state.wins, winners: state.winners, elim: state.elim, players: state.players, log: state.log }));
         if (state.undo.length > 15) state.undo.shift();
     }
 
@@ -281,6 +313,8 @@
         if (isPod) {
             state.players[i].out = true;
             state.elim.push(i);
+            curGame().out.push({ t: seconds(curGame()), s: i });
+            logChanged();
             const alive = cfg.players.map((_, k) => k).filter((k) => !state.players[k].out);
             if (alive.length <= 1) return finish();
             save(); render();
@@ -290,9 +324,12 @@
         const w = 1 - i;
         state.wins[w]++;
         state.winners.push(w);
+        curGame().winner = w;
+        logChanged();
         if (state.wins[w] >= cfg.winsNeeded) return finish();
         state.game++;
         state.players = freshPlayers();
+        state.log.push(freshGame());
         save(); render();
         celebrate(w, false);
         toast('Game ' + (state.game - 1) + ' para ' + name(w) + ' · ' + scoreText() + ' · Game ' + state.game + ' valendo!');
@@ -301,7 +338,10 @@
     function undo() {
         const snap = state.undo.pop();
         if (!snap) return toast('Nada para desfazer.');
+        dropPending();
         Object.assign(state, snap, { finished: false });
+        logChanged();
+        if (!Array.isArray(state.log) || !state.log.length) state.log = [freshGame()];
         // Quem estava zerado nao dispara o aviso de novo na hora: corrija com o "+".
         state.players.forEach((p, i) => { if (!p.out && lossReason(i)) p.ack = true; });
         save(); render(); closeModal();
@@ -311,6 +351,7 @@
     const scoreText = () => state.wins[0] + ' × ' + state.wins[1];
 
     function finish() {
+        flushLog();
         state.finished = true;
         save(); render();
         const champion = seriesWinner();
@@ -464,9 +505,45 @@
         showModal(title, text, actions, resultBody(), error);
     }
 
-    let sending = false;
+    // ---------- envio do histórico ----------
+    // Sobe durante o jogo (no máximo a cada SYNC_MS) e ao sair da tela, não só no "Enviar resultado": o placar pode sair
+    // pelo formulário, pelo adversário ou pelo organizador, e o gráfico precisa do histórico de qualquer jeito.
+    // O servidor só mostra o gráfico quando a partida tem resultado.
+    const SYNC_MS = 10000;
+    let syncTimer = null, syncDirty = false, syncOff = false;
+
+    function logChanged() {
+        syncDirty = true;
+        if (!syncTimer) syncTimer = setTimeout(() => syncLog(false), SYNC_MS);
+    }
+
+    async function syncLog(keepalive) {
+        clearTimeout(syncTimer);
+        syncTimer = null;
+        if (!cfg.logUrl || syncOff || !syncDirty) return;
+        const games = LifeLog.payload(state.log);
+        const hasPoints = games.some((g) => g.points.length);
+        syncDirty = false;
+        // Nada gravado ainda e nada no servidor: não precisa mandar. Zerou depois de mandar: manda vazio e o servidor apaga.
+        if (!hasPoints && !state.logSynced) return;
+        try {
+            const res = await fetch(cfg.logUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                keepalive: !!keepalive,
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ games }),
+            });
+            if (res.ok) { state.logSynced = hasPoints; save(); }
+            else if (res.status === 403 || res.status === 404) syncOff = true;
+            else syncDirty = true;
+        } catch (e) { syncDirty = true; /* sem conexão: tenta de novo na próxima mudança ou ao sair */ }
+    }
+
+    let sending = false, sent = false;
     async function submit() {
         if (sending) return;
+        flushLog();
         const [a, b] = state.wins;
         const kind = cfg.submit.kind;
         let body;
@@ -491,6 +568,9 @@
             });
             // Endpoints JSON respondem 200/201; os de formulario redirecionam (opaqueredirect).
             if (res.ok || res.type === 'opaqueredirect') {
+                syncDirty = true;
+                await syncLog(true);
+                sent = true;
                 try { localStorage.removeItem(cfg.storageKey); } catch (e) { /* ok */ }
                 window.location.assign(cfg.resultUrl);
                 return;
@@ -551,11 +631,12 @@
         const actions = [
             { label: 'Continuar', cls: 'primary', fn: () => {} },
             { label: 'Sortear quem começa (D20)', fn: highRoll },
-            { label: 'Reiniciar vidas deste game', fn: () => confirmThen('Reiniciar as vidas deste game?', () => { snapshot(); state.players = state.players.map((p) => ({ life: cfg.startingLife, poison: 0, cmd: {}, out: p.out, ack: false })); }) },
+            // Reiniciar recomeça também a curva deste game no gráfico.
+            { label: 'Reiniciar vidas deste game', fn: () => confirmThen('Reiniciar as vidas deste game?', () => { snapshot(); dropPending(); state.players = state.players.map((p) => ({ life: cfg.startingLife, poison: 0, cmd: {}, out: p.out, ack: false })); state.log[state.log.length - 1] = freshGame(); logChanged(); }) },
         ];
         if (state.undo.length) actions.push({ label: 'Desfazer última ação', fn: undo });
         if (!isPod && cfg.earlyEnd) actions.push({ label: 'Encerrar série agora (' + scoreText() + ')', fn: endEarly });
-        actions.push({ label: 'Zerar tudo', fn: () => confirmThen('Apagar o placar e as vidas desta partida?', () => { state = freshState(); }) });
+        actions.push({ label: 'Zerar tudo', fn: () => confirmThen('Apagar o placar e as vidas desta partida?', () => { dropPending(); const synced = state.logSynced; state = freshState(); state.logSynced = synced; logChanged(); }) });
         actions.push({ label: 'Sair (o placar fica salvo)', href: cfg.resultUrl });
         showModal(isPod ? 'Mesa' : 'Partida', '', actions, info);
     }
@@ -601,7 +682,7 @@
             const val = el('b', '', get());
             const minus = button('life-mini', '−', label + ' menos');
             const plus = button('life-mini', '+', label + ' mais');
-            const upd = (d) => { set(d); val.textContent = String(get()); save(); render(); check(i); };
+            const upd = (d) => { set(d); val.textContent = String(get()); touched(i); save(); render(); check(i); };
             minus.addEventListener('click', () => upd(-1));
             plus.addEventListener('click', () => upd(1));
             line.append(el('span', '', label + ' (' + limit + ')'), minus, val, plus);
@@ -630,7 +711,16 @@
         try { if ('wakeLock' in navigator && document.visibilityState === 'visible') lock = await navigator.wakeLock.request('screen'); } catch (e) { lock = null; }
     }
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (!lock || lock.released)) keepAwake(); });
+    // Saindo da tela (X, outra aba, tela apagada, fechou): grava o que estava assentando e manda o histórico.
+    // Depois do envio o estado já foi apagado do aparelho: não grava de novo.
+    const leaving = () => { if (!sent) { flushLog(); save(); syncLog(true); } };
+    window.addEventListener('pagehide', leaving);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leaving(); });
 
+    // Voltou para uma partida salva com vida diferente do último ponto (ex.: saiu antes dos 3 s): registra.
+    if (!state.finished) flushLog();
+    // Partida salva no aparelho com histórico que ainda não subiu: manda.
+    if (!state.logSynced && LifeLog.payload(state.log).some((g) => g.points.length)) logChanged();
     render();
     keepAwake();
     if (state.finished) showResult(); else checkAll();

@@ -6,6 +6,7 @@ use App\Models\GameMatch;
 use App\Models\Tournament;
 use App\Services\Community\NotificationService;
 use App\Services\Decks\BanListService;
+use App\Services\LifeLogService;
 use App\Services\StandingsService;
 use App\Services\TournamentRecapService;
 use Illuminate\Http\RedirectResponse;
@@ -61,7 +62,8 @@ class TournamentController extends Controller
         // O organizador tambem pode jogar: mostra o card de troca de deck da propria inscricao.
         $profile = auth()->user()->playerProfile()->with('decks')->first();
         $entry = $profile ? $tournament->players->firstWhere('player_profile_id', $profile->id) : null;
-        return view('tournaments.show', compact('tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'friends', 'recap', 'profile', 'entry', 'bannedDecks'));
+        $lifeLogs = app(LifeLogService::class)->viewableInTournament($tournament, auth()->user());
+        return view('tournaments.show', compact('tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'friends', 'recap', 'profile', 'entry', 'bannedDecks', 'lifeLogs'));
     }
 
     public function edit(Tournament $tournament): View

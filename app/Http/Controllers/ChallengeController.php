@@ -68,7 +68,10 @@ class ChallengeController extends Controller
         $this->service->autoConfirmOverdue();
         $ranked = $challenge->is_ranked ? RankedMatch::where(['source_type' => 'challenge', 'source_id' => $challenge->id])->first() : null;
 
-        return view('challenges.show', ['challenge' => $challenge->fresh(['challenger', 'opponent', 'casualMatch']), 'rankedMatch' => $ranked]);
+        // Desafio ranqueado: o contador grava na partida ranqueada.
+        $lifeChart = app(\App\Services\LifeLogService::class)->chartFor($ranked ? 'ranked' : 'challenge', $ranked ? $ranked->id : $challenge->id, $request->user());
+
+        return view('challenges.show', ['challenge' => $challenge->fresh(['challenger', 'opponent', 'casualMatch']), 'rankedMatch' => $ranked, 'lifeChart' => $lifeChart]);
     }
 
     public function transition(Request $request, Challenge $challenge)

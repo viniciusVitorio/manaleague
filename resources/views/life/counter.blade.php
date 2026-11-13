@@ -8,6 +8,7 @@
     <title>Contador de vida · {{ $config['title'] }} · ManaLeague</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
     <link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/life.css') }}">
+    <script src="{{ \App\Support\VersionedAsset::url('js/life-log.js') }}" defer></script>
     <script src="{{ \App\Support\VersionedAsset::url('js/life-counter.js') }}" defer></script>
 </head>
 <body class="life-body">

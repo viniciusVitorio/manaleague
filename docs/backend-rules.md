@@ -58,6 +58,12 @@ Como organizar controller, service, model, migration e regra de negócio. Comple
   Feature flag: `config('ranked.enabled')`. Detalhes em [ranked.md](ranked.md).
 - **Desafios:** casual não tem empate na UI de estatística (V–D). Status: `pending → accepted → completed`
   (ou `declined`, `cancelled`, `expired`, que expira de forma preguiçosa ao abrir as páginas). Placar sem resposta por `Challenge::CONFIRM_DAYS` dias é confirmado sozinho (`ChallengeService::autoConfirmOverdue`, também ao abrir as páginas e todo dia pelo workflow `daily-tasks.yml`).
+- **Histórico de vida:** o contador grava os pontos no aparelho e manda durante o jogo (no máximo a cada 10 s) e ao sair da
+  tela, não só no envio do placar: o placar pode sair pelo formulário, pelo adversário ou pelo organizador
+  (`LifeLogService::store`, um por partida: o primeiro aparelho que gravou é o dono; vazio do dono apaga). O filtro de
+  misclick fica no cliente (`public/js/life-log.js`: a vida precisa assentar 3 s; voltar ao valor anterior em até 15 s
+  apaga o ponto). O gráfico (`LifeLogService::chartFor`) só aparece com a partida com resultado e segue quem pode ver a
+  partida: os jogadores; no torneio também organizador e clube. Partida sem contador não tem gráfico.
 - **Avatar:** emoji único (servidor valida 1 grafema pictográfico; `PlayerProfile::emoji()` corta valores antigos).
 
 ## 6. Banco e migrations

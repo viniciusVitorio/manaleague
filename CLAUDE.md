@@ -35,7 +35,7 @@ Skills do projeto (em `.claude/skills/`): `verificar-tela` (prints no computador
 ```bash
 php artisan test                         # suíte inteira (≈320 testes); --filter NomeDoTeste para um só
 composer lint                            # Pint em modo verificação
-node --test tests/js/deck-simulator.test.cjs
+node --test "tests/js/*.test.cjs"        # testes de JS (simulador de mão, histórico de vida)
 docker compose up -d --build --wait --wait-timeout 300   # sobe/atualiza o app local depois de mudar código
 ```
 

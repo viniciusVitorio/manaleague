@@ -2,6 +2,7 @@
 {{-- Tela ao vivo: atualiza sozinha quando algo muda (live-refresh.js). --}}
 {{-- A página muda conforme a fase: preparação (inscrições), em andamento (rodada atual) e encerrado (campeão). --}}
 @section('live-scope', 'tournament:'.$tournament->id)
+@push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/life-chart.css') }}"><script defer src="{{ \App\Support\VersionedAsset::url('js/life-chart.js') }}"></script>@endpush
 @section('content')
 @php
     $canManage = auth()->user()->can('update', $tournament);
@@ -216,4 +217,5 @@
     </form>
 </details>
 @endif
+@if(! empty($lifeLogs))@include('life.partials.dialog')@endif
 @endsection

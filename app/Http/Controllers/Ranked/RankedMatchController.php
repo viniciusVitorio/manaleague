@@ -22,7 +22,7 @@ class RankedMatchController extends Controller
         $this->authorize('view', $match);
         $pending = $match->submissions->where('status', 'pending')->sortByDesc('id')->first();
 
-        return response()->view('ranked.match', ['match' => $match, 'pending' => $pending, 'tiers' => $tiers])->header('Cache-Control', 'private, no-store');
+        return response()->view('ranked.match', ['match' => $match, 'pending' => $pending, 'tiers' => $tiers, 'lifeChart' => app(\App\Services\LifeLogService::class)->chartFor('ranked', $match->id, $request->user())])->header('Cache-Control', 'private, no-store');
     }
 
     public function results(SubmitRankedResultRequest $request, RankedMatch $match)
