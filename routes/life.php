@@ -12,6 +12,13 @@ Route::middleware('auth')->group(function (): void {
     if (config('ranked.enabled')) {
         Route::get('/ranked/matches/{match}/life', [LifeCounterController::class, 'ranked'])->name('life.ranked');
     }
+    // Gráfico da partida: página inteira, ou só o gráfico quando a janela da lista pede (X-Requested-With).
+    Route::get('/life-logs/{type}/{id}', [LifeCounterController::class, 'showLog'])
+        ->whereIn('type', ['tournament', 'challenge', 'ranked'])->whereNumber('id')->name('life.log.show');
+    // Histórico de vida (gráfico da partida): o contador manda durante o jogo, no máximo a cada 10 s, e ao sair da tela.
+    Route::post('/life-logs/{type}/{id}', [LifeCounterController::class, 'storeLog'])
+        ->whereIn('type', ['tournament', 'challenge', 'ranked'])->whereNumber('id')
+        ->middleware('throttle:30,1')->name('life.log.store');
 
     // Sincronia das jogadas (o celular junta os toques e envia em lote).
     Route::get('/life/tables/{table}/sync', [LifeTableController::class, 'sync'])->middleware('throttle:120,1')->whereNumber('table')->name('life.tables.sync');

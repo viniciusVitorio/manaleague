@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/life.css') }}">
     @include('partials.realtime')
     <script src="{{ \App\Support\VersionedAsset::url('js/life-core.js') }}" defer></script>
+    <script src="{{ \App\Support\VersionedAsset::url('js/life-log.js') }}" defer></script>
     <script src="{{ \App\Support\VersionedAsset::url('js/life-counter.js') }}" defer></script>
 </head>
 <body class="life-body">

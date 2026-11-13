@@ -1,0 +1,73 @@
+/* Gráfico da partida (life/partials/chart). Cores por lugar na mesa, na ordem fixa; validadas para daltonismo
+   nos dois temas (no claro, 3 delas ficam abaixo de 3:1: por isso legenda, valor no fim da linha e tabela). */
+.lchart{--lc-1:#3987e5;--lc-2:#d95926;--lc-3:#199e70;--lc-4:#c98500;--lc-5:#d55181;--lc-6:#008300}
+html[data-theme="light"] .lchart{--lc-1:#2a78d6;--lc-2:#eb6834;--lc-3:#1baf7a;--lc-4:#eda100;--lc-5:#e87ba4;--lc-6:#008300}
+.lchart .s1{--sc:var(--lc-1)}.lchart .s2{--sc:var(--lc-2)}.lchart .s3{--sc:var(--lc-3)}
+.lchart .s4{--sc:var(--lc-4)}.lchart .s5{--sc:var(--lc-5)}.lchart .s6{--sc:var(--lc-6)}
+
+.lchart-legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin:0 0 14px;padding:0;list-style:none;color:var(--ui-fg-soft);font-size:.86rem}
+.lchart-legend li{display:inline-flex;align-items:center;gap:8px}
+.lchart-legend .lchart-avatar{width:22px;height:22px;font-size:.66rem}
+.lchart-key{display:inline-block;flex:0 0 auto;width:14px;height:3px;border-radius:2px;background:var(--sc)}
+
+.lchart-game{margin:0}
+.lchart-game+.lchart-game{margin-top:20px;padding-top:16px;border-top:1px solid var(--ui-border)}
+.lchart-game figcaption{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin:0 0 10px;font-size:.9rem}
+.lchart-game figcaption span{color:var(--ui-fg-muted);font-size:.84rem}
+
+/* A folga em cima e embaixo é para o avatar do fim da linha caber quando a vida termina no topo ou no fundo do eixo. */
+.lchart-frame{display:grid;grid-template-columns:30px minmax(0,1fr) 46px;height:250px;padding:14px 0}
+.lchart-y,.lchart-ends{position:relative;margin:0;padding:0;list-style:none}
+.lchart-y span{position:absolute;right:8px;transform:translateY(-50%);color:var(--ui-fg-subtle);font-size:.72rem;font-variant-numeric:tabular-nums;line-height:1}
+.lchart-y span.is-start{color:var(--ui-fg-soft);font-weight:600}
+.lchart-plot{position:relative;border-radius:2px;outline:none;touch-action:pan-y;cursor:crosshair}
+.lchart-plot:focus-visible{box-shadow:0 0 0 2px var(--ui-ring)}
+.lchart-plot svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.lchart-grid{stroke:var(--ui-border);stroke-width:1;vector-effect:non-scaling-stroke}
+.lchart-grid.is-zero,.lchart-grid.is-start{stroke:var(--ui-border-strong)}
+.lchart-line{fill:none;stroke:var(--sc);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+/* Um marcador por lance, com anel da cor do cartão para separar das outras linhas. */
+.lchart-mark{position:absolute;box-sizing:border-box;width:11px;height:11px;border:2px solid var(--ui-card);border-radius:50%;background:var(--sc);transform:translate(-50%,-50%);pointer-events:none}
+.lchart-end{position:absolute;z-index:1;display:flex;transform:translate(-50%,-50%);pointer-events:none}
+.lchart-end.is-out .lchart-avatar{filter:grayscale(1);opacity:.65}
+.lchart-avatar{display:inline-grid;flex:0 0 auto;place-items:center;box-sizing:border-box;width:28px;height:28px;overflow:hidden;border:2px solid var(--sc);border-radius:50%;
+    background:var(--ui-bg);box-shadow:0 0 0 2px var(--ui-card);color:var(--ui-fg);font-size:.74rem;font-weight:600;line-height:1}
+.lchart-avatar img{display:block;width:100%;height:100%;object-fit:cover}
+.lchart-ends li{position:absolute;left:21px;transform:translateY(-50%);color:var(--ui-fg);font-size:.82rem;font-variant-numeric:tabular-nums;line-height:1}
+.lchart-x{position:relative;height:20px;margin:2px 46px 0 30px;color:var(--ui-fg-subtle);font-size:.72rem}
+.lchart-x span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+.lchart-x span:first-child{transform:none}
+.lchart-x span:last-child{transform:translateX(-100%)}
+
+/* Leitura com o dedo/mouse (life-chart.js) */
+.lchart-cross{position:absolute;top:0;bottom:0;width:1px;background:var(--ui-fg-subtle);pointer-events:none}
+.lchart-tip{position:absolute;top:4px;z-index:2;min-width:120px;padding:8px 10px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);
+    background:var(--ui-card);box-shadow:0 8px 24px rgba(0,0,0,.25);pointer-events:none;font-size:.8rem}
+.lchart-tip p{display:flex;align-items:center;gap:6px;margin:0;color:var(--ui-fg-muted);white-space:nowrap}
+.lchart-tip p+p{margin-top:3px}
+.lchart-tip b{min-width:2ch;color:var(--ui-fg);font-variant-numeric:tabular-nums}
+.lchart-tip .lchart-tip-time{margin-bottom:4px;color:var(--ui-fg-subtle);font-size:.72rem}
+
+/* Lance a lance (tabela para quem não lê o gráfico) */
+.lchart-table{margin-top:18px;border-top:1px solid var(--ui-border);padding-top:12px}
+.lchart-table summary{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ui-fg-muted);font-size:.86rem;font-weight:500;list-style:none}
+.lchart-table summary::-webkit-details-marker{display:none}
+.lchart-table summary .icon{transition:transform .15s var(--ui-ease)}
+.lchart-table[open] summary .icon{transform:rotate(180deg)}
+.lchart-table table{width:100%;margin-top:12px;border-collapse:collapse;font-size:.84rem;font-variant-numeric:tabular-nums}
+.lchart-table caption{padding:0 0 6px;color:var(--ui-fg-soft);font-weight:600;text-align:left}
+.lchart-table th{padding:6px 8px;border-bottom:1px solid var(--ui-border);color:var(--ui-fg-subtle);font-size:.72rem;font-weight:500;letter-spacing:.04em;text-align:left;text-transform:uppercase}
+.lchart-table td{padding:6px 8px;border-bottom:1px solid var(--ui-border)}
+.lchart-table td .lchart-key{margin-right:7px;vertical-align:middle}
+.lchart-table td small{color:var(--ui-fg-muted)}
+.lchart-table td.is-up{color:var(--ui-success)}
+.lchart-table td.is-down{color:var(--ui-danger)}
+.lchart-table table+table{margin-top:18px}
+
+.lchart-dialog{width:min(720px,calc(100% - 32px))}
+.lchart-dialog .ui-dialog-body{overflow-y:auto;max-height:calc(100dvh - 140px)}
+.lchart-link{display:inline-flex;align-items:center;gap:5px}
+.tmatch-chart{margin-top:10px;color:var(--ui-fg-muted);font-size:.84rem;text-decoration:none}
+.tmatch-chart:hover{color:var(--ui-fg)}
+
+@media(max-width:520px){.lchart-frame{height:220px;grid-template-columns:26px minmax(0,1fr) 42px}.lchart-x{margin:2px 42px 0 26px}.lchart-table th,.lchart-table td{padding:6px 5px}}

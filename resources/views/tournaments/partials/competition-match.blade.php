@@ -67,4 +67,8 @@
             <p class="tmatch-note" title="Uma fase seguinte já foi gerada ou o torneio foi encerrado.">Resultado travado.</p>
         @endif
     @endif
+    {{-- Jogada com o contador de vida: abre o gráfico na janela (ou a página dele, sem JavaScript). --}}
+    @if(isset($lifeLogs[$match->id]))
+        <a class="tmatch-chart lchart-link" href="{{ route('life.log.show', ['tournament', $match->id]) }}" data-dialog-open="life-chart-dialog" data-dialog-src><x-icon name="activity" size="14" />Gráfico da partida</a>
+    @endif
 </article>

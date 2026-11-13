@@ -2,12 +2,13 @@
  * A mesa e compartilhada: cada toque vira uma jogada (life-core.js) que vai para o servidor e chega aos outros
  * celulares pelo Reverb (realtime.js). Sem internet, as jogadas ficam salvas no aparelho (localStorage) e sao
  * enviadas quando a conexao volta; sem tempo real, o contador pergunta ao servidor de poucos em poucos segundos.
- * O resultado final vai para o endpoint canonico da partida (mesmas validacoes do formulario manual). */
+ * O resultado final vai para o endpoint canonico da partida (mesmas validacoes do formulario manual).
+ * O historico de vida (grafico da partida) fica em cada aparelho e sobe para o servidor durante o jogo (life-log.js). */
 (function () {
     'use strict';
 
     const root = document.getElementById('life-counter');
-    if (!root || !window.LifeCore) return;
+    if (!root || !window.LifeCore || !window.LifeLog) return;
     const core = window.LifeCore;
     const cfg = JSON.parse(root.dataset.config);
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
@@ -185,13 +186,19 @@
 
     const hub = button('life-hub', '', 'Menu da partida');
     hub.addEventListener('click', openMenu);
+    // Saída sempre à vista (abriu sem querer? é só tocar no X). O placar e as vidas ficam salvos no aparelho.
+    const exit = el('a', 'life-exit', '✕');
+    exit.href = cfg.resultUrl;
+    exit.setAttribute('aria-label', 'Sair do contador (o placar fica salvo)');
+    exit.title = 'Sair (o placar fica salvo)';
+    exit.addEventListener('click', leaving);
     const toastEl = el('div', 'life-toast');
     toastEl.setAttribute('role', 'status');
     const modal = el('div', 'life-modal');
     modal.hidden = true;
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    root.append(board, hub, toastEl, modal);
+    root.append(board, hub, exit, toastEl, modal);
     let modalInfo = null; // o que o modal aberto mostra: { kind: 'loss', seat, game } | { kind: 'result' } | ...
 
     // ---------- render ----------
@@ -268,6 +275,7 @@
         }
         state = store.view();
         save();
+        logSee(prev, [op]);
         afterChange(prev, []);
         flushSoon();
     }
@@ -558,10 +566,12 @@
             });
             // Endpoints JSON respondem 200/201; os de formulario redirecionam (opaqueredirect).
             if (res.ok || res.type === 'opaqueredirect') {
-                // Avisa os outros celulares da mesa ("Fulano enviou o resultado") antes de sair.
+                // Avisa os outros celulares da mesa ("Fulano enviou o resultado") antes de sair; o histórico sobe junto.
                 act({ type: 'submitted' });
-                await Promise.race([flush(), new Promise((r) => setTimeout(r, 2500))]);
-                try { localStorage.removeItem(cfg.storageKey); } catch (e) { /* ok */ }
+                flushLog();
+                await Promise.race([Promise.all([flush(), syncLog(true)]), new Promise((r) => setTimeout(r, 2500))]);
+                sent = true;
+                try { localStorage.removeItem(cfg.storageKey); localStorage.removeItem(logKey); } catch (e) { /* ok */ }
                 window.location.assign(cfg.resultUrl);
                 return;
             }
@@ -704,6 +714,141 @@
         tray.hidden = false;
     }
 
+    // ---------- histórico de vida (gráfico da partida) ----------
+    // O placar é da mesa; o histórico é deste aparelho (a mesa não guarda tempo). Cada celular observa o placar, com
+    // toque daqui ou do outro celular, e grava o ponto quando a vida de um jogador fica parada por SETTLE_MS: toques
+    // seguidos viram um ponto só e −1 seguido de +1 não grava nada; voltar ao valor anterior logo depois apaga o ponto
+    // (life-log.js). Os dois celulares mandam o histórico; o servidor fica com o do primeiro que gravou.
+    const logKey = cfg.storageKey + ':log';
+    let lifelog = null;
+    try { lifelog = JSON.parse(localStorage.getItem(logKey) || 'null'); } catch (e) { lifelog = null; }
+    if (!lifelog || !Array.isArray(lifelog.games)) lifelog = { games: [], synced: false };
+    const saveLog = () => { try { localStorage.setItem(logKey, JSON.stringify(lifelog)); } catch (e) { /* sem espaço: segue em memória */ } };
+    const settle = cfg.players.map(() => null);
+    let sent = false;
+
+    // Um game do histórico por game da mesa (quem abriu no meio da série fica com os anteriores vazios).
+    function logGame(number) {
+        while (lifelog.games.length < number) lifelog.games.push(LifeLog.freshGame(Date.now()));
+        return lifelog.games[number - 1];
+    }
+
+    function commitLog(i, s) {
+        clearTimeout(settle[i]);
+        settle[i] = null;
+        const p = s.players[i];
+        if (p && LifeLog.commit(logGame(s.game), i, { l: p.life, p: p.poison }, cfg.startingLife, Date.now())) { saveLog(); logChanged(); }
+    }
+
+    const flushLog = () => cfg.players.forEach((_, i) => { if (settle[i]) commitLog(i, state); });
+    const dropSettle = () => cfg.players.forEach((_, i) => { clearTimeout(settle[i]); settle[i] = null; });
+
+    // Vencedor de cada game (duelo): o da mesa. Desfez o fim do game? Volta a ficar sem vencedor.
+    function logWinners() {
+        if (isPod) return;
+        lifelog.games.forEach((g, k) => {
+            const w = state.winners[k] === undefined ? null : state.winners[k];
+            if (g.winner !== w) { g.winner = w; logChanged(); }
+        });
+    }
+
+    // Mudou o placar (prev → state) por estas jogadas: atualiza o histórico.
+    // quiet = primeira cópia da mesa neste aparelho: grava a vida de agora, sem inventar o que já passou.
+    function logSee(prev, ops, quiet) {
+        const types = ops.map((op) => op.type);
+        const fresh = (s) => s.players.every((p) => p.out || (p.life === cfg.startingLife && p.poison === 0));
+        if (quiet) {
+            dropSettle();
+            logGame(state.game);
+            if (!state.finished) cfg.players.forEach((_, i) => commitLog(i, state));
+        } else if (types.includes('reset_all') && state.game === 1 && !state.winners.length && fresh(state)) {
+            dropSettle();
+            lifelog.games = [];
+            logGame(1);
+            logChanged();
+        } else {
+            if (state.game > prev.game) {
+                // Game decidido: fecha o anterior com a vida final de cada um.
+                cfg.players.forEach((_, i) => commitLog(i, prev));
+                logGame(state.game);
+            } else if (state.game < prev.game) {
+                // Desfez o fim do game: o game seguinte some do histórico.
+                dropSettle();
+                lifelog.games.length = Math.min(lifelog.games.length, state.game);
+                logChanged();
+            } else if (types.includes('reset_game') && fresh(state) && !fresh(prev)) {
+                dropSettle();
+                logGame(state.game);
+                lifelog.games[state.game - 1] = LifeLog.freshGame(Date.now());
+                logChanged();
+            }
+            const game = logGame(state.game);
+            if (isPod) {
+                // Eliminado na mesa: a linha dele para ali. Desfeito: volta.
+                state.elim.filter((i) => !prev.elim.includes(i)).forEach((i) => {
+                    commitLog(i, state);
+                    game.out.push({ t: LifeLog.seconds(game, Date.now()), s: i });
+                    logChanged();
+                });
+                const before = game.out.length;
+                game.out = game.out.filter((o) => state.elim.includes(o.s));
+                if (game.out.length !== before) logChanged();
+            }
+            if (state.game === prev.game) {
+                state.players.forEach((p, i) => {
+                    const q = prev.players[i];
+                    if (q && (p.life !== q.life || p.poison !== q.poison)) {
+                        clearTimeout(settle[i]);
+                        settle[i] = setTimeout(() => commitLog(i, state), LifeLog.SETTLE_MS);
+                    }
+                });
+            }
+            // Série encerrada: o que estava assentando entra agora.
+            if (state.finished && !prev.finished) flushLog();
+        }
+        logWinners();
+        saveLog();
+    }
+
+    // Sobe durante o jogo (no máximo a cada SYNC_MS) e ao sair da tela, não só no "Enviar resultado": o placar pode sair
+    // pelo formulário, pelo adversário ou pelo organizador, e o gráfico precisa do histórico de qualquer jeito.
+    // O servidor só mostra o gráfico quando a partida tem resultado.
+    const SYNC_MS = 10000;
+    let syncTimer = null, syncDirty = false, syncOff = false;
+
+    function logChanged() {
+        syncDirty = true;
+        if (!syncTimer) syncTimer = setTimeout(() => syncLog(false), SYNC_MS);
+    }
+
+    async function syncLog(keepalive) {
+        clearTimeout(syncTimer);
+        syncTimer = null;
+        if (!cfg.logUrl || syncOff || !syncDirty) return;
+        const games = LifeLog.payload(lifelog.games);
+        const hasPoints = games.some((g) => g.points.length);
+        syncDirty = false;
+        // Nada gravado ainda e nada no servidor: não precisa mandar. Zerou depois de mandar: manda vazio e o servidor apaga.
+        if (!hasPoints && !lifelog.synced) return;
+        try {
+            const res = await fetch(cfg.logUrl, { method: 'POST', credentials: 'same-origin', keepalive: !!keepalive, headers: headers(), body: JSON.stringify({ games }) });
+            if (res.ok) { lifelog.synced = hasPoints; saveLog(); }
+            else if (res.status === 403 || res.status === 404) syncOff = true;
+            else syncDirty = true;
+        } catch (e) { syncDirty = true; /* sem conexão: tenta de novo na próxima mudança ou ao sair */ }
+    }
+
+    // Saindo da tela (X, outra aba, tela apagada, fechou): grava o que estava assentando e manda o histórico.
+    // Depois do envio do resultado o histórico já subiu e foi apagado do aparelho: não grava de novo.
+    function leaving() {
+        if (sent) return;
+        flushLog();
+        saveLog();
+        syncLog(true);
+    }
+    window.addEventListener('pagehide', leaving);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leaving(); });
+
     // ---------- sincronia com a mesa ----------
     // Envio: junta os toques por um instante e manda em lote. Resposta = tudo que entrou na mesa depois
     // do que este aparelho tinha (inclusive do outro celular). Falhou: tenta de novo com espera crescente.
@@ -733,6 +878,7 @@
                     store.drop(batch.map((o) => o.id));
                     state = store.view();
                     save();
+                    logSee(prev, []);
                     afterChange(prev, []);
                     toast((data.errors && Object.values(data.errors).flat()[0]) || 'Jogada recusada pelo servidor.');
                     return;
@@ -770,6 +916,7 @@
         if (result.remote.length || store.seq > 0) firstCopy = false;
         state = store.view();
         save();
+        logSee(prev, result.remote.map((e) => e.op || {}), quiet && result.remote.length > 0);
         afterChange(prev, result.remote, quiet && result.remote.length > 0);
         if (result.gap) pull();
     }
@@ -829,6 +976,14 @@
         try { if ('wakeLock' in navigator && document.visibilityState === 'visible') lock = await navigator.wakeLock.request('screen'); } catch (e) { lock = null; }
     }
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (!lock || lock.released)) keepAwake(); });
+
+    // Voltou para uma partida salva com vida diferente do último ponto (ex.: saiu antes dos 3 s): registra.
+    logGame(state.game);
+    if (!state.finished) cfg.players.forEach((_, i) => commitLog(i, state));
+    logWinners();
+    saveLog();
+    // Histórico salvo no aparelho que ainda não subiu: manda.
+    if (!lifelog.synced && LifeLog.payload(lifelog.games).some((g) => g.points.length)) logChanged();
 
     render();
     keepAwake();

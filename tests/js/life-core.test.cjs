@@ -107,6 +107,7 @@ const plain = (v) => JSON.parse(JSON.stringify(v));
 function counterBrowser(saved, post) {
     const nodes = [], timers = new Map();
     let nextTimer = 0, persisted = saved;
+    const others = new Map();
     const cfg = { ...duel, storageKey: 'counter', sync: { me: 1, opsUrl: '/ops', url: '/table' } };
     const node = () => {
         const listeners = {};
@@ -129,7 +130,11 @@ function counterBrowser(saved, post) {
             getElementById: () => root, querySelector: () => null,
             createElement: node, addEventListener() {},
         },
-        localStorage: { getItem: () => persisted || null, setItem: (_, value) => { persisted = value; } },
+        // Só a mesa interessa a estes testes; o histórico de vida (outra chave) fica em memória à parte.
+        localStorage: {
+            getItem: (key) => (key === cfg.storageKey ? persisted || null : others.get(key) ?? null),
+            setItem: (key, value) => { if (key === cfg.storageKey) persisted = value; else others.set(key, value); },
+        },
         setTimeout(fn, ms) { const id = ++nextTimer; timers.set(id, { fn, ms }); return id; },
         clearTimeout(id) { timers.delete(id); },
         fetch(url, options) {
@@ -141,6 +146,7 @@ function counterBrowser(saved, post) {
     browser.window = browser;
     vm.createContext(browser);
     vm.runInContext(fs.readFileSync('public/js/life-core.js', 'utf8'), browser);
+    vm.runInContext(fs.readFileSync('public/js/life-log.js', 'utf8'), browser);
     vm.runInContext(fs.readFileSync('public/js/life-counter.js', 'utf8'), browser);
     return {
         tap() { nodes.find((e) => e.className === 'life-zone minus').fire('keydown', { key: 'Enter', preventDefault() {} }); },
@@ -152,6 +158,9 @@ function counterBrowser(saved, post) {
         },
         saved: () => persisted,
         pending: () => JSON.parse(persisted).pending,
+        // Histórico de vida deste aparelho: dispara a espera de assentar (LifeLog.SETTLE_MS) e lê o que ficou gravado.
+        settle() { [...timers.entries()].filter(([, v]) => v.ms === 3000).forEach(([id, v]) => { timers.delete(id); v.fn(); }); },
+        log: () => JSON.parse(others.get(cfg.storageKey + ':log') || 'null'),
     };
 }
 
@@ -210,6 +219,18 @@ require('node:test')('toques nunca enviados ainda agregam, inclusive apos reload
     reloaded.tap();
     assert.equal(reloaded.pending().length, 1);
     assert.equal(reloaded.pending()[0].op.d, -3);
+});
+
+require('node:test')('a mesa compartilhada alimenta o histórico de vida: toques seguidos viram um ponto ao assentar', async () => {
+    const browser = counterBrowser(null, () => new Promise(() => {}));
+    await new Promise(setImmediate);
+    browser.tap();
+    browser.tap();
+    assert.deepEqual(browser.log().games[0].points, [], 'ainda assentando');
+    browser.settle();
+    const points = browser.log().games[0].points;
+    assert.equal(points.length, 1);
+    assert.deepEqual([points[0].s, points[0].l, points[0].p], [0, 18, 0]);
 });
 
 console.log('life-core: ok');

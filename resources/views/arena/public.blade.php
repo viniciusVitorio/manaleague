@@ -26,7 +26,7 @@
     $otherRounds = $currentRound !== null ? $rounds->filter(fn ($matches, $round) => $round !== $currentRound) : $rounds;
     $timerEndsAt = $tournament->roundTimerRunning() ? $tournament->round_ends_at : null;
 @endphp
-@push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/competition.css') }}"><link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/live.css') }}"><script defer src="{{ \App\Support\VersionedAsset::url('js/round-timer.js') }}"></script>@endpush
+@push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/competition.css') }}"><link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/live.css') }}"><script defer src="{{ \App\Support\VersionedAsset::url('js/round-timer.js') }}"></script><link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/life-chart.css') }}"><script defer src="{{ \App\Support\VersionedAsset::url('js/life-chart.js') }}"></script>@endpush
 @section('content')
 <header class="public-hero">
     <span class="eyebrow">{{ $running ? 'Placar ao vivo' : 'Placar oficial' }}</span>
@@ -84,4 +84,5 @@
 @if($otherRounds->isNotEmpty())
     @include('tournaments.partials.round-list', ['rounds' => $otherRounds, 'currentRound' => $currentRound, 'title' => $currentRound !== null ? 'Outras rodadas' : 'Rodadas'])
 @endif
+@if(! empty($lifeLogs))@include('life.partials.dialog')@endif
 @endsection

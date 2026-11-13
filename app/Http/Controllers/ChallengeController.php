@@ -26,8 +26,9 @@ class ChallengeController extends Controller
         }
         $this->service->expire();
         $this->service->autoConfirmOverdue();
-        $open = $this->query($request)->whereIn('status', ['pending', 'accepted'])->latest()->get();
-        $history = $this->query($request)->whereNotIn('status', ['pending', 'accepted'])->latest()->paginate(15);
+        // Mais recente primeiro; criados no mesmo segundo desempatam pelo id (no PostgreSQL o empate vinha em ordem qualquer).
+        $open = $this->query($request)->whereIn('status', ['pending', 'accepted'])->latest()->latest('id')->get();
+        $history = $this->query($request)->whereNotIn('status', ['pending', 'accepted'])->latest()->latest('id')->paginate(15);
         $rows = $this->rows($request, $open->concat($history->getCollection()));
         $open = $open->map(fn (Challenge $c) => $rows[$c->id])->sortByDesc('needs_me')->values();
         $history->setCollection($history->getCollection()->map(fn (Challenge $c) => $rows[$c->id]));
@@ -68,7 +69,10 @@ class ChallengeController extends Controller
         $this->service->autoConfirmOverdue();
         $ranked = $challenge->is_ranked ? RankedMatch::where(['source_type' => 'challenge', 'source_id' => $challenge->id])->first() : null;
 
-        return view('challenges.show', ['challenge' => $challenge->fresh(['challenger', 'opponent', 'casualMatch']), 'rankedMatch' => $ranked]);
+        // Desafio ranqueado: o contador grava na partida ranqueada.
+        $lifeChart = app(\App\Services\LifeLogService::class)->chartFor($ranked ? 'ranked' : 'challenge', $ranked ? $ranked->id : $challenge->id, $request->user());
+
+        return view('challenges.show', ['challenge' => $challenge->fresh(['challenger', 'opponent', 'casualMatch']), 'rankedMatch' => $ranked, 'lifeChart' => $lifeChart]);
     }
 
     public function transition(Request $request, Challenge $challenge)

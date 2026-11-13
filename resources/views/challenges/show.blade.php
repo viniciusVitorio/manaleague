@@ -1,6 +1,7 @@
 @extends('layouts.app')
 {{-- Tela ao vivo: atualiza sozinha quando algo muda (live-refresh.js). --}}
 @section('live-scope', 'challenge:'.$challenge->id)
+@push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/life-chart.css') }}"><script defer src="{{ \App\Support\VersionedAsset::url('js/life-chart.js') }}"></script>@endpush
 @section('content')
 @php($match = $challenge->casualMatch)
 <a class="back-link" href="{{ route('challenges.index') }}">← Desafios</a>
@@ -29,4 +30,8 @@
 @endif
 @else<p>Este convite foi encerrado. Você pode enviar outro na página de desafios.</p>@endif
 </section>
+{{-- Gráfico da partida: só quando ela foi jogada com o contador de vida. --}}
+@if($lifeChart)
+<section class="card section-card" aria-labelledby="life-chart-heading"><h2 id="life-chart-heading">Gráfico da partida</h2>@include('life.partials.chart', ['chart' => $lifeChart])</section>
+@endif
 @endsection

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\GameMatch;
 use App\Models\Tournament;
+use App\Services\LifeLogService;
 use App\Services\StandingsService;
 use App\Services\TournamentRecapService;
 use Illuminate\View\View;
@@ -23,6 +24,8 @@ class PublicArenaController extends Controller
         $entry = $profile ? $tournament->players->firstWhere('player_profile_id', $profile->id) : null;
         $snapshot = app(\App\Services\LiveDisplayService::class)->snapshot($tournament);
         $slug = $tournament->public_slug;
-        return view('arena.public', compact('snapshot', 'slug', 'tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'recap', 'profile', 'entry'));
+        // Gráfico da partida: o jogador vê o das próprias partidas (o organizador vê todos na página dele).
+        $lifeLogs = app(LifeLogService::class)->viewableInTournament($tournament, auth()->user());
+        return view('arena.public', compact('snapshot', 'slug', 'tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'recap', 'profile', 'entry', 'lifeLogs'));
     }
 }

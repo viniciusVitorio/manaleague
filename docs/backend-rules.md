@@ -62,6 +62,21 @@ Como organizar controller, service, model, migration e regra de negócio. Comple
   Feature flag: `config('ranked.enabled')`. Detalhes em [ranked.md](ranked.md).
 - **Desafios:** casual não tem empate na UI de estatística (V–D). Status: `pending → accepted → completed`
   (ou `declined`, `cancelled`, `expired`, que expira de forma preguiçosa ao abrir as páginas). Placar sem resposta por `Challenge::CONFIRM_DAYS` dias é confirmado sozinho (`ChallengeService::autoConfirmOverdue`, também ao abrir as páginas e todo dia pelo workflow `daily-tasks.yml`).
+- **Histórico de vida:** o contador grava os pontos no aparelho e manda durante o jogo (no máximo a cada 10 s) e ao sair da
+  tela, não só no envio do placar: o placar pode sair pelo formulário, pelo adversário ou pelo organizador
+  (`LifeLogService::store`, um por partida: o primeiro aparelho que gravou é o dono; vazio do dono apaga). O filtro de
+  misclick fica no cliente (`public/js/life-log.js`: a vida precisa assentar 3 s; voltar ao valor anterior em até 15 s
+  apaga o ponto). O gráfico (`LifeLogService::chartFor`) só aparece com a partida com resultado e segue quem pode ver a
+  partida: os jogadores; no torneio também organizador e clube. Partida sem contador não tem gráfico. Com a mesa
+  compartilhada (`LifeTableService`), o placar é da mesa mas o histórico é de cada aparelho (a mesa não guarda tempo):
+  o contador observa o placar (toque dele ou do outro celular, em `logSee`) e grava em `<storageKey>:log`.
+- **Resumo da partida:** `MatchDetailService::for` monta o mesmo resumo para torneio, desafio e Ranked (jogadores, deck do
+  inscrito no torneio, placar, vencedor e o gráfico de `chartFor`), sempre com quem vê à esquerda. Quem não pode ver a
+  partida recebe 404. Em Minhas partidas, a linha encerrada do histórico abre o resumo na janela (`data-dialog-src`); em
+  andamento, a linha continua levando à tela com as ações. Desafio e Ranked não guardam deck. Partida ranqueada (desafio,
+  Ranked ou torneio ranqueado) mostra o ELO de cada jogador (antes → depois, Δ e a divisão), só para quem passa no `view`
+  da `RankedMatch` (os dois jogadores e a moderação; o organizador do torneio não vê). Vem do lançamento `match` do
+  ledger; se o formato já teve correção, de `RatingReplayService::worth` (o recálculo em ordem que a correção aplicou).
 - **Avatar:** emoji único (servidor valida 1 grafema pictográfico; `PlayerProfile::emoji()` corta valores antigos).
 
 ## 6. Banco e migrations

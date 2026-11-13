@@ -194,6 +194,8 @@ class LifeCounterService
             'poisonLimit' => self::POISON_LIMIT,
             'commanderLimit' => self::COMMANDER_DAMAGE_LIMIT,
             'idempotencyKey' => (string) Str::uuid(),
+            // Para onde vai o histórico de vida (gráfico da partida) durante o jogo.
+            'logUrl' => route('life.log.store', [$config['type'], $config['id']]),
             // Estado salvo no aparelho (copia da mesa + jogadas ainda nao enviadas): um por mesa e por conta.
             'storageKey' => $table ? LifeTableService::storageKey($table, $user) : 'ml-life:'.$config['type'].':'.$config['id'].':'.$user->id,
         ];

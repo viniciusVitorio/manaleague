@@ -16,7 +16,7 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 | **Live** | players submit scores from their phones, with confirmation or dispute; public tournament page (no account needed) and TV mode; pairings, scores, the round timer and notifications show up in real time (WebSocket) |
 | **Challenges** | 1v1 matches between friends, casual or ranked, with history and rivalries; a score the opponent does not confirm or dispute within 7 days is confirmed automatically |
 | **Ranked** | seasons with ELO/PDL, rank on the profile and moderation ([rules](docs/ranked.md)) |
-| **Life counter** | life counter for tournament matches, challenges and Ranked, shared between the players' phones in real time (works offline and syncs back); counters are only available from their registered match |
+| **Life counter** | life counter for tournament matches, challenges and Ranked, shared between the players' phones in real time (works offline and syncs back); counters are only available from their registered match. Matches played with it get a life chart of each game, with misclicks filtered out. Clicking a played match in My matches opens its summary: players, decks, score, winner, the ELO each player won or lost in ranked matches, and the life chart, which can be collapsed |
 | **Decks** | deck building with Scryfall search, import and export (Arena format and ManaBox CSV), foils, banned-card tag, Pauper legality check (cards never printed at common are tagged and blocked from official-rules tournaments), opening-hand simulator, version history and deck comparison |
 | **Collection** | ManaBox CSV import, search only your own cards and see what is missing to build a deck |
 | **Profile** | personal address (`/p/your-handle`), photo or emoji, showcase, stats, recent form and achievements (some of them secret) |
@@ -73,7 +73,7 @@ docker compose exec app php artisan db:seed --class=DemoSeeder
 ```bash
 php artisan test                           # PHPUnit suite (feature and unit)
 php artisan test --filter TestName         # a single file or method
-node --test tests/js/deck-simulator.test.cjs tests/js/life-core.test.cjs
+node --test "tests/js/*.test.cjs"          # JS tests
 composer lint                              # Pint in check mode
 ```
 
