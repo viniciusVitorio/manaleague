@@ -26,8 +26,9 @@ class ChallengeController extends Controller
         }
         $this->service->expire();
         $this->service->autoConfirmOverdue();
-        $open = $this->query($request)->whereIn('status', ['pending', 'accepted'])->latest()->get();
-        $history = $this->query($request)->whereNotIn('status', ['pending', 'accepted'])->latest()->paginate(15);
+        // Mais recente primeiro; criados no mesmo segundo desempatam pelo id (no PostgreSQL o empate vinha em ordem qualquer).
+        $open = $this->query($request)->whereIn('status', ['pending', 'accepted'])->latest()->latest('id')->get();
+        $history = $this->query($request)->whereNotIn('status', ['pending', 'accepted'])->latest()->latest('id')->paginate(15);
         $rows = $this->rows($request, $open->concat($history->getCollection()));
         $open = $open->map(fn (Challenge $c) => $rows[$c->id])->sortByDesc('needs_me')->values();
         $history->setCollection($history->getCollection()->map(fn (Challenge $c) => $rows[$c->id]));

@@ -27,12 +27,17 @@ class ChallengesPageTest extends TestCase
         $service->transition($done, $bia, 'accept');
         $match = $service->report($done, $bia, 2, 1);
         $service->review($done->fresh(), $ana, 'confirm', $match->revision);
-        // Em andamento: a Bia enviou um placar que a Ana precisa confirmar, e o Caio mandou um convite.
+        // Em andamento (o que precisa da Ana vem antes; dentro de cada grupo, o mais recente primeiro): o Caio mandou um
+        // convite, depois a Bia enviou um placar que a Ana precisa confirmar. Cada um num minuto, para a ordem não
+        // depender de empate na data de criação.
+        $this->travel(1)->minutes();
+        $service->create($caio, $ana->playerProfile, 'Pauper', 1, now()->addDay());
+        $this->travel(1)->minutes();
         $toConfirm = $service->create($bia->fresh(), $ana->playerProfile, 'Modern', 5, now()->addDay());
         $service->transition($toConfirm, $ana, 'accept');
         $service->report($toConfirm->fresh(), $bia, 3, 0);
-        $service->create($caio, $ana->playerProfile, 'Pauper', 1, now()->addDay());
         // E um convite que a própria Ana mandou e ainda não foi respondido.
+        $this->travel(1)->minutes();
         $service->create($ana, $caio->playerProfile, 'Pauper', 3, now()->addDay());
 
         $this->actingAs($ana)->get(route('challenges.index'))->assertOk()
