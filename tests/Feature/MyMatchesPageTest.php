@@ -112,7 +112,8 @@ class MyMatchesPageTest extends TestCase
         $this->actingAs($ana)->get(route('matches.mine'))->assertOk()
             ->assertSeeInOrder(['Em andamento', 'desafiou você', 'Convite recebido', 'Histórico', 'Desafio casual', 'Pauper · MD3', 'Vitória 2–1'])
             ->assertSee('href="'.route('challenges.show', $invite).'"', false)
-            ->assertSee('href="'.route('challenges.show', $done).'"', false)
+            // Desafio encerrado abre o resumo da partida na janela (MatchDetailTest).
+            ->assertSee('href="'.route('matches.detail', ['challenge', $done->id]).'"', false)
             ->assertSeeText('1 partida encerrada · campanha 1–0–0');
 
         $this->actingAs($bia)->get(route('matches.mine', ['tipo' => 'desafios']))->assertOk()

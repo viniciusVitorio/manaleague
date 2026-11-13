@@ -41,6 +41,8 @@ class MyMatchesService
 
             return $this->row($m, $playerIds, $submissions->get($m->id), $user, $upcoming ? (int) $currentRounds->get($m->tournament_id) : null) + [
                 'kind' => 'tournament', 'open' => $m->status === GameMatch::STATUS_PENDING && ! $upcoming, 'upcoming' => $upcoming,
+                // Encerrada: a linha abre o resumo da partida (decks, placar e gráfico de vida).
+                'detailUrl' => $m->status === GameMatch::STATUS_FINISHED ? route('matches.detail', ['tournament', $m->id]) : null,
                 'date' => $upcoming ? null : ($m->played_at ?? $m->updated_at),
                 'result' => $m->status === GameMatch::STATUS_FINISHED && ! $m->pod_player_ids ? $this->resultOf($m, $playerIds) : null,
             ];
@@ -53,6 +55,7 @@ class MyMatchesService
         $challenges = collect($rowsService->rows($user, $rowsService->query($user)->get()))->values()->map(fn (array $r) => array_merge($r, [
             'kind' => 'challenge', 'open' => in_array($r['challenge']->status, ['pending', 'accepted'], true),
             'href' => route('challenges.show', $r['challenge']), 'tone' => $r['tone'] ?? 'neutral',
+            'detailUrl' => in_array($r['challenge']->status, ['pending', 'accepted'], true) ? null : route('matches.detail', ['challenge', $r['challenge']->id]),
         ]));
 
         // Ranked: desafios ranqueados, torneios ranqueados e (legado) partidas do matchmaking.
@@ -119,6 +122,7 @@ class MyMatchesService
                 return ['kind' => 'ranked', 'ranked' => $m, 'opponent' => $one ? $m->playerTwo : $m->playerOne,
                     'open' => in_array($m->status, ['pending', 'reported', 'disputed'], true),
                     'label' => $label, 'tone' => $tone, 'needs_me' => $needsMe, 'href' => route('ranked.matches.show', $m),
+                    'detailUrl' => in_array($m->status, ['pending', 'reported', 'disputed'], true) ? null : route('matches.detail', ['ranked', $m->id]),
                     'date' => $m->confirmed_at ?? $m->played_at ?? $m->updated_at,
                     'result' => $m->status === 'confirmed' ? ($mine > $theirs ? 'w' : ($mine < $theirs ? 'l' : 'd')) : null];
             });

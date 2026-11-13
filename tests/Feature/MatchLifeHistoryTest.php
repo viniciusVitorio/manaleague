@@ -110,7 +110,9 @@ class MatchLifeHistoryTest extends TestCase
         $this->actingAs($owner)->get($url)->assertOk();
         $this->actingAs(User::factory()->create())->get($url)->assertNotFound();
 
-        // Onde aparece: o link do gráfico fica na página do organizador e na página pública só para quem jogou.
+        // Onde aparece: em Minhas partidas, dentro do resumo da partida; o link do gráfico sozinho fica na página do organizador
+        // e na página pública só para quem jogou.
+        $this->actingAs($ana)->get(route('matches.detail', ['tournament', $match->id]))->assertOk()->assertSeeInOrder(['Gráfico de vida', 'Game 1', 'vitória de Ana']);
         $this->actingAs($owner)->get(route('tournaments.show', $t))->assertOk()->assertSee('href="'.$url.'"', false)->assertSee('Gráfico da partida');
         $this->actingAs($bia)->get(route('arena.public', $t->public_slug))->assertOk()->assertSee('href="'.$url.'"', false);
         $this->actingAs(User::factory()->create())->get(route('arena.public', $t->public_slug))->assertOk()->assertDontSee('href="'.$url.'"', false);

@@ -12,6 +12,8 @@ Route::middleware(['auth','throttle:60,1'])->group(function() {
  Route::post('/match-submissions/{submission}/respond',[MatchResultSubmissionController::class,'respond'])->name('matches.submissions.respond');
  Route::post('/match-submissions/{submission}/resolve',[MatchResultSubmissionController::class,'resolve'])->name('matches.submissions.resolve');
  Route::get('/me/matches',[MatchResultSubmissionController::class,'index'])->name('matches.mine');
+ // Resumo de uma partida (quem jogou, decks, placar e gráfico de vida): abre na janela ao clicar na linha do histórico.
+ Route::get('/me/matches/{type}/{id}',[\App\Http\Controllers\MatchDetailController::class,'show'])->whereIn('type',\App\Services\MatchDetailService::TYPES)->whereNumber('id')->name('matches.detail');
  // Confirma de uma vez os placares enviados pelos adversários (torneio, desafio e Ranked).
  Route::post('/me/results/confirm-all',[\App\Http\Controllers\PendingResultsController::class,'confirmAll'])->middleware('throttle:10,1')->name('results.confirm-all');
  Route::post('/tournaments/{tournament}/matches/{match}/submissions',[MatchResultSubmissionController::class,'store'])->middleware('throttle:20,1')->name('matches.submissions.store');

@@ -1,0 +1,64 @@
+/* Resumo da partida (matches/partials/detail): placar com os dois lados, decks, vencedor e o gráfico de vida recolhível. */
+.mdetail{display:grid;gap:16px}
+.mdetail-context{margin:0;color:var(--ui-fg-muted);font-size:.86rem}
+
+.mdetail-board{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;gap:12px;padding:20px 12px 16px;
+    border:1px solid var(--ui-border);border-radius:var(--ui-radius);background:var(--ui-muted)}
+.mdetail-side{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;text-align:center}
+.mdetail-avatar{display:inline-grid;flex:0 0 auto;place-items:center;box-sizing:border-box;width:56px;height:56px;overflow:hidden;
+    border:2px solid var(--ui-border-strong);border-radius:50%;background:var(--ui-card);color:var(--ui-fg);font-size:1.3rem;font-weight:600;line-height:1}
+.mdetail-avatar img{display:block;width:100%;height:100%;object-fit:cover}
+.mdetail-side.is-winner .mdetail-avatar{border-color:var(--ui-warning)}
+.mdetail-who{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px 6px;min-width:0}
+.mdetail-who strong{font-size:.98rem;overflow-wrap:anywhere}
+.mdetail-who .player-link{color:inherit;text-decoration:none}
+.mdetail-who .player-link:hover{text-decoration:underline;text-underline-offset:3px}
+.mdetail-me{padding:1px 6px;border:1px solid var(--ui-border);border-radius:999px;background:var(--ui-card);color:var(--ui-fg-muted);
+    font-size:.66rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.mdetail-deck{display:inline-flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px 6px;color:var(--ui-fg-muted);font-size:.84rem;overflow-wrap:anywhere}
+.mdetail-deck .player-link{color:inherit}
+.mdetail-deck.is-empty{color:var(--ui-fg-subtle)}
+.mdetail-crown{display:inline-flex;align-items:center;gap:4px;color:var(--ui-warning);font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.mdetail-score{display:flex;align-items:center;gap:8px;align-self:center;margin-top:-14px;font-size:2.2rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.mdetail-score span{color:var(--ui-fg-subtle);font-weight:400}
+.mdetail-vs{color:var(--ui-fg-subtle);font-size:1.4rem}
+
+/* ELO da partida ranqueada, embaixo do deck: quanto mudou (verde/vermelho), de quanto para quanto e a divisão depois. */
+.mdetail-elo{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.78rem;color:var(--ui-fg-muted);font-variant-numeric:tabular-nums}
+.mdetail-elo b{padding:2px 9px;border-radius:999px;background:var(--ui-card);border:1px solid var(--ui-border);color:var(--ui-fg);font-size:.82rem;font-weight:700}
+.mdetail-elo.is-up b{border-color:color-mix(in srgb,var(--ui-success) 45%,transparent);background:color-mix(in srgb,var(--ui-success) 12%,var(--ui-card));color:var(--ui-success)}
+.mdetail-elo.is-down b{border-color:color-mix(in srgb,var(--ui-danger) 45%,transparent);background:color-mix(in srgb,var(--ui-danger) 12%,var(--ui-card));color:var(--ui-danger)}
+.mdetail-elo-tier{display:inline-flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px;color:var(--ui-fg);font-weight:600}
+.mdetail-elo-tier em{padding:0 6px;border-radius:999px;background:var(--ui-card);border:1px solid var(--ui-border);color:var(--ui-fg-muted);
+    font-size:.66rem;font-style:normal;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.mdetail-elo-note{display:flex;align-items:center;justify-content:center;gap:6px;margin:-6px 0 0;color:var(--ui-fg-muted);font-size:.84rem;text-align:center}
+
+.mdetail-result{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 10px;margin:0;font-size:.92rem;text-align:center}
+.mdetail-result span{color:var(--ui-fg-muted)}
+
+.mdetail-pod{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.mdetail-pod li{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm)}
+.mdetail-pod .mdetail-side{flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 10px;text-align:left}
+.mdetail-pod .mdetail-avatar{width:36px;height:36px;font-size:.9rem}
+.mdetail-place{min-width:2.4ch;color:var(--ui-fg-muted);font-weight:700;font-variant-numeric:tabular-nums}
+
+.mdetail-chart{padding-top:12px;border-top:1px solid var(--ui-border)}
+.mdetail-chart summary{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:.95rem;font-weight:600;list-style:none}
+.mdetail-chart summary::-webkit-details-marker{display:none}
+.mdetail-chart summary:focus-visible{border-radius:var(--ui-radius-sm);box-shadow:0 0 0 2px var(--ui-ring);outline:none}
+.mdetail-chev{margin-left:auto;color:var(--ui-fg-muted);transition:transform .15s var(--ui-ease)}
+.mdetail-chart[open] .mdetail-chev{transform:rotate(180deg)}
+.mdetail-chart[open] summary{margin-bottom:12px}
+.mdetail-nochart{display:flex;align-items:center;gap:8px;margin:0;padding:12px 14px;border:1px dashed var(--ui-border);border-radius:var(--ui-radius-sm);
+    color:var(--ui-fg-muted);font-size:.86rem}
+.mdetail-link{justify-self:start}
+
+.mdetail-dialog{width:min(720px,calc(100% - 32px))}
+.mdetail-dialog .ui-dialog-body{overflow-y:auto;max-height:calc(100dvh - 140px)}
+
+@media(max-width:480px){
+    .mdetail-board{gap:6px;padding:16px 6px 14px}
+    .mdetail-avatar{width:46px;height:46px;font-size:1.1rem}
+    .mdetail-score{gap:5px;font-size:1.8rem}
+    .mdetail-deck{font-size:.8rem}
+}

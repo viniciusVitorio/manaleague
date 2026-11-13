@@ -1,9 +1,10 @@
-{{-- Desafio (casual ou ranqueado) ou partida Ranked do matchmaking. A linha inteira leva à tela do desafio/partida,
-     onde ficam as ações (enviar, confirmar, contestar); por isso o nome do adversário é texto, não link de perfil. --}}
+{{-- Desafio (casual ou ranqueado) ou partida Ranked do matchmaking. Em andamento, a linha leva à tela do desafio/partida,
+     onde ficam as ações (enviar, confirmar, contestar); no histórico, abre o resumo da partida na janela.
+     Por isso o nome do adversário é texto, não link de perfil. --}}
 @php($isChallenge = $row['kind'] === 'challenge')
 @php($c = $isChallenge ? $row['challenge'] : null)
 @php($rm = $isChallenge ? null : $row['ranked'])
-<a class="ui-row mm-row mm-link is-{{ $row['tone'] }} @if($row['needs_me']) needs-me @endif" href="{{ $row['href'] }}">
+<a class="ui-row mm-row mm-link is-{{ $row['tone'] }} @if($row['needs_me']) needs-me @endif" href="{{ $row['detailUrl'] ?? $row['href'] }}"@if(! empty($row['detailUrl'])) data-dialog-open="match-dialog" data-dialog-src @endif>
     <span class="mm-round" aria-hidden="true"><x-icon :name="$isChallenge ? 'swords' : 'medal'" :size="15" /></span>
     <span class="ui-row-main">
         <span class="ui-row-title">
