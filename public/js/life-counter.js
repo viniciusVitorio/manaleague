@@ -159,13 +159,18 @@
 
     const hub = button('life-hub', '', 'Menu da partida');
     hub.addEventListener('click', openMenu);
+    // Saída sempre à vista (abriu sem querer? é só tocar no X). O placar e as vidas ficam salvos no aparelho.
+    const exit = el('a', 'life-exit', '✕');
+    exit.href = cfg.resultUrl;
+    exit.setAttribute('aria-label', 'Sair do contador (o placar fica salvo)');
+    exit.title = 'Sair (o placar fica salvo)';
     const toastEl = el('div', 'life-toast');
     toastEl.setAttribute('role', 'status');
     const modal = el('div', 'life-modal');
     modal.hidden = true;
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    root.append(board, hub, toastEl, modal);
+    root.append(board, hub, exit, toastEl, modal);
 
     // ---------- render ----------
     function placeOf(i) {

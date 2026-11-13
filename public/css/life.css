@@ -81,6 +81,12 @@ html, body.life-body { margin: 0; height: 100%; background: #09090b; color: #faf
     border: 4px solid #09090b; background: #fafafa; color: #09090b; font: 800 17px/1 var(--ff); cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.45); }
 .life-hub.done { background: #facc15; }
 .life-hub:focus-visible { outline: 3px solid #a78bfa; }
+/* X para sair: na linha do meio, junto à borda esquerda, longe dos números e igual para os dois lados da mesa. */
+.life-exit { position: absolute; left: max(14px, env(safe-area-inset-left)); top: 50%; z-index: 4; transform: translateY(-50%); display: grid; place-items: center;
+    width: 40px; height: 40px; border: 3px solid #09090b; border-radius: 50%; background: rgba(24,24,27,.92); color: #fafafa; font: 700 16px/1 var(--ff);
+    text-decoration: none; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+.life-exit:hover { background: #27272a; }
+.life-exit:focus-visible { outline: 3px solid #a78bfa; outline-offset: 2px; }
 
 .life-toast { position: absolute; left: 50%; top: calc(50% + 44px); z-index: 5; transform: translate(-50%, 8px); max-width: min(90vw, 460px); padding: 10px 16px;
     border-radius: 14px; background: rgba(9,9,11,.92); color: #fff; font-weight: 600; text-align: center; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
