@@ -18,7 +18,7 @@ class SecurityHeaders
         ."style-src 'self' 'unsafe-inline'; "
         ."img-src 'self' data: https://cards.scryfall.io%AVATARS%; "   // cartas oficiais + bucket das fotos de perfil
         ."font-src 'self'; "
-        ."connect-src 'self'; "
+        ."connect-src 'self'%REALTIME%; "   // + WebSocket do Reverb na mesma origem (tempo real)
         ."object-src 'none'; "
         ."base-uri 'self'; "
         ."form-action 'self'; "
@@ -27,11 +27,29 @@ class SecurityHeaders
     public function __construct(private readonly AvatarService $avatars) {}
 
     /** Fotos de perfil vem do bucket S3 (URL assinada) quando AVATAR_DISK=s3; so essa origem e liberada. */
-    private function csp(): string
+    private function csp(Request $request): string
     {
         $origin = $this->avatars->cspOrigin();
 
-        return str_replace('%AVATARS%', $origin ? ' '.$origin : '', self::CSP);
+        return str_replace(['%AVATARS%', '%REALTIME%'], [$origin ? ' '.$origin : '', $this->realtimeOrigins($request)], self::CSP);
+    }
+
+    /**
+     * Tempo real: o WebSocket do Reverb. Navegadores antigos nao tratam ws(s):// do proprio host como 'self',
+     * entao o host atual entra explicito; REVERB_CLIENT_URL (dev sem Caddy) libera so aquela origem.
+     */
+    private function realtimeOrigins(Request $request): string
+    {
+        if (! config('reverb.client.enabled')) {
+            return '';
+        }
+        $url = (string) config('reverb.client.url');
+        if ($url !== '' && ($parts = parse_url($url)) && isset($parts['scheme'], $parts['host'])) {
+            return ' '.$parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
+        }
+        $host = $request->getHttpHost();
+
+        return ' wss://'.$host.' ws://'.$host;
     }
 
     public function handle(Request $request, Closure $next): Response
@@ -39,7 +57,7 @@ class SecurityHeaders
         $response = $next($request);
 
         $headers = [
-            'Content-Security-Policy' => $this->csp(),
+            'Content-Security-Policy' => $this->csp($request),
             'X-Frame-Options' => 'SAMEORIGIN',
             'X-Content-Type-Options' => 'nosniff',
             'Referrer-Policy' => 'strict-origin-when-cross-origin',

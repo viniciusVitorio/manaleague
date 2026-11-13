@@ -10,7 +10,10 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    // Tempo real: POST /broadcasting/auth autoriza os canais privados (sessao + CSRF, como o resto do site).
+    ->withBroadcasting(__DIR__.'/../routes/channels.php', ['middleware' => ['web', 'auth', 'throttle:120,1']])
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias(['auth' => \App\Http\Middleware\Authenticate::class]);
         $middleware->validateCsrfTokens(except: []);
         // AsyncFormRedirects fica por fora de todo o grupo web: converte tambem os redirects de auth/guest.
         $middleware->web(

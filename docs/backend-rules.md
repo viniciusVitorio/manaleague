@@ -48,6 +48,10 @@ Como organizar controller, service, model, migration e regra de negócio. Comple
 - Conquistas: depois de um resultado confirmado, `AchievementService::sync($profile)` para os dois jogadores
   (avisa no sino; `notify: false` quando for só leitura de página).
 - Telas ao vivo: `LiveVersionService` (escopo `me`, `challenge:{id}`...) e `@section('live-scope', ...)` na view.
+  Com o Reverb ligado, o aviso chega na hora sozinho: o `LiveChangeObserver` observa os models dessas telas. Model novo
+  que aparece numa tela ao vivo entra no `AppServiceProvider` e no `LiveChannels::affectedBy()`. Canal privado novo
+  ganha regra em `routes/channels.php` (a mesma da página) e teste de quem pode e quem não pode assinar.
+  O aviso não leva dado; mensagem com conteúdo (`RealtimeService::send`) só em canal privado já autorizado.
 
 ## 5. Domínios com regra especial
 
@@ -63,7 +67,9 @@ Como organizar controller, service, model, migration e regra de negócio. Comple
   (`LifeLogService::store`, um por partida: o primeiro aparelho que gravou é o dono; vazio do dono apaga). O filtro de
   misclick fica no cliente (`public/js/life-log.js`: a vida precisa assentar 3 s; voltar ao valor anterior em até 15 s
   apaga o ponto). O gráfico (`LifeLogService::chartFor`) só aparece com a partida com resultado e segue quem pode ver a
-  partida: os jogadores; no torneio também organizador e clube. Partida sem contador não tem gráfico.
+  partida: os jogadores; no torneio também organizador e clube. Partida sem contador não tem gráfico. Com a mesa
+  compartilhada (`LifeTableService`), o placar é da mesa mas o histórico é de cada aparelho (a mesa não guarda tempo):
+  o contador observa o placar (toque dele ou do outro celular, em `logSee`) e grava em `<storageKey>:log`.
 - **Resumo da partida:** `MatchDetailService::for` monta o mesmo resumo para torneio, desafio e Ranked (jogadores, deck do
   inscrito no torneio, placar, vencedor e o gráfico de `chartFor`), sempre com quem vê à esquerda. Quem não pode ver a
   partida recebe 404. Em Minhas partidas, a linha encerrada do histórico abre o resumo na janela (`data-dialog-src`); em

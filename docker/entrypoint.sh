@@ -13,6 +13,11 @@ if [ "${DB_CONNECTION:-pgsql}" = "sqlite" ]; then
     touch "$database_path"
 fi
 
+# O servico reverb usa a mesma imagem: so o app migra (SKIP_MIGRATIONS=1 no reverb).
+if [ "${SKIP_MIGRATIONS:-0}" = "1" ]; then
+    exec "$@"
+fi
+
 php artisan migrate --force --no-interaction
 
 # Migracao unica SQLite -> PostgreSQL: se o banco antigo ainda estiver no volume, os dados dele

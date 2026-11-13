@@ -1,0 +1,6 @@
+/* Confirmacao de conta: reaproveita o formulario de autenticacao e os tokens do app. */
+.verification-card { min-width: 0; }
+.verification-email { overflow-wrap: anywhere; }
+.verification-actions { display: grid; gap: var(--s3); margin-block: var(--s5); }
+.verification-actions form { margin: 0; }
+.verification-actions .ui-btn { width: 100%; }

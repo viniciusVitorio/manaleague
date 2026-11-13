@@ -26,19 +26,19 @@ Mostre uma tabela com um commit por assunto, na ordem em que fazem sentido:
 
 | # | Mensagem | Arquivos |
 |---|---|---|
-| 1 | `feat(challenges): list your challenges first and move the form to its own page` | `ChallengeController.php`, `challenges/*.blade.php`, `ui.css` (bloco Desafios), `ChallengesPageTest.php` |
+| 1 | `ML-102 - feat: require email verification for new accounts` | `AuthController.php`, `EmailVerificationController.php`, `auth/verify-email.blade.php`, `EmailVerificationTest.php` |
 
 Regras da mensagem:
-- Inglês, Conventional Commits: `feat`, `fix`, `style`, `refactor`, `test`, `docs`, `chore`, com escopo (`profile`, `challenges`,
+- Inglês, com ticket obrigatório: `<ticket> - <type>: <English description>` (ex.: `ML-102 - feat: require email verification for new accounts`). Tipos: `feat`, `fix`, `style`, `refactor`, `test`, `docs`, `chore`; escopo opcional (`profile`, `challenges`,
   `decks`, `ranked`, `life`, `live`, `achievements`...). Assunto no imperativo, minúsculo, sem ponto, até ~72 caracteres.
 - Corpo opcional (2–3 frases) quando a regra não é óbvia ("Only confirmed challenges count; tournaments never do.").
 - **Sem** `Co-Authored-By`, sem "Generated with Claude Code". O autor é o usuário do `git config`.
 
-Diga também em qual branch vai (atual ou nova `feat/...`) e espere o **ok** explícito.
+Diga também em qual branch vai (`<ticket>-<type>-<english-description>`, ex.: `ML-102-feat-email-verification`) e espere o **ok** explícito.
 
 ## 3. Executar (depois do ok)
 
-- Branch nova, se pedida: `git switch -c feat/<nome>` (leva junto as mudanças não commitadas).
+- Branch nova, se pedida: `git switch -c <ticket>-<type>-<english-description>` (leva junto as mudanças não commitadas).
 - Arquivo inteiro de um assunto: `git add <arquivos>` e `git commit -m "<assunto>" -m "<corpo>"`.
 - **Arquivo com dois assuntos** (ex.: `ui.css` com blocos de duas funcionalidades): monte a versão intermediária do arquivo
   só com o bloco do primeiro commit e coloque no índice sem tocar a cópia de trabalho:

@@ -3,7 +3,7 @@
 <div class="auth-shell"><div class="card auth-card">
     <span class="eyebrow">Novo organizador</span>
     <h1>Crie sua conta</h1>
-    <p class="muted">Sua conta controla os torneios e os links públicos mostram apenas os resultados.</p>
+    <p class="muted">Após criar a conta, enviaremos um link para confirmar seu e-mail e liberar o acesso ao ManaLeague.</p>
     <form method="POST" action="{{ route('register') }}">@csrf
         <label>Nome<input name="name" value="{{ old('name') }}" maxlength="100" required></label>
         <label>E-mail<input type="email" name="email" value="{{ old('email') }}" required></label>

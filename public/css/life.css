@@ -115,3 +115,10 @@ html, body.life-body { margin: 0; height: 100%; background: #09090b; color: #faf
 .life-error { padding: 10px 12px; border-radius: 10px; background: #450a0a; color: #fecaca !important; }
 
 @media (prefers-reduced-motion: reduce) { .life-seat.is-low .life-total, .life-seat.is-winner { animation: none; } }
+
+/* Mesa compartilhada: bolinha no botão central. Verde = ao vivo, âmbar = sem conexão (as jogadas ficam no aparelho). */
+.life-hub.has-sync::after { content: ""; position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; border-radius: 50%;
+    border: 3px solid #09090b; background: #a1a1aa; }
+.life-hub.has-sync.is-live::after { background: #4ade80; }
+.life-hub.has-sync.is-offline::after { background: #fbbf24; }
+.life-sync-line { margin-top: -4px !important; }

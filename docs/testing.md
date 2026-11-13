@@ -7,11 +7,13 @@ Todo comportamento que o jogador percebe tem teste. Feature test (HTTP + banco) 
 ```bash
 php artisan test                          # suíte inteira (≈320 testes, ~1 min)
 php artisan test --filter ProfileSocialTest       # um arquivo ou um método
-node --test "tests/js/*.test.cjs"        # JS puro (simulador de mão, histórico de vida)
+node --test "tests/js/*.test.cjs"        # JS puro (simulador de mão, mesa compartilhada, histórico de vida)
 ```
 
 No Windows deste projeto, com o PHP do Herd, use o comando completo do [CLAUDE.md](../CLAUDE.md#comandos).
-Banco de teste: SQLite em memória (`phpunit.xml`), `RANKED_AUTO_YEARLY_SEASON=false`.
+Banco de teste: SQLite em memória (`phpunit.xml`), `RANKED_AUTO_YEARLY_SEASON=false`, `BROADCAST_CONNECTION=null`
+(tempo real desligado). Para testar avisos do Reverb, ligue no teste (`config(['broadcasting.default' => 'reverb'])`),
+use `Event::fake([RealtimeMessage::class])` e, para autorização de canal, recarregue `routes/channels.php` (ver `RealtimeTest`).
 
 ## Onde e como
 

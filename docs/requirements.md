@@ -6,7 +6,7 @@ Requisitos levantados antes da implementacao (fase de Requisitos do SSDLC). Cada
 
 | ID | Requisito |
 |---|---|
-| RF01 | Usuario cria conta e faz login com e-mail e senha; cada conta recebe um perfil de jogador. |
+| RF01 | Usuario cria conta e perfil; contas novas confirmam o e-mail por link assinado antes de acessar recursos privados, com tela de espera e reenvio. Contas anteriores ao ML-102 preservam acesso sem comprovacao retroativa. |
 | RF02 | Organizador cria, edita (antes do inicio) e exclui torneios com nome, formato, data e limite opcional de jogadores. |
 | RF03 | Jogadores entram no torneio por um link de convite; o organizador pode invalidar o link e gerar outro. |
 | RF04 | Organizador adiciona amigos (amizade aceita) diretamente ao torneio. |
@@ -43,3 +43,4 @@ Requisitos levantados antes da implementacao (fase de Requisitos do SSDLC). Cada
 | RS16 | Envio de e-mail sem segredo estatico e com menor privilegio | IAM Role na EC2 restrita a `ses:Send*` + `ses:FromAddress`; DKIM/SPF/DMARC | `terraform/ses.tf` |
 | RS17 | Dados de carta nao podem ser forjados pelo cliente; imagens so do CDN oficial | servidor busca a carta pelo ID no Scryfall; URLs validadas; CSP `img-src` restrito a `cards.scryfall.io` | `DeckCardsTest` |
 | RS18 | Busca de jogadores respeita privacidade e evita spam de pedidos | perfis "so com codigo", minimo de 3 letras, rate limit, maximo de 30 pedidos pendentes | `FriendsPageTest` |
+| RS19 | Novas contas comprovam acesso ao e-mail antes de acessar recursos privados | link assinado com expiracao, ID/hash vinculados a sessao, reenvio autenticado com cooldown e exigencia controlada pelo servidor | `EmailVerificationTest`, `EmailVerificationViewTest`; [ML-102](email-verification.md) |

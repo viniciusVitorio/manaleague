@@ -10,12 +10,13 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 
 | Area | What you can do |
 |---|---|
+| **Account** | e-mail confirmation for new accounts, signed expiring links and resend with cooldown; existing accounts keep access |
 | **Tournaments** | round-robin leagues, Swiss, single or double elimination and Commander pods; finals and third-place match; standard format rules or custom house rules; repeat a tournament with the same settings |
 | **Event day** | sign-up by invite link or QR code, player check-in on the event day, round timer and removal of no-shows |
-| **Live** | players submit scores from their phones, with confirmation or dispute; public tournament page (no account needed) and TV mode |
+| **Live** | players submit scores from their phones, with confirmation or dispute; public tournament page (no account needed) and TV mode; pairings, scores, the round timer and notifications show up in real time (WebSocket) |
 | **Challenges** | 1v1 matches between friends, casual or ranked, with history and rivalries; a score the opponent does not confirm or dispute within 7 days is confirmed automatically |
 | **Ranked** | seasons with ELO/PDL, rank on the profile and moderation ([rules](docs/ranked.md)) |
-| **Life counter** | life counter for tournament matches, challenges and Ranked; matches played with it get a life chart of each game, with misclicks filtered out. Clicking a played match in My matches opens its summary: players, decks, score, winner, the ELO each player won or lost in ranked matches, and the life chart, which can be collapsed |
+| **Life counter** | life counter for tournament matches, challenges and Ranked, shared between the players' phones in real time (works offline and syncs back); counters are only available from their registered match. Matches played with it get a life chart of each game, with misclicks filtered out. Clicking a played match in My matches opens its summary: players, decks, score, winner, the ELO each player won or lost in ranked matches, and the life chart, which can be collapsed |
 | **Decks** | deck building with Scryfall search, import and export (Arena format and ManaBox CSV), foils, banned-card tag, Pauper legality check (cards never printed at common are tagged and blocked from official-rules tournaments), opening-hand simulator, version history and deck comparison |
 | **Collection** | ManaBox CSV import, search only your own cards and see what is missing to build a deck |
 | **Profile** | personal address (`/p/your-handle`), photo or emoji, showcase, stats, recent form and achievements (some of them secret) |
@@ -30,6 +31,7 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 - **Infrastructure:**
   - Docker Compose, with the same runtime locally and in production;
   - Caddy (TLS) and a WAF: Nginx + ModSecurity with the OWASP CRS;
+  - Laravel Reverb for real time (WebSocket), with a polling fallback;
   - AWS: EC2, S3 for profile photos and SES for e-mail;
   - Cloudflare at the edge.
 - **Integrations:** the [Scryfall API](https://scryfall.com/docs/api) for card data, images and ban lists.
@@ -37,6 +39,7 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 
 ```text
 Internet → Cloudflare → Caddy (TLS) → Nginx + ModSecurity/OWASP CRS → PHP-FPM/Laravel → PostgreSQL
+                               └→ /app/* (WebSocket) → Laravel Reverb
 ```
 
 Details and past decisions are in [docs/architecture.md](docs/architecture.md).
@@ -84,16 +87,26 @@ The pipeline in `.github/workflows/pipeline.yml` runs on every pull request to `
 2. **Dependency and filesystem scan:** Composer Audit and Trivy.
 3. **SonarQube Cloud:** a required Quality Gate.
 4. **WAF:**
-   - starts the full stack;
-   - checks that legitimate traffic passes and that classic attacks (SQLi, XSS, LFI, RCE...) are blocked.
+   - builds the app image once, tagged with the commit SHA, and starts app/Reverb from that same image without rebuilding;
+   - checks legitimate traffic, classic attacks (SQLi, XSS, LFI, RCE...), forged IP headers and the Reverb WebSocket;
+   - after all smoke tests pass, exports that image with a SHA256 checksum as `app-image-<commit SHA>` (also on pull requests; retained for one day).
 5. **Deploy to EC2:**
    - SSH is opened only during the deploy, only for the runner's IP;
-   - releases are immutable and switched by symlink;
+   - downloads the tested image artifact from the same workflow run and transfers it alongside the source and production environment;
+   - checks SHA256, imports the image and verifies the expected commit tag before switching the release symlink;
+   - starts Compose with `--no-build`: no PHP extension or Composer compilation runs on EC2, and no new registry or secret is needed;
    - patch notes are synced.
 
 A second workflow, `.github/workflows/daily-tasks.yml`, runs the production routines every day at 06:00 (Brasília) and on demand (**Actions → Daily tasks → Run workflow**): it refreshes the ban list of each format and the Pauper legality of every deck card from Scryfall, and confirms challenge scores left unanswered for 7 days. The deploy also runs the card checks. The run fails, and GitHub notifies the team, when a task fails (for example, Scryfall does not answer).
 
 Publishing, editing or deleting a GitHub Release only syncs the patch notes. It does not test or redeploy code. Each published release becomes a card in the Patch notes tab and a notification for every account ([docs/patch-notes.md](docs/patch-notes.md)).
+
+Deployment regression checks run in the WAF job and can also run locally (Bash and Node.js required):
+
+```bash
+bash docker/deploy/test-load-image.sh
+node --test tests/js/deploy-pipeline.test.cjs
+```
 
 ## Project structure
 
@@ -115,14 +128,15 @@ The docs are written in Portuguese.
 
 - **Architecture and modules:** [architecture.md](docs/architecture.md)
 - **Development rules:** [UI](docs/ui-rules.md) · [back end](docs/backend-rules.md) · [testing](docs/testing.md)
+- **Account verification:** [ML-102 flow and mail configuration](docs/email-verification.md)
 - **Ranked:** [ELO/PDL and rules](docs/ranked.md)
 - **Security:** [SSDLC](docs/ssdlc.md) · [requirements](docs/requirements.md) · [threat model](docs/threat-model.md)
 - **Releases:** [patch notes](docs/patch-notes.md)
 
 ## Contributing
 
-- **Branches:** new work goes on its own branch (`feat/...`, `fix/...`, `docs/...`) and reaches `main` through a pull request.
-- **Commits:** in English, following [Conventional Commits](https://www.conventionalcommits.org/) (`feat(profile): ...`), one commit per topic.
+- **Branches:** `<ticket>-<type>-<english-description>`, for example `ML-102-feat-email-verification`; one ticket per branch, reaching `main` through a pull request.
+- **Commits:** `<ticket> - <type>: <English description>`, for example `ML-102 - feat: require email verification for new accounts`; one commit per topic.
 - **Before opening a PR:**
   - the full test suite passes;
   - UI changes are checked on desktop (1280px) and mobile (390px), in dark and light themes;

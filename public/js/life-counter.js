@@ -1,33 +1,45 @@
 /* Contador de vida (estilo Lotus) vinculado a uma partida do ManaLeague.
- * Estado salvo no aparelho (localStorage) por partida; o resultado final vai para o
- * endpoint canonico da partida (mesmas validacoes do formulario manual). */
+ * A mesa e compartilhada: cada toque vira uma jogada (life-core.js) que vai para o servidor e chega aos outros
+ * celulares pelo Reverb (realtime.js). Sem internet, as jogadas ficam salvas no aparelho (localStorage) e sao
+ * enviadas quando a conexao volta; sem tempo real, o contador pergunta ao servidor de poucos em poucos segundos.
+ * O resultado final vai para o endpoint canonico da partida (mesmas validacoes do formulario manual).
+ * O historico de vida (grafico da partida) fica em cada aparelho e sobe para o servidor durante o jogo (life-log.js). */
 (function () {
     'use strict';
 
     const root = document.getElementById('life-counter');
-    if (!root) return;
+    if (!root || !window.LifeCore || !window.LifeLog) return;
+    const core = window.LifeCore;
     const cfg = JSON.parse(root.dataset.config);
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
     const n = cfg.players.length;
     const isPod = cfg.mode === 'pod';
+    const sync = cfg.sync || null;
+    const me = sync ? sync.me : null;
+    const realtime = window.ManaLeagueRealtime || null;
     const COLORS = ['#7c3aed', '#0891b2', '#d97706', '#059669', '#dc2626', '#db2777'];
     const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // ---------- estado ----------
-    const freshPlayers = () => cfg.players.map(() => ({ life: cfg.startingLife, poison: 0, cmd: {}, out: false, ack: false }));
-    // Histórico de cada game para o gráfico da partida: at = início do game; cada ponto é { t: segundos, s: lugar, l: vida, p: veneno }.
-    const freshGame = () => LifeLog.freshGame(Date.now());
-    const freshState = () => ({ v: 1, game: 1, wins: cfg.players.map(() => 0), winners: [], elim: [], players: freshPlayers(), finished: false, undo: [], key: cfg.idempotencyKey, log: [freshGame()] });
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(cfg.storageKey) || 'null'); } catch (e) { saved = null; }
+    const store = new core.Store(cfg, saved);
+    // Chave de idempotencia do envio do resultado: a mesma em todas as tentativas deste aparelho.
+    const submitKey = (saved && saved.key) || cfg.idempotencyKey;
+    let state = store.view();
+    // Aparelho sem copia da mesa (abriu agora, ou e o segundo celular): a primeira leva de jogadas so monta o placar.
+    let firstCopy = !(saved && saved.v === 2);
+    // "Ainda nao (corrigir)": vale so neste aparelho, ate a vida sair da zona de derrota.
+    const acks = cfg.players.map(() => false);
 
-    let state;
-    try { state = JSON.parse(localStorage.getItem(cfg.storageKey) || 'null'); } catch (e) { state = null; }
-    if (!state || state.v !== 1 || !Array.isArray(state.players) || state.players.length !== n) state = freshState();
-    state.key = state.key || cfg.idempotencyKey;
-    // Partida salva antes do histórico existir: começa a gravar daqui.
-    if (!Array.isArray(state.log) || !state.log.length) state.log = [freshGame()];
+    const save = () => {
+        try { localStorage.setItem(cfg.storageKey, JSON.stringify(Object.assign(store.serialize(), { key: submitKey }))); } catch (e) { /* aba anonima cheia: segue em memoria */ }
+    };
+
     // Cor do fundo: a que cada jogador escolheu nas preferências do perfil. Sem escolha (ou repetida na mesa),
     // pega a primeira cor padrão que ninguém está usando, para os lados nunca ficarem iguais.
-    const seatColors = (() => {
+    let seatColors = [];
+    function computeColors() {
         const taken = new Set(), out = [];
         cfg.players.forEach((p, i) => { if (p.color && !taken.has(p.color)) { out[i] = p.color; taken.add(p.color); } });
         cfg.players.forEach((_, i) => {
@@ -35,8 +47,9 @@
             out[i] = COLORS.find((c) => !taken.has(c)) || COLORS[i % COLORS.length];
             taken.add(out[i]);
         });
-        return out;
-    })();
+        seatColors = out;
+    }
+    computeColors();
     const colorOf = (i) => seatColors[i];
     // Fundo claro (ex.: branco) pede texto escuro; a conta segue a luminância relativa do WCAG.
     function isLight(hex) {
@@ -49,33 +62,7 @@
         return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5;
     }
 
-    const save = () => { try { localStorage.setItem(cfg.storageKey, JSON.stringify(state)); } catch (e) { /* aba anonima cheia: segue em memoria */ } };
-    const clone = (v) => JSON.parse(JSON.stringify(v));
     const name = (i) => cfg.players[i].name || ('Jogador ' + (i + 1));
-
-    // ---------- histórico (sem misclick) ----------
-    // 1) A mudança só entra quando a vida do jogador fica parada por SETTLE_MS: toques seguidos viram um ponto só,
-    //    e −1 seguido de +1 não grava nada.
-    // 2) Desfazer e reiniciar voltam o histórico junto (ele faz parte do estado e do snapshot).
-    // 3) Correção atrasada (em life-log.js): voltou ao valor anterior logo depois, sem nada no meio, o ponto sai.
-    const settle = cfg.players.map(() => null);
-    const curGame = () => state.log[state.log.length - 1];
-    const seconds = (g) => LifeLog.seconds(g, Date.now());
-
-    function touched(i) {
-        clearTimeout(settle[i]);
-        settle[i] = setTimeout(() => commit(i), LifeLog.SETTLE_MS);
-    }
-
-    function commit(i) {
-        clearTimeout(settle[i]);
-        settle[i] = null;
-        const p = state.players[i];
-        if (LifeLog.commit(curGame(), i, { l: p.life, p: p.poison }, cfg.startingLife, Date.now())) { save(); logChanged(); }
-    }
-
-    const flushLog = () => cfg.players.forEach((_, i) => commit(i));
-    const dropPending = () => cfg.players.forEach((_, i) => { clearTimeout(settle[i]); settle[i] = null; });
 
     // ---------- helpers de DOM ----------
     function el(tag, cls, text) {
@@ -115,8 +102,8 @@
     function seatLayout() {
         const landscape = window.innerWidth > window.innerHeight;
         if (!isPod) {
-            const me = cfg.meIndex || 0;
-            return { rows: 2, seats: [{ i: 1 - me, rot: 180, row: 1, col: 1, span: 6 }, { i: me, rot: 0, row: 2, col: 1, span: 6 }] };
+            const mine = cfg.meIndex || 0;
+            return { rows: 2, seats: [{ i: 1 - mine, rot: 180, row: 1, col: 1, span: 6 }, { i: mine, rot: 0, row: 2, col: 1, span: 6 }] };
         }
         const seats = [];
         if (landscape) {
@@ -143,22 +130,20 @@
 
     cfg.players.forEach((_, i) => {
         const seat = el('section', 'life-seat');
-        seat.style.setProperty('--c', colorOf(i));
-        seat.classList.toggle('is-light', isLight(colorOf(i)));
         const panel = el('div', 'life-panel');
         const head = el('div', 'life-head');
-        const nm = el('strong', 'life-name', name(i));
+        const nm = el('strong', 'life-name');
         const pips = el('span', 'life-pips');
         head.append(nm, pips);
         const total = el('div', 'life-total');
         total.setAttribute('aria-live', 'polite');
         const delta = el('div', 'life-delta');
-        const minus = button('life-zone minus', '−', 'Tirar vida de ' + name(i));
-        const plus = button('life-zone plus', '+', 'Dar vida para ' + name(i));
+        const minus = button('life-zone minus', '−');
+        const plus = button('life-zone plus', '+');
         bindHold(minus, (s) => changeLife(i, -s));
         bindHold(plus, (s) => changeLife(i, s));
         const tools = el('div', 'life-tools');
-        const poison = button('life-chip', '', 'Veneno e dano de comandante de ' + name(i));
+        const poison = button('life-chip', '');
         poison.addEventListener('click', () => openTray(i));
         tools.append(poison);
         const outBadge = el('div', 'life-out');
@@ -168,8 +153,22 @@
         panel.append(minus, plus, head, total, delta, tools, outBadge, roll, tray);
         seat.append(panel);
         board.append(seat);
-        panels[i] = { seat, panel, pips, total, delta, poison, outBadge, roll, tray };
+        panels[i] = { seat, panel, nm, minus, plus, pips, total, delta, poison, outBadge, roll, tray };
     });
+
+    // Nome, cor e rotulos dos jogadores da partida.
+    function paintSeats() {
+        cfg.players.forEach((_, i) => {
+            const ui = panels[i];
+            ui.seat.style.setProperty('--c', colorOf(i));
+            ui.seat.classList.toggle('is-light', isLight(colorOf(i)));
+            ui.nm.textContent = name(i);
+            ui.minus.setAttribute('aria-label', 'Tirar vida de ' + name(i));
+            ui.plus.setAttribute('aria-label', 'Dar vida para ' + name(i));
+            ui.poison.setAttribute('aria-label', 'Veneno e dano de comandante de ' + name(i));
+        });
+    }
+    paintSeats();
 
     function layout() {
         const { rows, seats } = seatLayout();
@@ -192,7 +191,7 @@
     exit.href = cfg.resultUrl;
     exit.setAttribute('aria-label', 'Sair do contador (o placar fica salvo)');
     exit.title = 'Sair (o placar fica salvo)';
-    exit.addEventListener('click', () => { flushLog(); save(); syncLog(true); });
+    exit.addEventListener('click', leaving);
     const toastEl = el('div', 'life-toast');
     toastEl.setAttribute('role', 'status');
     const modal = el('div', 'life-modal');
@@ -200,6 +199,7 @@
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
     root.append(board, hub, exit, toastEl, modal);
+    let modalInfo = null; // o que o modal aberto mostra: { kind: 'loss', seat, game } | { kind: 'result' } | ...
 
     // ---------- render ----------
     function placeOf(i) {
@@ -236,12 +236,14 @@
             const place = placeOf(i);
             ui.outBadge.textContent = p.out ? 'Eliminado · ' + place + 'º' : (place === 1 ? '🏆 Vencedor · 1º' : (champion === i ? '🏆 Vencedor' : ''));
             ui.outBadge.hidden = !ui.outBadge.textContent;
+            if (!ui.tray.hidden && ui.tray.refresh) ui.tray.refresh();
         });
         hub.textContent = isPod ? '☰' : 'G' + Math.min(state.game, cfg.bestOf);
         hub.classList.toggle('done', state.finished);
     }
 
     function showDelta(i, d) {
+        if (!d) return;
         const box = deltas[i], ui = panels[i];
         box.sum += d;
         ui.delta.textContent = (box.sum > 0 ? '+' : box.sum < 0 ? '−' : '±') + Math.abs(box.sum);
@@ -259,6 +261,73 @@
         toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
     }
 
+    // ---------- jogadas ----------
+    // Toda mudança passa por aqui: vira jogada, aparece na hora e vai para o servidor logo depois.
+    function act(op) {
+        const prev = state;
+        const last = store.pending[store.pending.length - 1];
+        // Só agrega se comprovadamente nunca enviada; falha/reload nao reabre o mesmo client_id.
+        if (op.type === 'life' && last && last.op.type === 'life' && last.op.seat === op.seat && last.attempted === false
+            && Math.abs(last.op.d + op.d) <= 999 && last.op.d + op.d !== 0) {
+            last.op.d += op.d;
+        } else {
+            store.local(op, me);
+        }
+        state = store.view();
+        save();
+        logSee(prev, [op]);
+        afterChange(prev, []);
+        flushSoon();
+    }
+
+    function changeLife(i, d) {
+        const p = state.players[i];
+        if (state.finished || p.out) return;
+        act({ type: 'life', seat: i, d });
+        showDelta(i, d);
+        if (navigator.vibrate) navigator.vibrate(8);
+    }
+
+    // Depois de qualquer mudança (deste ou de outro celular): tela, animações e avisos que dependem dela.
+    // quiet = primeira cópia da mesa num aparelho novo: mostra o placar sem festejar games antigos.
+    function afterChange(prev, remote, quiet) {
+        render();
+        if (quiet) {
+            closeModal();
+            if (state.finished) showResult(); else checkAll();
+            return;
+        }
+        // Desfeito no outro celular: quem voltou para a zona de derrota não pergunta de novo na hora.
+        if (remote.some((e) => e.op.type === 'undo')) state.players.forEach((p, i) => { if (!p.out && lossReason(i)) acks[i] = true; });
+        remote.forEach((e) => {
+            if (e.op.type === 'life') showDelta(e.op.seat, e.op.d);
+            if (e.op.type === 'cmd') showDelta(e.op.seat, -e.op.d);
+        });
+        const fromOther = remote.length > 0;
+        if (state.game > prev.game && !state.finished) {
+            const w = state.winners[state.winners.length - 1];
+            acks.fill(false);
+            celebrate(w, false);
+            toast('Game ' + (state.game - 1) + ' para ' + name(w) + ' · ' + scoreText() + ' · Game ' + state.game + ' valendo!');
+        } else if (isPod && state.elim.length > prev.elim.length && !state.finished) {
+            const out = state.elim[state.elim.length - 1];
+            toast(name(out) + ' fica em ' + (n - state.elim.length + 1) + 'º');
+        }
+        if (state.roll && state.roll.key !== (prev.roll && prev.roll.key)) showRolls(state.roll.rolls);
+        if (!prev.finished && state.finished) finishUI();
+        else if (prev.finished && !state.finished) {
+            closeModal();
+            if (fromOther) toast('Placar corrigido no outro celular.');
+        }
+        if (state.finished && state.submitted && !(prev.submitted) && state.submitted.by !== me) showResult();
+        // Modal de fim de game aberto, mas a mesa já andou (o outro celular confirmou ou corrigiu): fecha.
+        if (modalInfo && modalInfo.kind === 'loss') {
+            const p = state.players[modalInfo.seat];
+            if (state.finished || state.game !== modalInfo.game || !p || p.out || !lossReason(modalInfo.seat)) closeModal();
+        }
+        if (!state.finished) checkAll();
+    }
+
     // ---------- regras ----------
     function lossReason(i) {
         const p = state.players[i];
@@ -273,21 +342,11 @@
     function check(i) {
         const p = state.players[i];
         const reason = lossReason(i);
-        if (!reason) { p.ack = false; return; }
-        if (p.out || p.ack || state.finished || !modal.hidden) return;
+        if (!reason) { acks[i] = false; return; }
+        if (p.out || acks[i] || state.finished || !modal.hidden) return;
         askLoss(i, reason);
     }
     const checkAll = () => cfg.players.forEach((_, i) => check(i));
-
-    function changeLife(i, d) {
-        const p = state.players[i];
-        if (state.finished || p.out) return;
-        p.life += d;
-        showDelta(i, d);
-        touched(i);
-        save(); render(); check(i);
-        if (navigator.vibrate) navigator.vibrate(8);
-    }
 
     function askLoss(i, reason) {
         const winner = isPod ? null : 1 - i;
@@ -295,65 +354,25 @@
         const text = isPod
             ? reason + (last ? ' A mesa termina aqui.' : ' Confirmar eliminação?')
             : reason + ' Confirmar vitória de ' + name(winner) + ' no game ' + state.game + '?';
-        showModal(isPod ? 'Eliminar ' + name(i) + '?' : 'Fim do game ' + state.game, text, [
-            { label: isPod ? 'Confirmar eliminação' : 'Confirmar', cls: 'primary', fn: () => confirmLoss(i) },
-            { label: 'Ainda não (corrigir)', fn: () => { state.players[i].ack = true; save(); } },
-        ]);
-    }
-
-    // O histórico vai no snapshot: desfazer um game desfaz também o que ele mudou no gráfico.
-    function snapshot() {
-        flushLog();
-        state.undo.push(clone({ game: state.game, wins: state.wins, winners: state.winners, elim: state.elim, players: state.players, log: state.log }));
-        if (state.undo.length > 15) state.undo.shift();
-    }
-
-    function confirmLoss(i) {
-        snapshot();
-        if (isPod) {
-            state.players[i].out = true;
-            state.elim.push(i);
-            curGame().out.push({ t: seconds(curGame()), s: i });
-            logChanged();
-            const alive = cfg.players.map((_, k) => k).filter((k) => !state.players[k].out);
-            if (alive.length <= 1) return finish();
-            save(); render();
-            toast(name(i) + ' fica em ' + (n - state.elim.length + 1) + 'º');
-            return checkAll();
-        }
-        const w = 1 - i;
-        state.wins[w]++;
-        state.winners.push(w);
-        curGame().winner = w;
-        logChanged();
-        if (state.wins[w] >= cfg.winsNeeded) return finish();
-        state.game++;
-        state.players = freshPlayers();
-        state.log.push(freshGame());
-        save(); render();
-        celebrate(w, false);
-        toast('Game ' + (state.game - 1) + ' para ' + name(w) + ' · ' + scoreText() + ' · Game ' + state.game + ' valendo!');
+        const game = state.game;
+        showModal(isPod ? 'Eliminar ' + name(i) + '?' : 'Fim do game ' + game, text, [
+            { label: isPod ? 'Confirmar eliminação' : 'Confirmar', cls: 'primary', fn: () => act({ type: 'loss', seat: i, game }) },
+            { label: 'Ainda não (corrigir)', fn: () => { acks[i] = true; } },
+        ], null, null, { kind: 'loss', seat: i, game });
     }
 
     function undo() {
-        const snap = state.undo.pop();
-        if (!snap) return toast('Nada para desfazer.');
-        dropPending();
-        Object.assign(state, snap, { finished: false });
-        logChanged();
-        if (!Array.isArray(state.log) || !state.log.length) state.log = [freshGame()];
+        if (!state.undo.length) return toast('Nada para desfazer.');
         // Quem estava zerado nao dispara o aviso de novo na hora: corrija com o "+".
-        state.players.forEach((p, i) => { if (!p.out && lossReason(i)) p.ack = true; });
-        save(); render(); closeModal();
+        act({ type: 'undo', depth: state.undo.length });
+        state.players.forEach((p, i) => { if (!p.out && lossReason(i)) acks[i] = true; });
+        closeModal();
         toast('Desfeito.');
     }
 
     const scoreText = () => state.wins[0] + ' × ' + state.wins[1];
 
-    function finish() {
-        flushLog();
-        state.finished = true;
-        save(); render();
+    function finishUI() {
         const champion = seriesWinner();
         if (champion === null || reduceMotion) return showResult();
         // Primeiro a festa no lado de quem ganhou; o resumo aparece logo depois, por cima.
@@ -367,7 +386,7 @@
     const UP = { 0: [0, -1], 180: [0, 1], 90: [1, 0], '-90': [-1, 0] };
     let party = null;
     function celebrate(i, big) {
-        if (reduceMotion) return;
+        if (reduceMotion || i === undefined || i === null || !panels[i]) return;
         const rect = panels[i].seat.getBoundingClientRect();
         const [ux, uy] = UP[panels[i].rot] || UP[0];
         const rx = -uy, ry = ux; // "direita" de quem está sentado ali
@@ -487,63 +506,42 @@
         return box;
     }
 
+    // Quem mandou o resultado pelo outro celular (pela conta de quem está sentado).
+    function submitterName() {
+        const by = state.submitted && state.submitted.by;
+        const seat = cfg.players.findIndex((p) => p.user && p.user === by);
+        return seat >= 0 ? name(seat) : 'Seu adversário';
+    }
+
     function showResult(error) {
         const actions = [];
         let title, text;
+        const sentByOther = state.submitted && state.submitted.by !== me;
         if (isPod) {
             title = 'Mesa encerrada';
-            text = cfg.submit ? 'Confira as posições e lance o resultado.' : 'Só o organizador lança as posições. Mostre esta tela para ele.';
+            text = cfg.submit ? 'Confira as posições e lance o resultado.' : (cfg.type === 'quick' ? 'Boa partida!' : 'Só o organizador lança as posições. Mostre esta tela para ele.');
         } else {
             const [a, b] = state.wins;
             title = 'Fim da partida';
             text = a === b ? 'Empate na série.' : name(a > b ? 0 : 1) + ' venceu a série.';
-            if (cfg.submit && cfg.submit.kind !== 'tournament_admin') text += ' O adversário confirma o placar depois.';
+            if (cfg.submit && cfg.submit.kind !== 'tournament_admin' && !sentByOther) text += ' O adversário confirma o placar depois.';
         }
-        if (cfg.submit) actions.push({ label: isPod ? 'Lançar posições' : 'Enviar resultado', cls: 'primary', keep: true, fn: submit });
-        actions.push({ label: isPod ? 'Desfazer última eliminação' : 'Corrigir último game', fn: undo, keep: true });
-        actions.push({ label: cfg.submit ? 'Sair sem enviar' : 'Voltar para a partida', href: cfg.resultUrl });
-        showModal(title, text, actions, resultBody(), error);
+        if (sentByOther) {
+            // O outro celular já enviou: aqui só falta conferir e confirmar na página da partida.
+            text += ' ' + submitterName() + ' enviou o resultado. Confira e confirme na partida.';
+            actions.push({ label: 'Ver e confirmar', cls: 'primary', href: cfg.resultUrl });
+        } else if (cfg.submit) {
+            actions.push({ label: isPod ? 'Lançar posições' : 'Enviar resultado', cls: 'primary', keep: true, fn: submit });
+        }
+        if (cfg.type === 'quick') actions.push({ label: 'Jogar de novo', cls: cfg.submit ? '' : 'primary', fn: () => act({ type: 'reset_all' }) });
+        if (!sentByOther) actions.push({ label: isPod ? 'Desfazer última eliminação' : 'Corrigir último game', fn: undo, keep: true });
+        if (!sentByOther) actions.push({ label: cfg.submit ? 'Sair sem enviar' : 'Voltar', href: cfg.resultUrl });
+        showModal(title, text, actions, resultBody(), error, { kind: 'result' });
     }
 
-    // ---------- envio do histórico ----------
-    // Sobe durante o jogo (no máximo a cada SYNC_MS) e ao sair da tela, não só no "Enviar resultado": o placar pode sair
-    // pelo formulário, pelo adversário ou pelo organizador, e o gráfico precisa do histórico de qualquer jeito.
-    // O servidor só mostra o gráfico quando a partida tem resultado.
-    const SYNC_MS = 10000;
-    let syncTimer = null, syncDirty = false, syncOff = false;
-
-    function logChanged() {
-        syncDirty = true;
-        if (!syncTimer) syncTimer = setTimeout(() => syncLog(false), SYNC_MS);
-    }
-
-    async function syncLog(keepalive) {
-        clearTimeout(syncTimer);
-        syncTimer = null;
-        if (!cfg.logUrl || syncOff || !syncDirty) return;
-        const games = LifeLog.payload(state.log);
-        const hasPoints = games.some((g) => g.points.length);
-        syncDirty = false;
-        // Nada gravado ainda e nada no servidor: não precisa mandar. Zerou depois de mandar: manda vazio e o servidor apaga.
-        if (!hasPoints && !state.logSynced) return;
-        try {
-            const res = await fetch(cfg.logUrl, {
-                method: 'POST',
-                credentials: 'same-origin',
-                keepalive: !!keepalive,
-                headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
-                body: JSON.stringify({ games }),
-            });
-            if (res.ok) { state.logSynced = hasPoints; save(); }
-            else if (res.status === 403 || res.status === 404) syncOff = true;
-            else syncDirty = true;
-        } catch (e) { syncDirty = true; /* sem conexão: tenta de novo na próxima mudança ou ao sair */ }
-    }
-
-    let sending = false, sent = false;
+    let sending = false;
     async function submit() {
         if (sending) return;
-        flushLog();
         const [a, b] = state.wins;
         const kind = cfg.submit.kind;
         let body;
@@ -551,9 +549,9 @@
             const placements = {};
             cfg.players.forEach((p, i) => { placements[p.id] = placeOf(i); });
             body = { placements };
-        } else if (kind === 'tournament') body = { player_one_games: a, player_two_games: b, idempotency_key: state.key };
+        } else if (kind === 'tournament') body = { player_one_games: a, player_two_games: b, idempotency_key: submitKey };
         else if (kind === 'tournament_admin') body = { player_one_games: a, player_two_games: b };
-        else if (kind === 'ranked') body = { score_one: a, score_two: b, idempotency_key: state.key };
+        else if (kind === 'ranked') body = { score_one: a, score_two: b, idempotency_key: submitKey };
         else body = { challenger_games: a, opponent_games: b, game_order: state.winners.map((w) => w + 1).join(',') };
 
         sending = true;
@@ -568,10 +566,12 @@
             });
             // Endpoints JSON respondem 200/201; os de formulario redirecionam (opaqueredirect).
             if (res.ok || res.type === 'opaqueredirect') {
-                syncDirty = true;
-                await syncLog(true);
+                // Avisa os outros celulares da mesa ("Fulano enviou o resultado") antes de sair; o histórico sobe junto.
+                act({ type: 'submitted' });
+                flushLog();
+                await Promise.race([Promise.all([flush(), syncLog(true)]), new Promise((r) => setTimeout(r, 2500))]);
                 sent = true;
-                try { localStorage.removeItem(cfg.storageKey); } catch (e) { /* ok */ }
+                try { localStorage.removeItem(cfg.storageKey); localStorage.removeItem(logKey); } catch (e) { /* ok */ }
                 window.location.assign(cfg.resultUrl);
                 return;
             }
@@ -593,8 +593,9 @@
     const setBusy = (on) => modal.querySelectorAll('button').forEach((b) => { b.disabled = on; });
 
     // ---------- modal / menus ----------
-    function showModal(title, text, actions, extra, error) {
+    function showModal(title, text, actions, extra, error, info) {
         modal.textContent = '';
+        modalInfo = info || { kind: 'menu' };
         const card = el('div', 'life-modal-card');
         card.append(el('h2', '', title));
         if (text) card.append(el('p', '', text));
@@ -603,7 +604,7 @@
         const row = el('div', 'life-actions');
         actions.forEach((a) => {
             let node;
-            if (a.href) { node = el('a', 'life-btn', a.label); node.href = a.href; }
+            if (a.href) { node = el('a', 'life-btn ' + (a.cls || ''), a.label); node.href = a.href; }
             else {
                 node = button('life-btn ' + (a.cls || ''), a.label);
                 node.addEventListener('click', () => { if (!a.keep) closeModal(); a.fn(); if (!a.keep) render(); });
@@ -618,7 +619,8 @@
     function closeModal() {
         modal.hidden = true;
         modal.textContent = '';
-        setTimeout(checkAll, 0);
+        modalInfo = null;
+        setTimeout(() => { if (!state.finished) checkAll(); }, 0);
     }
     modal.addEventListener('click', (e) => { if (e.target === modal && !state.finished) closeModal(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.hidden && !state.finished) closeModal(); });
@@ -628,41 +630,47 @@
         const info = el('div', 'life-menu-info');
         info.append(el('p', 'life-muted', cfg.title + ' · ' + cfg.subtitle));
         if (!isPod) info.append(el('p', 'life-score-small', name(0) + ' ' + scoreText() + ' ' + name(1) + ' · Game ' + state.game));
+        if (sync) info.append(el('p', 'life-muted life-sync-line', syncText()));
         const actions = [
             { label: 'Continuar', cls: 'primary', fn: () => {} },
-            { label: 'Sortear quem começa (D20)', fn: highRoll },
-            // Reiniciar recomeça também a curva deste game no gráfico.
-            { label: 'Reiniciar vidas deste game', fn: () => confirmThen('Reiniciar as vidas deste game?', () => { snapshot(); dropPending(); state.players = state.players.map((p) => ({ life: cfg.startingLife, poison: 0, cmd: {}, out: p.out, ack: false })); state.log[state.log.length - 1] = freshGame(); logChanged(); }) },
         ];
+        actions.push({ label: 'Sortear quem começa (D20)', fn: highRoll });
+        actions.push({ label: 'Reiniciar vidas deste game', fn: () => confirmThen('Reiniciar as vidas deste game?', () => act({ type: 'reset_game', game: state.game })) });
         if (state.undo.length) actions.push({ label: 'Desfazer última ação', fn: undo });
         if (!isPod && cfg.earlyEnd) actions.push({ label: 'Encerrar série agora (' + scoreText() + ')', fn: endEarly });
-        actions.push({ label: 'Zerar tudo', fn: () => confirmThen('Apagar o placar e as vidas desta partida?', () => { dropPending(); const synced = state.logSynced; state = freshState(); state.logSynced = synced; logChanged(); }) });
+        actions.push({ label: 'Zerar tudo', fn: () => confirmThen('Apagar o placar e as vidas desta partida' + (sync ? ' (em todos os celulares)' : '') + '?', () => act({ type: 'reset_all' })) });
         actions.push({ label: 'Sair (o placar fica salvo)', href: cfg.resultUrl });
         showModal(isPod ? 'Mesa' : 'Partida', '', actions, info);
     }
 
     function confirmThen(question, fn) {
         setTimeout(() => showModal('Tem certeza?', question, [
-            { label: 'Sim', cls: 'primary', fn: () => { fn(); save(); render(); } },
+            { label: 'Sim', cls: 'primary', fn: () => { fn(); } },
             { label: 'Cancelar', fn: () => {} },
         ]), 0);
     }
 
     function endEarly() {
         if (state.wins[0] + state.wins[1] === 0) return toast('Nenhum game decidido ainda.');
-        confirmThen('Encerrar a série em ' + scoreText() + ' (por tempo)? O servidor confere se esse placar vale para a partida.', () => { snapshot(); finish(); });
+        confirmThen('Encerrar a série em ' + scoreText() + ' (por tempo)? O servidor confere se esse placar vale para a partida.', () => act({ type: 'end_early', game: state.game }));
     }
 
+    // O sorteio é feito aqui e vai como jogada: todos os celulares mostram os mesmos números.
     function highRoll() {
-        const alive = cfg.players.map((_, i) => i).filter((i) => !state.players[i].out);
         const rolls = {};
-        alive.forEach((i) => { rolls[i] = 1 + Math.floor(Math.random() * 20); });
-        const top = Math.max(...Object.values(rolls));
-        const winners = alive.filter((i) => rolls[i] === top);
-        alive.forEach((i) => {
+        cfg.players.forEach((_, i) => { if (!state.players[i].out) rolls[i] = 1 + Math.floor(Math.random() * 20); });
+        act({ type: 'roll', rolls });
+    }
+
+    function showRolls(rolls) {
+        const entries = Object.entries(rolls || {}).map(([i, v]) => [+i, v]).filter(([i]) => panels[i]);
+        if (!entries.length) return;
+        const top = Math.max(...entries.map(([, v]) => v));
+        const winners = entries.filter(([, v]) => v === top).map(([i]) => i);
+        entries.forEach(([i, v]) => {
             const r = panels[i].roll;
-            r.textContent = 'D20: ' + rolls[i];
-            r.classList.toggle('best', winners.length === 1 && rolls[i] === top);
+            r.textContent = 'D20: ' + v;
+            r.classList.toggle('best', winners.length === 1 && v === top);
             r.classList.add('show');
             setTimeout(() => r.classList.remove('show'), 3200);
         });
@@ -675,34 +683,291 @@
         const tray = panels[i].tray;
         tray.textContent = '';
         const close = button('life-tray-close', '✕', 'Fechar');
-        close.addEventListener('click', () => { tray.hidden = true; });
+        close.addEventListener('click', () => { tray.hidden = true; tray.refresh = null; });
         tray.append(close, el('h3', '', 'Contadores de ' + name(i)));
-        const row = (label, get, set, limit) => {
+        const values = [];
+        const row = (label, get, op, limit) => {
             const line = el('div', 'life-tray-row');
             const val = el('b', '', get());
             const minus = button('life-mini', '−', label + ' menos');
             const plus = button('life-mini', '+', label + ' mais');
-            const upd = (d) => { set(d); val.textContent = String(get()); touched(i); save(); render(); check(i); };
+            const upd = (d) => {
+                const before = state.players[i].life;
+                act(op(d));
+                showDelta(i, state.players[i].life - before);
+            };
             minus.addEventListener('click', () => upd(-1));
             plus.addEventListener('click', () => upd(1));
             line.append(el('span', '', label + ' (' + limit + ')'), minus, val, plus);
             tray.append(line);
+            values.push(() => { val.textContent = String(get()); });
         };
-        const p = state.players[i];
-        row('☠ Veneno', () => p.poison, (d) => { p.poison = Math.max(0, p.poison + d); }, cfg.poisonLimit);
+        row('☠ Veneno', () => state.players[i].poison, (d) => ({ type: 'poison', seat: i, d }), cfg.poisonLimit);
         if (cfg.commanderDamage) {
             cfg.players.forEach((_, from) => {
                 if (from === i) return;
-                // Dano de comandante tambem tira vida (como no Lotus).
-                row('⚔ de ' + name(from), () => p.cmd[from] || 0, (d) => {
-                    const cur = p.cmd[from] || 0, next = Math.max(0, cur + d);
-                    p.cmd[from] = next;
-                    p.life -= next - cur;
-                    if (next !== cur) showDelta(i, -(next - cur));
-                }, cfg.commanderLimit);
+                row('⚔ de ' + name(from), () => state.players[i].cmd[from] || 0, (d) => ({ type: 'cmd', seat: i, from, d }), cfg.commanderLimit);
             });
         }
+        // Atualiza os números quando a jogada vem do outro celular com a bandeja aberta.
+        tray.refresh = () => values.forEach((fn) => fn());
         tray.hidden = false;
+    }
+
+    // ---------- histórico de vida (gráfico da partida) ----------
+    // O placar é da mesa; o histórico é deste aparelho (a mesa não guarda tempo). Cada celular observa o placar, com
+    // toque daqui ou do outro celular, e grava o ponto quando a vida de um jogador fica parada por SETTLE_MS: toques
+    // seguidos viram um ponto só e −1 seguido de +1 não grava nada; voltar ao valor anterior logo depois apaga o ponto
+    // (life-log.js). Os dois celulares mandam o histórico; o servidor fica com o do primeiro que gravou.
+    const logKey = cfg.storageKey + ':log';
+    let lifelog = null;
+    try { lifelog = JSON.parse(localStorage.getItem(logKey) || 'null'); } catch (e) { lifelog = null; }
+    if (!lifelog || !Array.isArray(lifelog.games)) lifelog = { games: [], synced: false };
+    const saveLog = () => { try { localStorage.setItem(logKey, JSON.stringify(lifelog)); } catch (e) { /* sem espaço: segue em memória */ } };
+    const settle = cfg.players.map(() => null);
+    let sent = false;
+
+    // Um game do histórico por game da mesa (quem abriu no meio da série fica com os anteriores vazios).
+    function logGame(number) {
+        while (lifelog.games.length < number) lifelog.games.push(LifeLog.freshGame(Date.now()));
+        return lifelog.games[number - 1];
+    }
+
+    function commitLog(i, s) {
+        clearTimeout(settle[i]);
+        settle[i] = null;
+        const p = s.players[i];
+        if (p && LifeLog.commit(logGame(s.game), i, { l: p.life, p: p.poison }, cfg.startingLife, Date.now())) { saveLog(); logChanged(); }
+    }
+
+    const flushLog = () => cfg.players.forEach((_, i) => { if (settle[i]) commitLog(i, state); });
+    const dropSettle = () => cfg.players.forEach((_, i) => { clearTimeout(settle[i]); settle[i] = null; });
+
+    // Vencedor de cada game (duelo): o da mesa. Desfez o fim do game? Volta a ficar sem vencedor.
+    function logWinners() {
+        if (isPod) return;
+        lifelog.games.forEach((g, k) => {
+            const w = state.winners[k] === undefined ? null : state.winners[k];
+            if (g.winner !== w) { g.winner = w; logChanged(); }
+        });
+    }
+
+    // Mudou o placar (prev → state) por estas jogadas: atualiza o histórico.
+    // quiet = primeira cópia da mesa neste aparelho: grava a vida de agora, sem inventar o que já passou.
+    function logSee(prev, ops, quiet) {
+        const types = ops.map((op) => op.type);
+        const fresh = (s) => s.players.every((p) => p.out || (p.life === cfg.startingLife && p.poison === 0));
+        if (quiet) {
+            dropSettle();
+            logGame(state.game);
+            if (!state.finished) cfg.players.forEach((_, i) => commitLog(i, state));
+        } else if (types.includes('reset_all') && state.game === 1 && !state.winners.length && fresh(state)) {
+            dropSettle();
+            lifelog.games = [];
+            logGame(1);
+            logChanged();
+        } else {
+            if (state.game > prev.game) {
+                // Game decidido: fecha o anterior com a vida final de cada um.
+                cfg.players.forEach((_, i) => commitLog(i, prev));
+                logGame(state.game);
+            } else if (state.game < prev.game) {
+                // Desfez o fim do game: o game seguinte some do histórico.
+                dropSettle();
+                lifelog.games.length = Math.min(lifelog.games.length, state.game);
+                logChanged();
+            } else if (types.includes('reset_game') && fresh(state) && !fresh(prev)) {
+                dropSettle();
+                logGame(state.game);
+                lifelog.games[state.game - 1] = LifeLog.freshGame(Date.now());
+                logChanged();
+            }
+            const game = logGame(state.game);
+            if (isPod) {
+                // Eliminado na mesa: a linha dele para ali. Desfeito: volta.
+                state.elim.filter((i) => !prev.elim.includes(i)).forEach((i) => {
+                    commitLog(i, state);
+                    game.out.push({ t: LifeLog.seconds(game, Date.now()), s: i });
+                    logChanged();
+                });
+                const before = game.out.length;
+                game.out = game.out.filter((o) => state.elim.includes(o.s));
+                if (game.out.length !== before) logChanged();
+            }
+            if (state.game === prev.game) {
+                state.players.forEach((p, i) => {
+                    const q = prev.players[i];
+                    if (q && (p.life !== q.life || p.poison !== q.poison)) {
+                        clearTimeout(settle[i]);
+                        settle[i] = setTimeout(() => commitLog(i, state), LifeLog.SETTLE_MS);
+                    }
+                });
+            }
+            // Série encerrada: o que estava assentando entra agora.
+            if (state.finished && !prev.finished) flushLog();
+        }
+        logWinners();
+        saveLog();
+    }
+
+    // Sobe durante o jogo (no máximo a cada SYNC_MS) e ao sair da tela, não só no "Enviar resultado": o placar pode sair
+    // pelo formulário, pelo adversário ou pelo organizador, e o gráfico precisa do histórico de qualquer jeito.
+    // O servidor só mostra o gráfico quando a partida tem resultado.
+    const SYNC_MS = 10000;
+    let syncTimer = null, syncDirty = false, syncOff = false;
+
+    function logChanged() {
+        syncDirty = true;
+        if (!syncTimer) syncTimer = setTimeout(() => syncLog(false), SYNC_MS);
+    }
+
+    async function syncLog(keepalive) {
+        clearTimeout(syncTimer);
+        syncTimer = null;
+        if (!cfg.logUrl || syncOff || !syncDirty) return;
+        const games = LifeLog.payload(lifelog.games);
+        const hasPoints = games.some((g) => g.points.length);
+        syncDirty = false;
+        // Nada gravado ainda e nada no servidor: não precisa mandar. Zerou depois de mandar: manda vazio e o servidor apaga.
+        if (!hasPoints && !lifelog.synced) return;
+        try {
+            const res = await fetch(cfg.logUrl, { method: 'POST', credentials: 'same-origin', keepalive: !!keepalive, headers: headers(), body: JSON.stringify({ games }) });
+            if (res.ok) { lifelog.synced = hasPoints; saveLog(); }
+            else if (res.status === 403 || res.status === 404) syncOff = true;
+            else syncDirty = true;
+        } catch (e) { syncDirty = true; /* sem conexão: tenta de novo na próxima mudança ou ao sair */ }
+    }
+
+    // Saindo da tela (X, outra aba, tela apagada, fechou): grava o que estava assentando e manda o histórico.
+    // Depois do envio do resultado o histórico já subiu e foi apagado do aparelho: não grava de novo.
+    function leaving() {
+        if (sent) return;
+        flushLog();
+        saveLog();
+        syncLog(true);
+    }
+    window.addEventListener('pagehide', leaving);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leaving(); });
+
+    // ---------- sincronia com a mesa ----------
+    // Envio: junta os toques por um instante e manda em lote. Resposta = tudo que entrou na mesa depois
+    // do que este aparelho tinha (inclusive do outro celular). Falhou: tenta de novo com espera crescente.
+    const net = { sending: null, timer: null, backoff: 0, ok: true, pulling: false, poll: null, stopped: false };
+
+    function flushSoon(ms) {
+        if (!sync || net.stopped) return;
+        clearTimeout(net.timer);
+        net.timer = setTimeout(flush, ms === undefined ? 150 : ms);
+    }
+
+    function headers() {
+        return { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' };
+    }
+
+    function flush() {
+        if (!sync || net.stopped || !store.pending.length) return Promise.resolve();
+        if (net.sending) return net.sending;
+        const batch = store.outbox(50);
+        save(); // Persiste a primeira tentativa ANTES de fetch, mesmo se a resposta nunca chegar.
+        net.sending = fetch(sync.opsUrl, { method: 'POST', credentials: 'same-origin', headers: headers(), body: JSON.stringify({ after: store.seq, ops: batch }) })
+            .then(async (res) => {
+                if (res.status === 422) {
+                    // Jogada recusada (ex.: mesa no limite): sai da fila para não travar as próximas.
+                    const data = await res.json().catch(() => ({}));
+                    const prev = state;
+                    store.drop(batch.map((o) => o.id));
+                    state = store.view();
+                    save();
+                    logSee(prev, []);
+                    afterChange(prev, []);
+                    toast((data.errors && Object.values(data.errors).flat()[0]) || 'Jogada recusada pelo servidor.');
+                    return;
+                }
+                if (res.status === 419 || res.status === 401) { net.stopped = true; setNet(false, 'Sua sessão expirou. Recarregue a página: as jogadas ficam salvas.'); return; }
+                if (res.status === 404 || res.status === 403) { net.stopped = true; setNet(false, 'Esta mesa não está mais disponível.'); return; }
+                if (!res.ok) throw new Error('http ' + res.status);
+                ingest(await res.json());
+                net.backoff = 0;
+                setNet(true);
+            })
+            .catch(() => {
+                setNet(false);
+                net.backoff = Math.min(30000, (net.backoff || 1000) * 2);
+                flushSoon(net.backoff);
+            })
+            .finally(() => {
+                net.sending = null;
+                if (store.pending.length && net.ok) flushSoon(30);
+            });
+        return net.sending;
+    }
+
+    function ingest(data) {
+        if (!data) return;
+        if (typeof data.seq === 'number' && data.seq < store.seq) {
+            // A mesa no servidor está atrás deste aparelho (foi recriada): recomeça da cópia do servidor.
+            store.reset();
+            pull();
+            return;
+        }
+        const prev = state;
+        const quiet = firstCopy && store.seq === 0;
+        const result = store.receive(Array.isArray(data.ops) ? data.ops : []);
+        if (result.remote.length || store.seq > 0) firstCopy = false;
+        state = store.view();
+        save();
+        logSee(prev, result.remote.map((e) => e.op || {}), quiet && result.remote.length > 0);
+        afterChange(prev, result.remote, quiet && result.remote.length > 0);
+        if (result.gap) pull();
+    }
+
+    function pull() {
+        if (!sync || net.pulling || net.stopped) return;
+        net.pulling = true;
+        fetch(sync.url + '?after=' + store.seq, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } })
+            .then((res) => {
+                if (res.status === 404 || res.status === 403) { net.stopped = true; setNet(false, 'Esta mesa não está mais disponível.'); return null; }
+                if (!res.ok) throw new Error('http ' + res.status);
+                return res.json();
+            })
+            .then((data) => { if (data) { ingest(data); setNet(true); } })
+            .catch(() => setNet(false))
+            .finally(() => { net.pulling = false; });
+    }
+
+    // Plano B sem socket: pergunta a cada 3s (aba visível). Com o canal assinado, só uma conferência a cada 20s.
+    function pollLoop() {
+        clearTimeout(net.poll);
+        const live = realtime && realtime.subscribed(sync.channel);
+        net.poll = setTimeout(() => { if (!document.hidden) pull(); pollLoop(); }, live ? 20000 : 3000);
+    }
+
+    let netMessage = null;
+    function setNet(ok, message) {
+        net.ok = ok;
+        netMessage = message || null;
+        const live = ok && realtime && realtime.subscribed(sync.channel);
+        hub.classList.toggle('is-offline', !ok);
+        hub.classList.toggle('is-live', !!live);
+        hub.title = syncText();
+        if (message) toast(message);
+    }
+
+    function syncText() {
+        if (netMessage) return netMessage;
+        const waiting = store.pending.length;
+        if (!net.ok) return 'Sem conexão: ' + (waiting ? waiting + (waiting === 1 ? ' jogada esperando' : ' jogadas esperando') + ' para enviar. ' : '') + 'O placar fica salvo neste aparelho.';
+        return realtime && realtime.subscribed(sync.channel) ? 'Ao vivo: o placar aparece igual nos outros celulares.' : 'Sincronizando com os outros celulares a cada poucos segundos.';
+    }
+
+    if (sync) {
+        if (realtime) {
+            realtime.on(sync.channel, 'ops', (data) => ingest({ ops: data && data.ops }));
+            realtime.on(sync.channel, 'subscribed', () => { pull(); setNet(net.ok); pollLoop(); });
+            realtime.onState(() => setNet(net.ok));
+        }
+        window.addEventListener('online', () => { if (!net.stopped) { net.backoff = 0; flushSoon(0); pull(); } });
+        document.addEventListener('visibilitychange', () => { if (!document.hidden && !net.stopped) { pull(); flushSoon(0); } });
     }
 
     // Tela acesa durante a partida, quando o navegador permite.
@@ -711,17 +976,23 @@
         try { if ('wakeLock' in navigator && document.visibilityState === 'visible') lock = await navigator.wakeLock.request('screen'); } catch (e) { lock = null; }
     }
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (!lock || lock.released)) keepAwake(); });
-    // Saindo da tela (X, outra aba, tela apagada, fechou): grava o que estava assentando e manda o histórico.
-    // Depois do envio o estado já foi apagado do aparelho: não grava de novo.
-    const leaving = () => { if (!sent) { flushLog(); save(); syncLog(true); } };
-    window.addEventListener('pagehide', leaving);
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leaving(); });
 
     // Voltou para uma partida salva com vida diferente do último ponto (ex.: saiu antes dos 3 s): registra.
-    if (!state.finished) flushLog();
-    // Partida salva no aparelho com histórico que ainda não subiu: manda.
-    if (!state.logSynced && LifeLog.payload(state.log).some((g) => g.points.length)) logChanged();
+    logGame(state.game);
+    if (!state.finished) cfg.players.forEach((_, i) => commitLog(i, state));
+    logWinners();
+    saveLog();
+    // Histórico salvo no aparelho que ainda não subiu: manda.
+    if (!lifelog.synced && LifeLog.payload(lifelog.games).some((g) => g.points.length)) logChanged();
+
     render();
     keepAwake();
     if (state.finished) showResult(); else checkAll();
+    if (sync) {
+        hub.classList.add('has-sync');
+        setNet(true);
+        pull();
+        flushSoon(0);
+        pollLoop();
+    }
 })();

@@ -110,8 +110,14 @@ jobs:
     name: WAF (ModSecurity + OWASP CRS)
     runs-on: ubuntu-latest
     needs: test
+    env:
+      APP_IMAGE: manaleague-app:${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
+      - name: Deploy image regression tests
+        run: |
+          bash docker/deploy/test-load-image.sh
+          node --test tests/js/deploy-pipeline.test.cjs
       - name: Cloudflare IP ranges are up to date
         run: |
           live="$( (curl --fail -s https://www.cloudflare.com/ips-v4; echo; curl --fail -s https://www.cloudflare.com/ips-v6) | grep -v '^$' | sort)"
@@ -122,7 +128,8 @@ jobs:
       - name: Start the stack (Caddy -> Nginx + ModSecurity/CRS -> PHP-FPM/Laravel)
         run: |
           printf 'APP_KEY=base64:%s\nAPP_ENV=production\nAPP_DEBUG=false\nAPP_URL=http://localhost:8080\nLOG_LEVEL=warning\nDB_PASSWORD=%s\n' "$(openssl rand -base64 32)" "$(openssl rand -hex 24)" > .env
-          docker compose up -d --build --wait --wait-timeout 300
+          docker compose build app
+          docker compose up -d --no-build --wait --wait-timeout 300
       - name: WAF smoke test (legit traffic passes, attacks are blocked)
         run: bash docker/waf/waf-smoke.sh http://localhost:8080
       - name: Forged client IP headers are ignored
@@ -135,9 +142,34 @@ jobs:
           if [[ -z "$line" || "$line" == *6.6.6.6* ]]; then
             echo "IP forjado chegou ao WAF/app (ou a requisicao nao apareceu no log)"; exit 1
           fi
+      - name: Realtime (Reverb) behind Caddy
+        run: |
+          # O WebSocket abre pela mesma origem (Caddy -> Reverb) e a API HTTP do Reverb nao e publica.
+          key="$(docker compose exec -T app php artisan tinker --execute 'echo config("reverb.apps.apps.0.key");' | tr -d '[:space:]')"
+          handshake() { curl -s -o /dev/null -w '%{http_code}' --max-time 5 -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' -H "Origin: $1" "http://localhost:8080/app/$key?protocol=7&client=js&version=8.4.0" || true; }
+          ok="$(handshake http://localhost:8080)"
+          echo "handshake mesma origem: $ok"; [[ "$ok" == "101" ]]
+          api="$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8080/apps/manaleague/events)"
+          echo "API do Reverb pela borda: $api"; [[ "$api" != "200" && "$api" != "401" ]]
+          docker compose exec -T reverb php -r 'exit(@file_get_contents("http://127.0.0.1:8080/up") === false ? 1 : 0);'
+      - name: Export tested app image
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/app-image"
+          docker save "$APP_IMAGE" | gzip -1 > "$RUNNER_TEMP/app-image/app.tar.gz"
+          cd "$RUNNER_TEMP/app-image"
+          sha256sum --text app.tar.gz > app.tar.gz.sha256
+      - name: Keep tested app image for deploy
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-image-${{ github.sha }}
+          path: ${{ runner.temp }}/app-image/
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
       - name: Stack logs
         if: always()
-        run: docker compose logs --no-color --tail=150 waf web app db
+        run: docker compose logs --no-color --tail=150 waf web app db reverb
 
   deploy:
     name: Deploy to AWS EC2
@@ -155,6 +187,13 @@ jobs:
       # So o deploy de codigo precisa do repositorio (a tag de uma release apagada pode nem existir mais).
       - uses: actions/checkout@v4
         if: github.event_name == 'push'
+      # Sem run-id/token: baixa somente o artifact desta mesma execucao.
+      - name: Download tested app image
+        if: github.event_name == 'push'
+        uses: actions/download-artifact@v4
+        with:
+          name: app-image-${{ github.sha }}
+          path: ${{ runner.temp }}/app-image
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -227,6 +266,7 @@ jobs:
           WAF_MODE: ${{ vars.WAF_MODE || 'On' }}
         run: |
           printf 'APP_NAME=ManaLeague\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://manaleague.com.br\nLOG_CHANNEL=stderr\nLOG_LEVEL=warning\nDB_CONNECTION=pgsql\nDB_DATABASE=manaleague\nDB_USERNAME=manaleague\nDB_PASSWORD=%s\nSESSION_DRIVER=database\nSESSION_ENCRYPT=true\nSESSION_SECURE_COOKIE=true\nSESSION_HTTP_ONLY=true\nSESSION_SAME_SITE=lax\nCACHE_STORE=database\nQUEUE_CONNECTION=database\nAPP_PORT=80\nHTTPS_PORT=443\nCADDY_DOMAINS="manaleague.com.br, www.manaleague.com.br"\nMAIL_MAILER=%s\nMAIL_FROM_ADDRESS=nao-responda@manaleague.com.br\nMAIL_FROM_NAME=ManaLeague\nAWS_SES_REGION=%s\nAWS_SES_CONFIGURATION_SET=manaleague-transactional\nAVATAR_DISK=%s\nAWS_BUCKET=%s\nAWS_DEFAULT_REGION=%s\nWAF_MODE=%s\n' "$APP_KEY" "$DB_PASSWORD" "$MAIL_MAILER" "$AWS_REGION" "$AVATAR_DISK" "$AVATAR_BUCKET" "$AWS_REGION" "$WAF_MODE" > deploy.env
+          printf 'APP_IMAGE=manaleague-app:%s\n' "$GITHUB_SHA" >> deploy.env
           # vendor e terraform so na raiz ("./"): sem o "./" o tar tira qualquer pasta com esse nome, e ja tirou
           # resources/views/vendor (paginacao) e public/js/vendor (Idiomorph) da producao.
           tar --exclude=.git --exclude=./terraform --exclude=./vendor --exclude=.env --exclude=deploy.env -czf /tmp/release.tar.gz .
@@ -241,7 +281,7 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
         run: |
-          scp -i ~/.ssh/manaleague /tmp/release.tar.gz deploy.env "$EC2_USER@$EC2_HOST:/tmp/"
+          scp -i ~/.ssh/manaleague /tmp/release.tar.gz deploy.env "$RUNNER_TEMP/app-image/app.tar.gz" "$RUNNER_TEMP/app-image/app.tar.gz.sha256" "$EC2_USER@$EC2_HOST:/tmp/"
       - name: Activate release
         if: github.event_name == 'push'
         env:
@@ -254,21 +294,23 @@ jobs:
           mkdir -p "$release_dir"
           tar -xzf /tmp/release.tar.gz -C "$release_dir"
           mv /tmp/deploy.env "$release_dir/.env"
-          ln -sfn "$release_dir" /opt/manaleague/current
-          cd /opt/manaleague/current
+          cd "$release_dir"
           for attempt in $(seq 1 30); do
             if command -v docker >/dev/null && sudo docker info >/dev/null 2>&1; then break; fi
             sleep 10
           done
           sudo docker info >/dev/null
-          # Caddy e WAF (owasp/modsecurity-crs) sao imagens oficiais com tag fixa; so o app e construido aqui.
+          # Verifica o SHA256 antes de importar; falhas preservam o current anterior.
+          sudo bash "$release_dir/docker/deploy/load-image.sh" /tmp/app.tar.gz /tmp/app.tar.gz.sha256 "manaleague-app:$RELEASE"
+          rm -f /tmp/app.tar.gz /tmp/app.tar.gz.sha256
+          # Somente imagens oficiais sao baixadas; app/reverb vieram do job WAF.
           sudo docker compose -p manaleague pull --quiet waf web db
-          sudo docker compose -p manaleague build app
           # Copia de seguranca do SQLite antes do 1o boot com PostgreSQL (o app importa e renomeia o arquivo).
           if sudo docker volume inspect manaleague_app_storage >/dev/null 2>&1; then
             sudo docker run --rm -v manaleague_app_storage:/s -v /opt/manaleague:/b alpine sh -c \
               'if [ -s /s/app/database.sqlite ] && [ ! -e /b/database-pre-postgres.sqlite ]; then cp -a /s/app/database.sqlite /b/database-pre-postgres.sqlite; for x in -wal -shm; do [ -e /s/app/database.sqlite$x ] && cp -a /s/app/database.sqlite$x /b/database-pre-postgres.sqlite$x; done; echo "Backup do SQLite em /opt/manaleague/database-pre-postgres.sqlite"; fi; true'
           fi
+          ln -sfn "$release_dir" /opt/manaleague/current
           sudo docker compose -p manaleague up -d --no-build --remove-orphans --wait --wait-timeout 300
           sudo docker compose -p manaleague exec -T app php artisan optimize
           # Lista de cartas banidas (Scryfall). Se falhar, o deploy segue com a lista anterior.
