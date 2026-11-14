@@ -65,12 +65,20 @@ class CasualChallengeTest extends TestCase
         $this->actingAs($a)->get('/challenges')->assertOk()->assertSee('Desafiar amigo');
         $this->post('/challenges', ['opponent_id' => $b->playerProfile->id, 'format' => 'Pauper', 'best_of' => 3, 'expires_in' => 24])->assertRedirect();
         $c = Challenge::sole();
+        $card = route('challenges.index').'#desafio-'.$c->id;
         $this->actingAs(User::factory()->create())->get('/challenges/'.$c->id)->assertForbidden();
-        $this->actingAs($b)->post('/challenges/'.$c->id.'/transition', ['action' => 'accept'])->assertRedirect();
-        $this->actingAs($a)->post('/challenges/'.$c->id.'/report', ['challenger_games' => 2, 'opponent_games' => 1, 'game_order' => '2,1,1'])->assertRedirect();
-        $this->get('/challenges/'.$c->id)->assertOk()->assertSee('Aguardando confirmação');
+        $this->actingAs($b)->from('/challenges')->post('/challenges/'.$c->id.'/transition', ['action' => 'accept'])->assertRedirect('/challenges');
+        $this->actingAs($a)->from('/me/matches')->post('/challenges/'.$c->id.'/report', ['challenger_games' => 2, 'opponent_games' => 1, 'game_order' => '2,1,1'])
+            ->assertRedirect('/me/matches');
+        // Não há mais página do desafio: em andamento, o endereço antigo leva ao cartão dele em Desafios.
+        $this->get('/challenges/'.$c->id)->assertRedirect($card);
+        $this->get('/challenges')->assertOk()->assertSee('id="desafio-'.$c->id.'"', false)->assertSee('Aguardando confirmação');
         $this->actingAs($b)->post('/challenges/'.$c->id.'/review', ['action' => 'confirm', 'revision' => 1])->assertRedirect();
-        $this->get('/challenges/rivalries')->assertOk()->assertSee('1 série')->assertSee('0 vitórias');
+        // Encerrado: o endereço antigo leva ao resumo da partida; as rivalidades são uma seção de Desafios.
+        $this->get('/challenges/'.$c->id)->assertRedirect(route('matches.detail', ['challenge', $c->id]));
+        $this->get('/challenges/rivalries')->assertRedirect(route('challenges.index').'#rivalidades');
+        $this->get('/challenges')->assertOk()->assertSee('id="rivalidades"', false)->assertSee('1 série')->assertSee('0 vitórias')
+            ->assertDontSee('id="desafio-'.$c->id.'"', false);
         $this->assertDatabaseCount('matches', 0);
     }
 

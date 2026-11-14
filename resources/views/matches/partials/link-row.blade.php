@@ -1,6 +1,6 @@
-{{-- Desafio (casual ou ranqueado) ou partida Ranked do matchmaking. Em andamento, a linha leva à tela do desafio/partida,
-     onde ficam as ações (enviar, confirmar, contestar); no histórico, abre o resumo da partida na janela.
-     Por isso o nome do adversário é texto, não link de perfil. --}}
+{{-- Desafio encerrado (casual ou ranqueado) ou partida Ranked do matchmaking: no histórico, a linha abre o resumo da
+     partida na janela; Ranked em andamento leva à tela da partida, onde ficam as ações. Desafio em andamento usa o
+     cartão com as ações (challenges/partials/open-challenge). Por isso o nome do adversário é texto, não link de perfil. --}}
 @php($isChallenge = $row['kind'] === 'challenge')
 @php($c = $isChallenge ? $row['challenge'] : null)
 @php($rm = $isChallenge ? null : $row['ranked'])

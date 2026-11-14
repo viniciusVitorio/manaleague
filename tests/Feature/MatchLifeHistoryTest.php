@@ -118,23 +118,25 @@ class MatchLifeHistoryTest extends TestCase
         $this->actingAs(User::factory()->create())->get(route('arena.public', $t->public_slug))->assertOk()->assertDontSee('href="'.$url.'"', false);
     }
 
-    public function test_challenge_and_ranked_pages_show_the_chart_when_it_exists(): void
+    public function test_challenge_and_ranked_summaries_show_the_chart_when_it_exists(): void
     {
         $ana = $this->user('Ana');
         $bia = $this->user('Bia');
         $this->befriend($ana, $bia);
         $service = app(ChallengeService::class);
 
-        // Desafio casual: sem contador, sem gráfico; com histórico, o gráfico aparece na página do desafio.
+        // Desafio casual: sem contador, sem gráfico; com histórico, o gráfico aparece no resumo da partida.
         $challenge = $service->create($ana, $bia->playerProfile, 'Pauper', 3, now()->addDay());
         $service->transition($challenge, $bia, 'accept');
-        $service->report($challenge, $ana, 2, 1);
-        $this->actingAs($ana)->get(route('challenges.show', $challenge))->assertOk()->assertDontSee('Gráfico da partida');
+        $casual = $service->report($challenge, $ana, 2, 1);
+        $service->review($challenge, $bia, 'confirm', $casual->revision);
+        $summary = route('matches.detail', ['challenge', $challenge->id]);
+        $this->actingAs($ana)->get($summary)->assertOk()->assertDontSee('Gráfico de vida')->assertSee('Sem gráfico de vida');
         $this->postJson(route('life.log.store', ['challenge', $challenge->id]), ['games' => $this->games()])->assertCreated();
-        $this->actingAs($bia)->get(route('challenges.show', $challenge))->assertOk()->assertSeeInOrder(['Gráfico da partida', 'Game 1', 'vitória de Ana']);
+        $this->actingAs($bia)->get($summary)->assertOk()->assertSeeInOrder(['Gráfico de vida', 'Game 1', 'vitória de Ana']);
         $this->actingAs(User::factory()->create())->get(route('life.log.show', ['challenge', $challenge->id]))->assertNotFound();
 
-        // Ranqueada: o gráfico fica na partida ranqueada (e no desafio que a criou).
+        // Ranqueada: o gráfico fica na partida ranqueada (e no resumo do desafio que a criou).
         $season = RankedSeason::create(['name' => 'T1', 'slug' => 't1-'.Str::random(4), 'status' => 'active', 'scope' => 'global',
             'starts_at' => now()->subMonth(), 'ends_at' => now()->addMonth(), 'rules_version' => 'elo-v2']);
         $season->formats()->create(['format' => 'Pauper', 'k_factor' => 32, 'starting_rating' => 600, 'allow_draws' => true]);
@@ -144,7 +146,8 @@ class MatchLifeHistoryTest extends TestCase
         app(RankedMatchService::class)->submit($ranked, $ana, 2, 0, (string) Str::uuid());
         $this->actingAs($ana)->postJson(route('life.log.store', ['ranked', $ranked->id]), ['games' => $this->games()])->assertCreated();
         $this->get(route('ranked.matches.show', $ranked))->assertOk()->assertSeeInOrder(['Gráfico da partida', 'Game 2', 'vitória de Bia']);
-        $this->get(route('challenges.show', $rankedChallenge))->assertOk()->assertSee('Gráfico da partida');
+        app(RankedMatchService::class)->confirm($ranked->fresh(), $bia);
+        $this->get(route('matches.detail', ['challenge', $rankedChallenge->id]))->assertOk()->assertSee('Gráfico de vida');
     }
 
     /** Torneio do organizador com Ana × Bia na rodada 1, ainda sem placar. */

@@ -160,7 +160,7 @@ class LifeCounterService
             ],
             'meIndex' => $challenge->opponent?->account_user_id === $user->id ? 1 : 0,
             'submit' => ['kind' => 'challenge', 'method' => 'POST', 'url' => route('challenges.report', $challenge)],
-            'resultUrl' => route('challenges.show', $challenge),
+            'resultUrl' => $challenge->url(),
         ], $user);
     }
 

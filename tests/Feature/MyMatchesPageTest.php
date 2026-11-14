@@ -111,7 +111,8 @@ class MyMatchesPageTest extends TestCase
 
         $this->actingAs($ana)->get(route('matches.mine'))->assertOk()
             ->assertSeeInOrder(['Em andamento', 'desafiou você', 'Convite recebido', 'Histórico', 'Desafio casual', 'Pauper · MD3', 'Vitória 2–1'])
-            ->assertSee('href="'.route('challenges.show', $invite).'"', false)
+            // Desafio em andamento: o cartão com as ações fica aqui mesmo (aceitar ou recusar o convite).
+            ->assertSee('id="desafio-'.$invite->id.'"', false)->assertSee(route('challenges.transition', $invite), false)->assertSee('Aceitar')
             // Desafio encerrado abre o resumo da partida na janela (MatchDetailTest).
             ->assertSee('href="'.route('matches.detail', ['challenge', $done->id]).'"', false)
             ->assertSeeText('1 partida encerrada · campanha 1–0–0');
@@ -136,11 +137,11 @@ class MyMatchesPageTest extends TestCase
 
         $this->actingAs($ana)->get(route('matches.mine', ['tipo' => 'ranked']))->assertOk()
             ->assertSee('Desafio ranqueado')->assertSee('Jogar e enviar placar')
-            ->assertSee('href="'.route('challenges.show', $ranked).'"', false)
-            ->assertDontSee('href="'.route('challenges.show', $casual).'"', false);
+            ->assertSee('id="desafio-'.$ranked->id.'"', false)
+            ->assertDontSee('id="desafio-'.$casual->id.'"', false);
         // Em "Todas" o desafio ranqueado aparece uma vez so (nao duplica com o Ranked).
         $html = $this->actingAs($ana)->get(route('matches.mine'))->getContent();
-        $this->assertSame(1, substr_count($html, 'href="'.route('challenges.show', $ranked).'"'));
+        $this->assertSame(1, substr_count($html, 'id="desafio-'.$ranked->id.'"'));
     }
 
     public function test_unknown_filter_falls_back_to_all_and_empty_state_points_to_challenges(): void

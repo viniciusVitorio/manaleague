@@ -70,10 +70,17 @@ Como organizar controller, service, model, migration e regra de negócio. Comple
   partida: os jogadores; no torneio também organizador e clube. Partida sem contador não tem gráfico. Com a mesa
   compartilhada (`LifeTableService`), o placar é da mesa mas o histórico é de cada aparelho (a mesa não guarda tempo):
   o contador observa o placar (toque dele ou do outro celular, em `logSee`) e grava em `<storageKey>:log`.
+- **Página de Desafios:** só o que está em andamento e as rivalidades; o histórico das séries fica em Minhas partidas.
+  Não existe página do desafio: as ações (aceitar, recusar, cancelar, enviar placar, confirmar, contestar) ficam no cartão
+  `challenges/partials/open-challenge`, o mesmo em Desafios e em Minhas partidas; desafio ranqueado manda para as rotas da
+  partida ranqueada. `Challenge::url()` diz para onde um desafio leva (aberto → `/challenges#desafio-{id}`; encerrado →
+  resumo da partida) e é o destino de `/challenges/{id}` (notificações antigas) e do contador de vida.
+  `/challenges/rivalries` redireciona para a seção `#rivalidades`. As ações voltam para a tela de onde vieram (`back()`).
 - **Resumo da partida:** `MatchDetailService::for` monta o mesmo resumo para torneio, desafio e Ranked (jogadores, deck do
   inscrito no torneio, placar, vencedor e o gráfico de `chartFor`), sempre com quem vê à esquerda. Quem não pode ver a
   partida recebe 404. Em Minhas partidas, a linha encerrada do histórico abre o resumo na janela (`data-dialog-src`); em
-  andamento, a linha continua levando à tela com as ações. Desafio e Ranked não guardam deck. Partida ranqueada (desafio,
+  andamento, o desafio mostra o cartão com as ações e o Ranked do matchmaking leva à tela da partida. O resumo de desafio
+  não tem link (não há página do desafio). Desafio e Ranked não guardam deck. Partida ranqueada (desafio,
   Ranked ou torneio ranqueado) mostra o ELO de cada jogador (antes → depois, Δ e a divisão), só para quem passa no `view`
   da `RankedMatch` (os dois jogadores e a moderação; o organizador do torneio não vê). Vem do lançamento `match` do
   ledger; se o formato já teve correção, de `RatingReplayService::worth` (o recálculo em ordem que a correção aplicou).

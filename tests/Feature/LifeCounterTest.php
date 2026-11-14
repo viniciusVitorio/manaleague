@@ -169,21 +169,24 @@ class LifeCounterTest extends TestCase
         [$a, $b] = $this->friends();
         $s = app(ChallengeService::class);
         $c = $s->create($a, $b->playerProfile, 'Pauper', 3, now()->addDay());
-        $this->actingAs($a)->get(route('life.challenge', $c))->assertRedirect(route('challenges.show', $c));
+        $card = route('challenges.index').'#desafio-'.$c->id;
+        $this->actingAs($a)->get(route('life.challenge', $c))->assertRedirect($card);
         $s->transition($c, $b, 'accept');
 
         $cfg = $this->config($this->actingAs($b)->get(route('life.challenge', $c)));
         $this->assertSame('challenge', $cfg['submit']['kind']);
         $this->assertSame(1, $cfg['meIndex']);
         $this->assertSame(2, $cfg['winsNeeded']);
-        $this->actingAs($b)->get(route('challenges.show', $c))->assertSee(route('life.challenge', $c), false);
+        $this->actingAs($b)->get(route('challenges.index'))->assertSee(route('life.challenge', $c), false);
 
         $this->actingAs($b)->postJson($cfg['submit']['url'], ['challenger_games' => 2, 'opponent_games' => 2, 'game_order' => '1,2,1,2'])->assertUnprocessable();
-        $this->actingAs($b)->postJson($cfg['submit']['url'], ['challenger_games' => 1, 'opponent_games' => 2, 'game_order' => '2,1,2'])->assertRedirect(route('challenges.show', $c));
+        $this->actingAs($b)->postJson($cfg['submit']['url'], ['challenger_games' => 1, 'opponent_games' => 2, 'game_order' => '2,1,2'])->assertRedirect();
+        // Depois do envio o contador abre o resultUrl: o cartão do desafio em Desafios.
+        $this->assertSame($card, $cfg['resultUrl']);
         $match = $c->casualMatch()->sole();
         $this->assertSame('reported', $match->status);
         $this->assertSame([2, 1, 2], $match->game_order);
-        $this->actingAs($a)->get(route('life.challenge', $c))->assertRedirect(route('challenges.show', $c));
+        $this->actingAs($a)->get(route('life.challenge', $c))->assertRedirect($card);
     }
 
     public function test_ranked_challenge_redirects_to_the_ranked_counter(): void

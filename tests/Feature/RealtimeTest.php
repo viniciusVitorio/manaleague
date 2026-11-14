@@ -35,8 +35,8 @@ class RealtimeTest extends TestCase
         $service->transition($challenge, $b, 'accept');
         app(RealtimeService::class)->flush();
         Event::fake([RealtimeMessage::class]);
-        $this->actingAs($a)->post(route('challenges.report', $challenge), ['challenger_games' => 2, 'opponent_games' => 1, 'game_order' => '1,2,1'])
-            ->assertRedirect(route('challenges.show', $challenge));
+        $this->actingAs($a)->from(route('challenges.index'))->post(route('challenges.report', $challenge), ['challenger_games' => 2, 'opponent_games' => 1, 'game_order' => '1,2,1'])
+            ->assertRedirect(route('challenges.index'));
 
         $changed = $this->changedChannels();
         $this->assertContains('private-challenge.'.$challenge->id, $changed);
