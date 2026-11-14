@@ -96,6 +96,7 @@ Card · Card · Card                (mesma largura, 12–16px entre eles)
   "Novo torneio"); o formulário abre em `/<recurso>/new` com `← <Lista>`, título "Novo ...", campos em cards e,
   no fim, `Cancelar` (ghost) + ação primária. Links que pré-preenchem usam query (`?opponent=ID`).
 - Lista com o que **precisa de você** primeiro (selo amarelo), depois o resto, depois o histórico (paginado).
+  Em Desafios o histórico não aparece: ele fica em Minhas partidas, junto com torneios e Ranked.
 - Uma página tem **no máximo 1 botão primário**.
 
 ---
@@ -111,7 +112,7 @@ Card · Card · Card                (mesma largura, 12–16px entre eles)
 | `<x-ui.status :status>` | estado de torneio/partida | não traduza estado na mão |
 | `<x-avatar :of>` | foto/emoji/inicial | nunca imprima `mark()` ou emoji direto |
 | `<x-profile-link :of>` | nome clicável | nunca dentro de outro link, `<label>`, `<option>` |
-| `.ui-row` (+ `ui-row-main`, `ui-row-title`, `ui-row-sub`) | linha de lista | linha inteira clicável quando leva a um detalhe (`<a class="ui-row ...">`); ver `challenges/partials/row.blade.php` |
+| `.ui-row` (+ `ui-row-main`, `ui-row-title`, `ui-row-sub`) | linha de lista | linha inteira clicável quando leva a um detalhe (`<a class="ui-row ...">`); ver `matches/partials/link-row.blade.php` |
 | `.ui-option.ui-option-box` + `input.ui-switch` | liga/desliga com explicação | título + descrição à esquerda, chave à direita |
 | `.choice-chips` / `.choice-chip` | 2–5 opções curtas (melhor de, validade) | radio escondido + `span` em pill; selecionado = primário |
 | `.friend-choices` / `.friend-choice` | escolher pessoa | cartão com avatar + nome, radio escondido, borda primária quando marcado |
@@ -119,6 +120,7 @@ Card · Card · Card                (mesma largura, 12–16px entre eles)
 | `.form-dots` / `.form-dot.is-win|is-loss|is-draw` | últimos resultados | 12px, `opacity .55`, `:hover` 1, anel na primeira, `title` com o detalhe + `sr-only` |
 | `.rival-card` | "um contra o outro" | avatares nas pontas, placar no meio, selo de quem lidera, barra `.rival-meter`, rodapé com resumo + ação |
 | `partials/confirm-all` | 2+ placares para confirmar | já incluso nas listas de partidas e desafios |
+| `.mm-open` (+ `mm-body`, `mm-score`, `mm-actions`, `mm-dispute`) | partida em andamento: linha que abre ao clicar (`<details id>`, fechada por padrão) com a ação dentro | placar com as fotos dos jogadores e mini contador − número + (`matches/partials/score-board` + `js/score-step.js`, o mesmo visual do resumo da partida; só leitura ao confirmar), contador de vida, confirmar/contestar; o `id` mantém aberta nas atualizações e um link `#id` já chega aberto; ver `matches/partials/open-match` (torneio) e `challenges/partials/open-challenge` (desafio) |
 | `.ui-hint` | explicação de regra | no topo da página, com ícone `info` |
 | `<dialog class="ui-dialog">` (+ `ui-dialog-head`, `ui-dialog-body`, `ui-dialog-foot`) | janela por cima da página (compartilhar link e QR) | abre com `[data-dialog-open="id"]`, inclusive de dentro de um menu; fecha no X `[data-dialog-close]`, no Esc ou no fundo (`nav.js`); ver `tournaments/show.blade.php` |
 
@@ -127,7 +129,7 @@ Card · Card · Card                (mesma largura, 12–16px entre eles)
 | Papel | Classe | Exemplo |
 |---|---|---|
 | Ação principal (1 por página) | `ui-btn ui-btn-primary` | "Desafiar amigo", "Enviar desafio" |
-| Secundária | `ui-btn ui-btn-outline` | "Rivalidades", "Revanche" |
+| Secundária | `ui-btn ui-btn-outline` | "Recusar", "Revanche" |
 | Terciária / cancelar | `ui-btn ui-btn-ghost` | "Cancelar" |
 | Dentro de card / linha | `+ ui-btn-sm` | |
 | Só ícone | `ui-icon-btn` + `aria-label` + `title` | lápis de editar perfil, copiar link |
@@ -143,7 +145,7 @@ Card · Card · Card                (mesma largura, 12–16px entre eles)
 
 ### Confronto (Rival)
 
-> O card do Rival **saiu do perfil** (pedido do dono). Padrão e classes `.rival-card` foram removidos; o retrospecto entre amigos fica só em Desafios → Rivalidades. Mantido aqui só como referência visual caso volte.
+> O card do Rival **saiu do perfil** (pedido do dono). Padrão e classes `.rival-card` foram removidos; o retrospecto entre amigos fica só na seção Rivalidades da tela de Desafios. Mantido aqui só como referência visual caso volte.
 
 ```
 ⚔ RIVAL                                   [Você lidera]

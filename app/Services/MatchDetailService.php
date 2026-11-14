@@ -117,7 +117,7 @@ class MatchDetailService
         ];
         $status = match (true) {
             $state === 'invalidated' => 'Anulada',
-            $state === 'confirmed' => null,
+            $state === 'confirmed' => $this->autoConfirmed($ranked ?? $match),
             $state === 'reported' => 'Placar enviado · aguardando confirmação',
             $state === 'disputed' => 'Placar contestado',
             default => $challenge->statusLabel(),
@@ -126,8 +126,7 @@ class MatchDetailService
 
         return $this->summary('challenge', $challenge->is_ranked ? 'Desafio ranqueado' : 'Desafio casual', (bool) $challenge->is_ranked,
             [$challenge->format, 'MD'.$challenge->best_of], $scored ? ($ranked?->confirmed_at ?? $match?->confirmed_at ?? $challenge->updated_at) : null,
-            $status, false, $players, $state === 'confirmed', $chart, ['url' => route('challenges.show', $challenge), 'label' => 'Abrir desafio'],
-            $this->elo($ranked, $user));
+            $status, false, $players, $state === 'confirmed', $chart, null, $this->elo($ranked, $user));
     }
 
     private function ranked(int $id, User $user): ?array
@@ -142,7 +141,7 @@ class MatchDetailService
             $this->seat($match->playerTwo->displayName(), $match->playerTwo, null, $scored ? $match->score_two : null, null, $match->playerTwo->account_user_id === $user->id),
         ];
         $status = match ($match->status) {
-            'confirmed' => null,
+            'confirmed' => $this->autoConfirmed($match),
             'reported' => 'Placar enviado · aguardando confirmação',
             default => $match->statusLabel(),
         };
@@ -192,6 +191,17 @@ class MatchDetailService
         }
 
         return ['byProfile' => $byProfile, 'note' => null];
+    }
+
+    /** Placar que o adversário não confirmou nem contestou no prazo: avisa que foi confirmado sozinho, e quando. */
+    private function autoConfirmed($match): ?string
+    {
+        if (! $match?->auto_confirmed || ! $match->confirmed_at) {
+            return null;
+        }
+
+        return 'Confirmado automaticamente em '.$match->confirmed_at->timezone(config('app.timezone'))->format('d/m/Y')
+            .': o adversário não confirmou nem contestou em '.Challenge::CONFIRM_DAYS.' dias';
     }
 
     /** Vencedor e frase do resultado ("Ana venceu por 2–1", "Empate em 1–1", "Ana venceu a mesa"). */

@@ -110,8 +110,8 @@ class DashboardLayoutTest extends TestCase
     {
         $user = User::factory()->create();
         $user->ensurePlayerProfile();
-        $this->actingAs($user)->get('/challenges/rivalries')->assertOk()->assertSee('Como funcionam as rivalidades')
-            ->assertSee('placar confirmado pelos dois')->assertSee('Nenhuma rivalidade ainda.');
+        $this->actingAs($user)->get('/challenges/rivalries')->assertRedirect(route('challenges.index').'#rivalidades');
+        $this->get('/challenges')->assertOk()->assertSee('Nenhum desafio ainda.');
         $friend = User::factory()->create();
         $friend->ensurePlayerProfile();
         $user->friendProfiles()->attach($friend->playerProfile, ['status' => 'accepted']);

@@ -488,17 +488,17 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 /* Campo de avatar: um emoji so, grande e centralizado */
 .emoji-input{width:72px;height:56px;padding:0;font-size:1.8rem;line-height:1;text-align:center}
 
-/* ---------- Desafios: lista (em andamento + historico) e formulario de novo desafio ---------- */
+/* ---------- Desafios: em andamento (cartoes com as acoes, os mesmos de Minhas partidas), rivalidades e formulario de novo desafio ---------- */
 .page-head-actions{display:flex;flex-wrap:wrap;gap:var(--s2)}
-.challenge-list{margin-bottom:var(--s4)}
-.challenge-row{text-decoration:none}
-.challenge-row:hover{background:var(--ui-muted)}
-.challenge-row .ui-avatar{width:36px;height:36px;font-size:1rem;flex:0 0 auto}
-.challenge-row .ui-row-title{color:var(--ui-fg);font-weight:500}
-.challenge-row.needs-me .ui-row-title{font-weight:700}
-.challenge-ranked{color:var(--ui-warning);font-weight:600}
-.challenge-row-go{flex:0 0 auto;color:var(--ui-fg-subtle)}
-@media(max-width:480px){.challenge-row{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:var(--s3);row-gap:6px}.challenge-row .ui-avatar{grid-row:1/span 2}.challenge-row .ui-badge{grid-column:2;justify-self:start}.challenge-row-go{display:none}.challenge-row .ui-row-title{white-space:normal}}
+.challenge-section{margin-bottom:var(--s4)}
+.challenge-history-link{color:var(--ui-fg);text-decoration:underline;text-decoration-color:var(--ui-border-strong);text-underline-offset:3px}
+.challenge-history-link:hover{text-decoration-color:currentColor}
+.challenge-rules{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--ui-border);color:var(--ui-fg-muted);font-size:.84rem}
+.challenge-rules>summary{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ui-fg-muted);font-weight:500;list-style:none}
+.challenge-rules>summary::-webkit-details-marker{display:none}
+.challenge-rules>summary:hover{color:var(--ui-fg)}
+.challenge-rules>summary:focus-visible{outline:2px solid var(--ui-ring);outline-offset:2px;border-radius:var(--ui-radius-sm)}
+.challenge-rules ul{margin:var(--s2) 0 0;padding-left:1.2em;display:grid;gap:4px}
 .challenge-form{display:grid;gap:var(--s4)}
 .challenge-form .ui-option-box{border-bottom:1px solid var(--ui-border)}
 .friend-choices{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--s2);max-height:300px;overflow:auto;padding:2px}
@@ -550,18 +550,38 @@ a.mm-link:hover .mm-go{transform:translateX(2px)}
 .mm-row.is-success .mm-round{border-color:rgba(74,222,128,.25);color:var(--ui-success)}
 .mm-row.is-danger .mm-round{border-color:rgba(248,113,113,.25);color:var(--ui-danger)}
 .mm-row.is-warning .mm-round{border-color:rgba(251,191,36,.3);color:var(--ui-warning)}
-.mm-open{padding:var(--s3);border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);background:var(--ui-bg)}
+/* Partida em andamento: linha da lista que abre (<details>) para o placar, o contador de vida e confirmar/contestar. */
+.mm-open{padding:var(--s3);border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);background:var(--ui-bg);transition:background-color .15s,border-color .15s}
+.mm-open>summary{list-style:none;cursor:pointer;border-radius:var(--ui-radius-sm)}
+.mm-open>summary::-webkit-details-marker{display:none}
+.mm-open>summary:focus-visible{outline:2px solid var(--ui-ring);outline-offset:4px}
+.mm-open:not([open]):hover{background:var(--ui-muted)}
+.mm-toggle{flex:0 0 auto;color:var(--ui-fg-subtle);transition:transform .15s}
+.mm-open[open] .mm-toggle{transform:rotate(180deg)}
 .mm-open.is-needs-me{border-color:rgba(251,191,36,.3)}
 .mm-open>.mm-row{padding:0}
 .mm-body{display:grid;gap:var(--s3);margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--ui-border)}
 .mm-body:empty{display:none}
 .mm-body .round-timer-compact{justify-self:start;margin:0}
-.mm-score{display:grid;gap:var(--s3);margin:0}
-.mm-score-inputs{display:flex;align-items:flex-end;gap:var(--s2);max-width:340px}
-.mm-score-inputs label{flex:1 1 0;min-width:0;margin:0}
-.mm-score-inputs label span{display:block;overflow:hidden;color:var(--ui-fg-muted);font-size:.78rem;text-overflow:ellipsis;white-space:nowrap}
-.mm-score-inputs input{min-height:48px;text-align:center;font-size:1.3rem;font-weight:700;font-variant-numeric:tabular-nums}
-.mm-dash{padding-bottom:12px;color:var(--ui-fg-subtle);font-weight:700}
+/* Placar com os jogadores (matches/partials/score-board): como no resumo da partida, foto e nome nas pontas e, embaixo,
+   o mini contador (− número +) ou o placar enviado. Botões e dica centralizados embaixo. */
+.mm-score{display:grid;justify-items:center;gap:var(--s3);margin:0;text-align:center}
+.mm-board{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;column-gap:var(--s3);width:100%;max-width:380px}
+.mm-board-side{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;text-align:center}
+.mm-board-avatar{display:inline-grid;flex:0 0 auto;place-items:center;box-sizing:border-box;width:44px;height:44px;overflow:hidden;border:2px solid var(--ui-border-strong);border-radius:50%;background:var(--ui-card);color:var(--ui-fg);font-size:1.05rem;font-weight:600;line-height:1}
+.mm-board-avatar img{display:block;width:100%;height:100%;object-fit:cover}
+.mm-board-side.is-winner .mm-board-avatar{border-color:var(--ui-warning)}
+.mm-board-name{max-width:100%;overflow:hidden;color:var(--ui-fg);font-size:.86rem;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.mm-board-vs{padding-bottom:8px;color:var(--ui-fg-subtle);font-size:1.3rem;font-weight:700}
+.mm-board-score{min-height:44px;color:var(--ui-fg);font-size:1.9rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:44px}
+.mm-step{display:inline-flex;align-items:center;gap:6px}
+.mm-step input{width:48px;min-height:44px;padding:2px;border-radius:var(--ui-radius-sm);text-align:center;font-size:1.4rem;font-weight:700;font-variant-numeric:tabular-nums;-moz-appearance:textfield;appearance:textfield}
+.mm-step input::-webkit-inner-spin-button,.mm-step input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.mm-step-btn{display:grid;flex:0 0 auto;place-items:center;width:32px;height:32px;padding:0;border:1px solid var(--ui-border);border-radius:50%;background:var(--ui-card);color:var(--ui-fg-muted);font-size:1.1rem;font-weight:600;line-height:1;cursor:pointer;transition:background-color .15s,border-color .15s,color .15s}
+.mm-step-btn:hover{border-color:var(--ui-border-strong);background:var(--ui-muted);color:var(--ui-fg)}
+.mm-step-btn:focus-visible{outline:2px solid var(--ui-ring);outline-offset:2px}
+.mm-score .mm-actions{justify-content:center}
+.mm-score .mm-help{max-width:420px}
 .mm-actions{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--s2)}
 .mm-actions form{margin:0}
 .mm-help,.mm-note{margin:0;color:var(--ui-fg-subtle);font-size:.8rem}
@@ -579,7 +599,8 @@ a.mm-link:hover .mm-go{transform:translateX(2px)}
   .mm-round{grid-row:1/span 2}
   .mm-row .ui-badge{grid-column:2;justify-self:start}
   .mm-row .ui-row-title,.mm-row .ui-row-sub{white-space:normal}
-  .mm-score-inputs{max-width:none}
+  .mm-open>summary.mm-row{grid-template-columns:auto minmax(0,1fr) auto}
+  .mm-toggle{grid-column:3;grid-row:1/span 2;align-self:center}
   .mm-actions>*,.mm-actions form .ui-btn,.mm-actions>.ui-btn{flex:1 1 100%;width:100%;justify-content:center}
   .mm-dispute>summary{width:100%;justify-content:center}
   .mm-me{display:none}

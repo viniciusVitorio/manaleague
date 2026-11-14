@@ -1,7 +1,7 @@
 @extends('layouts.app')
 {{-- Tela ao vivo: atualiza sozinha quando algo muda (live-refresh.js). --}}
 @section('live-scope', 'me')
-@push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/live.css') }}"><script defer src="{{ \App\Support\VersionedAsset::url('js/round-timer.js') }}"></script><link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/life-chart.css') }}"><link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/match-detail.css') }}"><script defer src="{{ \App\Support\VersionedAsset::url('js/life-chart.js') }}"></script>@endpush
+@push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/live.css') }}"><script defer src="{{ \App\Support\VersionedAsset::url('js/round-timer.js') }}"></script><link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/life-chart.css') }}"><link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/match-detail.css') }}"><script defer src="{{ \App\Support\VersionedAsset::url('js/life-chart.js') }}"></script><script defer src="{{ \App\Support\VersionedAsset::url('js/score-step.js') }}"></script>@endpush
 @section('content')
 <header class="page-head">
     <div>
@@ -47,6 +47,8 @@
             @foreach($open as $row)
                 @if($row['kind'] === 'tournament')
                     @include('matches.partials.open-match', ['row' => $row])
+                @elseif($row['kind'] === 'challenge')
+                    @include('challenges.partials.open-challenge', ['row' => $row])
                 @else
                     <div class="ui-list mm-list">@include('matches.partials.link-row', ['row' => $row])</div>
                 @endif

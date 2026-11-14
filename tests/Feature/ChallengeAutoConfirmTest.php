@@ -43,8 +43,10 @@ class ChallengeAutoConfirmTest extends TestCase
             $this->assertTrue(CommunityNotification::where('user_id', $user->id)->where('title', 'Placar do desafio confirmado automaticamente')->exists());
         }
         $this->assertTrue(CommunityActivity::where('event_key', "challenge:{$challenge->id}:completed")->where('actor_id', $vini->id)->exists());
-        $this->actingAs($felipe)->get("/challenges/{$challenge->id}")
-            ->assertSee('Resultado confirmado automaticamente em')
+        // O aviso fica no resumo da partida (o endereço antigo do desafio leva até ele).
+        $this->actingAs($felipe)->get("/challenges/{$challenge->id}")->assertRedirect(route('matches.detail', ['challenge', $challenge->id]));
+        $this->get(route('matches.detail', ['challenge', $challenge->id]))
+            ->assertSee('Confirmado automaticamente em')
             ->assertSee('não confirmou nem contestou em 7 dias');
 
         // Rodar de novo não duplica nada.
@@ -58,10 +60,11 @@ class ChallengeAutoConfirmTest extends TestCase
         app(ChallengeService::class)->report($challenge, $vini, 2, 1);
         $deadline = now()->addDays(Challenge::CONFIRM_DAYS)->timezone(config('app.timezone'))->format('d/m/Y \à\s H:i');
 
-        $this->actingAs($felipe)->get("/challenges/{$challenge->id}")
+        // No cartão do desafio em andamento (Desafios e Minhas partidas).
+        $this->actingAs($felipe)->get('/challenges')
             ->assertSee("Você tem até {$deadline} para confirmar ou contestar. Depois disso, o placar é confirmado automaticamente.");
-        $this->actingAs($vini)->get("/challenges/{$challenge->id}")
-            ->assertSee("Se ele não responder até {$deadline}, o placar é confirmado automaticamente.");
+        $this->actingAs($vini)->get('/me/matches')
+            ->assertSee("Se não houver resposta até {$deadline}, o placar é confirmado automaticamente.");
         $this->assertTrue(CommunityNotification::where('user_id', $felipe->id)->where('title', 'Confirme o placar do desafio em até 7 dias')->exists());
     }
 

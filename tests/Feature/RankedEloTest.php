@@ -494,8 +494,8 @@ class RankedEloTest extends TestCase
         $this->play($this->match($s, $a, $b), $a, $b, 2, 1);
         $this->play($this->match($s, $a, $b), $a, $b, 1, 1);
         $this->match($s, $a, $b); // pendente: nao conta
-        $this->actingAs($a)->get('/challenges/rivalries')->assertOk()->assertSee('Bia')->assertSee('2 séries')->assertSee('2 ranqueadas')
+        $this->actingAs($a)->get('/challenges')->assertOk()->assertSee('Bia')->assertSee('2 séries')->assertSee('2 ranqueadas')
             ->assertSee('<strong>1</strong>–0–1', false);
-        $this->actingAs($b)->get('/challenges/rivalries')->assertSee('<strong>0</strong>–1–1', false);
+        $this->actingAs($b)->get('/challenges')->assertSee('<strong>0</strong>–1–1', false);
     }
 }

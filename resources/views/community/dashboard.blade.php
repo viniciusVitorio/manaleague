@@ -103,7 +103,7 @@
                         <li><a class="ui-row" href="{{ route('ranked.matches.show', $rm) }}"><span class="ui-row-icon"><x-icon name="chart" /></span><span class="ui-row-main"><span class="ui-row-title">Enviar resultado ranqueado</span><span class="ui-row-sub">{{ $rm->format }} · {{ $rm->playerOne->displayName() }} × {{ $rm->playerTwo->displayName() }}</span></span><x-icon name="chevron-right" class="ui-chevron" /></a></li>
                     @endforeach
                     @foreach($otherChallenges as $challenge)
-                        <li><a class="ui-row" href="{{ route('challenges.show', $challenge) }}"><span class="ui-row-icon"><x-icon name="swords" /></span><span class="ui-row-main"><span class="ui-row-title">{{ $challenge->status === 'pending' ? 'Desafio recebido' : 'Desafio em andamento' }}</span><span class="ui-row-sub">{{ $challenge->challenger->displayName() }} × {{ $challenge->opponent->displayName() }} · {{ $challenge->format }} MD{{ $challenge->best_of }}</span></span><x-icon name="chevron-right" class="ui-chevron" /></a></li>
+                        <li><a class="ui-row" href="{{ $challenge->url() }}"><span class="ui-row-icon"><x-icon name="swords" /></span><span class="ui-row-main"><span class="ui-row-title">{{ $challenge->status === 'pending' ? 'Desafio recebido' : 'Desafio em andamento' }}</span><span class="ui-row-sub">{{ $challenge->challenger->displayName() }} × {{ $challenge->opponent->displayName() }} · {{ $challenge->format }} MD{{ $challenge->best_of }}</span></span><x-icon name="chevron-right" class="ui-chevron" /></a></li>
                     @endforeach
                     @foreach($reviewQueue as $tournament)
                         <li><a class="ui-row" href="{{ route('matches.submissions.queue', $tournament) }}"><span class="ui-row-icon"><x-icon name="flag" /></span><span class="ui-row-main"><span class="ui-row-title">Resultados para revisar</span><span class="ui-row-sub">{{ $tournament->name }} · {{ $awaitingReview->get($tournament->id) }} {{ $awaitingReview->get($tournament->id) === 1 ? 'envio' : 'envios' }}</span></span><x-icon name="chevron-right" class="ui-chevron" /></a></li>
@@ -158,7 +158,7 @@
             @else
                 <ul class="ui-list">
                     @foreach($challenges->take(6) as $challenge)
-                        <li><a class="ui-row" href="{{ route('challenges.show', $challenge) }}"><span class="ui-row-main"><span class="ui-row-title">{{ $challenge->challenger->displayName() }} × {{ $challenge->opponent->displayName() }}</span><span class="ui-row-sub">@if($challenge->is_ranked)Ranqueada · @endif{{ $challenge->format }} · MD{{ $challenge->best_of }}</span></span><x-ui.status :status="$challenge->casualMatch?->status === 'reported' ? 'reported' : $challenge->status" /></a></li>
+                        <li><a class="ui-row" href="{{ $challenge->url() }}"><span class="ui-row-main"><span class="ui-row-title">{{ $challenge->challenger->displayName() }} × {{ $challenge->opponent->displayName() }}</span><span class="ui-row-sub">@if($challenge->is_ranked)Ranqueada · @endif{{ $challenge->format }} · MD{{ $challenge->best_of }}</span></span><x-ui.status :status="$challenge->casualMatch?->status === 'reported' ? 'reported' : $challenge->status" /></a></li>
                     @endforeach
                 </ul>
             @endif

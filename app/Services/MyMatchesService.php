@@ -54,7 +54,7 @@ class MyMatchesService
         $rowsService = app(ChallengeRowsService::class);
         $challenges = collect($rowsService->rows($user, $rowsService->query($user)->get()))->values()->map(fn (array $r) => array_merge($r, [
             'kind' => 'challenge', 'open' => in_array($r['challenge']->status, ['pending', 'accepted'], true),
-            'href' => route('challenges.show', $r['challenge']), 'tone' => $r['tone'] ?? 'neutral',
+            'href' => $r['challenge']->url(), 'tone' => $r['tone'] ?? 'neutral',
             'detailUrl' => in_array($r['challenge']->status, ['pending', 'accepted'], true) ? null : route('matches.detail', ['challenge', $r['challenge']->id]),
         ]));
 
@@ -233,6 +233,7 @@ class MyMatchesService
             $sMine = $iAmTwo ? $submission->player_two_games : $submission->player_one_games;
             $sTheirs = $iAmTwo ? $submission->player_one_games : $submission->player_two_games;
             $row['score'] = $sMine.'–'.$sTheirs;
+            [$row['my_score'], $row['their_score']] = [(int) $sMine, (int) $sTheirs];
             $row['claim'] = $sMine > $sTheirs ? 'vitória sua' : ($sMine < $sTheirs ? 'derrota sua' : 'empate');
             $fromMe = (int) $submission->submitted_by === (int) $user->id;
             if ($submission->status === 'pending' && ! $fromMe) {

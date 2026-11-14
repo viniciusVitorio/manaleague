@@ -68,7 +68,7 @@ class MatchDetailTest extends TestCase
         $bia->friendProfiles()->attach($ana->playerProfile, ['status' => 'accepted']);
         $service = app(ChallengeService::class);
 
-        // Desafio casual confirmado: Bia venceu 2–1. Sem deck (desafio não guarda deck), com link para a página do desafio.
+        // Desafio casual confirmado: Bia venceu 2–1. Sem deck (desafio não guarda deck) e sem link: não há página do desafio.
         $challenge = $service->create($ana, $bia->playerProfile, 'Pauper', 3, now()->addDay());
         $service->transition($challenge, $bia, 'accept');
         $casual = $service->report($challenge, $ana, 1, 2);
@@ -77,7 +77,8 @@ class MatchDetailTest extends TestCase
 
         $this->actingAs($ana)->get(route('matches.mine'))->assertOk()->assertSee('href="'.$url.'" data-dialog-open="match-dialog"', false);
         $this->get($url)->assertOk()->assertSeeInOrder(['Desafio casual', 'Pauper', 'MD3', 'Ana', 'Você', '1', '2', 'Bia', 'Vencedor', 'Bia venceu por 2–1'])
-            ->assertDontSee('Deck não informado')->assertSee('Sem gráfico de vida')->assertSee('href="'.route('challenges.show', $challenge).'"', false);
+            ->assertDontSee('Deck não informado')->assertSee('Sem gráfico de vida')->assertDontSee('Abrir desafio')
+            ->assertDontSee('href="'.url('/challenges/'.$challenge->id).'"', false);
         $this->actingAs(User::factory()->create())->get($url)->assertNotFound();
 
         // Ranked do matchmaking confirmado: mesmo resumo, com o ELO de cada um (quanto mudou, de quanto para quanto e a divisão).

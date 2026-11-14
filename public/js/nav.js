@@ -197,7 +197,18 @@
         }, true);
     }
 
-    function boot() { init(); initToggles(); initMenus(); initMuteSwitches(); initConfirmAndCopy(); initDialogs(); }
+    // Link para uma linha que abre (ex.: #desafio-12, a partida em andamento de uma notificação): já chega aberta.
+    function initTargetDetails() {
+        function open() {
+            var id = decodeURIComponent(location.hash.slice(1));
+            var target = id && document.getElementById(id);
+            if (target && target.tagName === 'DETAILS' && !target.open) target.open = true;
+        }
+        open();
+        window.addEventListener('hashchange', open);
+    }
+
+    function boot() { init(); initToggles(); initMenus(); initMuteSwitches(); initConfirmAndCopy(); initDialogs(); initTargetDetails(); }
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', boot);

@@ -10,7 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * Linhas de desafio do ponto de vista de quem esta logado: adversario, placar (vitoria/derrota) e o estado em
  * palavras ("Confirmar placar", "Aguardando resposta"...). needs_me = falta uma acao sua.
- * Usado pela lista de Desafios e por "Minhas partidas" (as duas telas mostram o mesmo estado).
+ * Usado pela lista de Desafios e por "Minhas partidas" (as duas telas mostram o mesmo estado). Em andamento, a linha
+ * tambem leva o que o cartao de acoes precisa (partida ranqueada, placar enviado, quem enviou).
  */
 class ChallengeRowsService
 {
@@ -53,7 +54,10 @@ class ChallengeRowsService
                 ? ($myScore > $theirScore ? 'w' : ($myScore < $theirScore ? 'l' : 'd')) : null;
             $rows[$c->id] = ['challenge' => $c, 'opponent' => $mine ? $c->opponent : $c->challenger, 'invited_me' => ! $mine,
                 'label' => $label, 'tone' => $tone, 'needs_me' => $needsMe, 'result' => $result,
-                'date' => $r?->confirmed_at ?? $match?->confirmed_at ?? $c->updated_at];
+                'date' => $r?->confirmed_at ?? $match?->confirmed_at ?? $c->updated_at,
+                'ranked' => $r, 'state' => $status, 'my_score' => $myScore, 'their_score' => $theirScore, 'reported_by_me' => $reportedByMe,
+                // Na partida ranqueada o placar vai como score_one/score_two: quem é o "um".
+                'i_am_one' => $r ? $r->player_one_profile_id === $me : null];
         }
 
         return $rows;

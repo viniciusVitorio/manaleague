@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/s/achievement/{token}', [AchievementShareController::class, 'publicShow'])->where('token', '[a-f0-9]{64}')->middleware('throttle:60,1')->name('achievements.public');
 Route::middleware('auth')->group(function () {
     Route::get('/challenges', [ChallengeController::class, 'index'])->name('challenges.index');
+    // Rivalidades e a antiga página do desafio só redirecionam (links de notificações antigas continuam funcionando):
+    // rivalidades são uma seção de /challenges; o desafio vai para o cartão dele (em andamento) ou para o resumo da partida.
     Route::get('/challenges/rivalries', [ChallengeController::class, 'rivalries'])->name('challenges.rivalries');
     Route::get('/challenges/new', [ChallengeController::class, 'create'])->name('challenges.create');
     Route::post('/challenges', [ChallengeController::class, 'store'])->middleware('throttle:10,1')->name('challenges.store');

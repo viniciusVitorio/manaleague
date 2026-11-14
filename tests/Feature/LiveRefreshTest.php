@@ -15,14 +15,14 @@ class LiveRefreshTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_challenge_page_notices_when_the_friend_accepts_and_reports(): void
+    public function test_challenges_page_notices_when_the_friend_accepts_and_reports(): void
     {
         [$ana, $felipe] = $this->friends();
         $service = app(ChallengeService::class);
         $challenge = $service->create($ana, $felipe->playerProfile, 'Pauper', 3, now()->addDay());
-        $scope = 'challenge:'.$challenge->id;
+        $scope = 'me';
 
-        $page = $this->actingAs($ana)->get(route('challenges.show', $challenge))->assertOk()
+        $page = $this->actingAs($ana)->get(route('challenges.index'))->assertOk()
             ->assertSee('id="live-refresh"', false)->assertSee('js/live-refresh.js', false);
         $rendered = $this->renderedVersion($page);
         $this->assertSame($rendered, $this->version($ana, $scope), 'Nada mudou: a versão é a mesma da página');
