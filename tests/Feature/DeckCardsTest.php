@@ -212,6 +212,12 @@ class DeckCardsTest extends TestCase
 
         $this->actingAs($owner)->get(route('decks.show', $deck))
             ->assertOk()->assertSee('Lightning Bolt')->assertSee('Curva de mana')->assertSee('Buscar cartas')
+            // O CMC médio aparece no gráfico: o número ao lado do título e a linha na posição dele (custo 1 => 1,5/8 da largura).
+            ->assertSee('<p class="curve-stat"><span>CMC médio</span><b>1,00</b></p>', false)
+            ->assertSee('class="curve-avg" style="--at: 0.1875"', false)
+            // Tocar no nome da carta abre a janela com a imagem: o nome carrega os dados e a janela existe na página.
+            ->assertSee('role="button" aria-haspopup="dialog" data-card-view data-card-image="', false)
+            ->assertSee('id="deck-card-view"', false)
             ->assertSee('pelo menos 60 cartas');
 
         $stranger = User::factory()->create();

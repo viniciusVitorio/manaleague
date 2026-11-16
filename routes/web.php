@@ -33,6 +33,8 @@ foreach (['competition', 'live', 'deck-tools', 'community', 'challenges', 'ranke
 Route::view('/', 'welcome')->name('home');
 Route::get('/patch-notes', [PatchNoteController::class, 'index'])->name('patch-notes.index');
 Route::get('/t/{slug}', PublicArenaController::class)->middleware('throttle:60,1')->name('arena.public');
+// Deck compartilhado por link (ML-023): abre sem conta; token de 40 caracteres hexadecimais, link desconhecido = 404.
+Route::get('/d/{token}', [DeckController::class, 'publicShow'])->where('token', '[a-f0-9]{40}')->middleware('throttle:60,1')->name('decks.public');
 // Foto de perfil no disco local (dev/testes); com S3 redireciona para a URL assinada.
 Route::get('/avatars/{file}', [AvatarController::class, 'show'])
     ->where('file', '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webp')
@@ -82,6 +84,9 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/me/showcase/{slot}', [\App\Http\Controllers\ShowcaseController::class, 'destroy'])->whereIn('slot', ['1', '2', '3'])->name('showcase.destroy');
     Route::post('/me/decks', [DeckController::class, 'store'])->name('decks.store');
     Route::get('/decks/{deck}', [DeckController::class, 'show'])->name('decks.show');
+    // Link público do deck (ML-023): o dono cria, troca ou desativa.
+    Route::post('/me/decks/{deck}/share', [DeckController::class, 'share'])->middleware('throttle:20,1')->name('decks.share');
+    Route::delete('/me/decks/{deck}/share', [DeckController::class, 'unshare'])->name('decks.unshare');
     Route::get('/decks/{deck}/export', [DeckController::class, 'export'])->middleware('throttle:30,1')->name('decks.export');
     Route::get('/me/decks/{deck}/edit', [DeckController::class, 'edit'])->name('decks.edit');
     Route::post('/me/decks/{deck}/cards', [DeckCardController::class, 'store'])->middleware('throttle:60,1')->name('decks.cards.store');

@@ -84,6 +84,12 @@ Como organizar controller, service, model, migration e regra de negócio. Comple
   Ranked ou torneio ranqueado) mostra o ELO de cada jogador (antes → depois, Δ e a divisão), só para quem passa no `view`
   da `RankedMatch` (os dois jogadores e a moderação; o organizador do torneio não vê). Vem do lançamento `match` do
   ledger; se o formato já teve correção, de `RatingReplayService::worth` (o recálculo em ordem que a correção aplicou).
+- **Link público do deck (ML-023):** o dono cria em `POST /me/decks/{deck}/share` (de novo = link novo, o anterior para de
+  funcionar) e desativa em `DELETE`. `/d/{token}` abre o deck sem conta, como um amigo veria (sem edição, coleção nem .csv),
+  e vale mesmo para deck privado: o link é uma escolha à parte da visibilidade para amigos. O token (40 hex) fica cifrado
+  em `decks.share_token` para o dono copiar de novo; a busca usa só `share_token_hash` (sha256). Resposta com
+  `X-Robots-Tag: noindex` e `Referrer-Policy: no-referrer` (as imagens das cartas vêm do Scryfall). Use os métodos do
+  `Deck` (`enableShareLink`, `disableShareLink`, `shareUrl`, `findShared`); os campos são `$hidden`.
 - **Avatar:** emoji único (servidor valida 1 grafema pictográfico; `PlayerProfile::emoji()` corta valores antigos).
 
 ## 6. Banco e migrations

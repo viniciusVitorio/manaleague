@@ -186,9 +186,14 @@
             if (dialog && (event.target === dialog || event.target.closest('[data-dialog-close]'))) dialog.close();
         });
         // Janela que precisa aparecer ja aberta (ex.: a troca de deck voltou com erro): data-open-on-load.
-        document.querySelectorAll('dialog.ui-dialog[data-open-on-load]').forEach(function (dialog) {
-            if (typeof dialog.showModal === 'function' && !dialog.open) dialog.showModal();
-        });
+        function openMarked() {
+            document.querySelectorAll('dialog.ui-dialog[data-open-on-load]').forEach(function (dialog) {
+                if (typeof dialog.showModal === 'function' && !dialog.open) dialog.showModal();
+            });
+        }
+        openMarked();
+        // Depois de um envio sem recarregar (async-forms.js) a página volta com a marca: abre de novo (ex.: link do deck criado).
+        document.addEventListener('manaleague:updated', openMarked);
         // 'close' nao borbulha: escuta na captura.
         document.addEventListener('close', function (event) {
             if (!event.target.matches || !event.target.matches('dialog.ui-dialog')) return;
