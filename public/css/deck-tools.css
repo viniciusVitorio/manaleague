@@ -1,8 +1,72 @@
 /* Scoped deck tools; no global layout overrides. */
-.tools-nav{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 24px}.tools-nav a{padding:10px 16px;border:1px solid var(--ui-border-strong);border-radius:12px;color:var(--ui-fg-soft);text-decoration:none}.tools-nav a:hover,.tools-nav a:focus-visible{border-color:#a78bfa;color:var(--ui-fg)}.tools-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px}.tools-form{display:flex;gap:16px;flex-wrap:wrap;align-items:end}.tools-form label{flex:1;min-width:160px;display:grid;gap:8px}.tools-form input,.tools-form select{width:100%}.tools-table-wrap{overflow:auto}.tools-table{width:100%;border-collapse:collapse;text-align:left}.tools-table th,.tools-table td{padding:12px;border-bottom:1px solid var(--ui-border)}.tools-table small{display:block;color:var(--ui-fg-muted)}.tools-positive{color:#86efac}.tools-hash{overflow-wrap:anywhere}.version-cover{width:100%;height:200px;object-fit:cover;border-radius:12px;margin-top:16px}.sim-hand{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0}.sim-card{width:140px;border:2px solid #454550;border-radius:12px;padding:8px;background:#191922;color:#fff;cursor:pointer}.sim-card img{width:100%;border-radius:8px}.sim-card[aria-pressed=true]{border-color:#c4b5fd;transform:translateY(-6px)}.sim-actions{display:flex;gap:10px;flex-wrap:wrap}.tools-note{padding:16px;border-left:3px solid #a78bfa;background:var(--ui-muted)}.tools-inline-form{display:flex;gap:8px;align-items:center}.tools-inline-form input{max-width:80px}@media(max-width:600px){.tools-form{display:grid}.sim-card{width:110px}.tools-table th,.tools-table td{padding:8px}.tools-inline-form{flex-wrap:wrap}}
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px}.tools-form{display:flex;gap:16px;flex-wrap:wrap;align-items:end}.tools-form label{flex:1;min-width:160px;display:grid;gap:8px}.tools-form input,.tools-form select{width:100%}.tools-table-wrap{overflow:auto}.tools-table{width:100%;border-collapse:collapse;text-align:left}.tools-table th,.tools-table td{padding:12px;border-bottom:1px solid var(--ui-border)}.tools-table small{display:block;color:var(--ui-fg-muted)}.tools-positive{color:#86efac}.tools-hash{overflow-wrap:anywhere}.version-cover{width:100%;height:200px;object-fit:cover;border-radius:12px;margin-top:16px}.sim-hand{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0}.sim-card{width:140px;border:2px solid #454550;border-radius:12px;padding:8px;background:#191922;color:#fff;cursor:pointer}.sim-card img{width:100%;border-radius:8px}.sim-card[aria-pressed=true]{border-color:#c4b5fd;transform:translateY(-6px)}.sim-actions{display:flex;gap:10px;flex-wrap:wrap}.tools-note{padding:16px;border-left:3px solid #a78bfa;background:var(--ui-muted)}.tools-inline-form{display:flex;gap:8px;align-items:center}.tools-inline-form input{max-width:80px}@media(max-width:600px){.tools-form{display:grid}.sim-card{width:110px}.tools-table th,.tools-table td{padding:8px}.tools-inline-form{flex-wrap:wrap}}
 /* Faltantes: lista de compras e "já comprei" */
 .missing-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:24px}
 .missing-action{display:grid;gap:10px;align-content:start;margin:0}
 .missing-action h2{margin:0;font-size:1.05rem}.missing-action p{margin:0}
 .missing-action textarea{width:100%;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.82rem}
 .missing-action label{display:grid;gap:6px}
+
+/* Abas das ferramentas de decks (Meus decks, Coleção, Histórico, Comparar): a página atual fica sublinhada. */
+.tools-nav{display:flex;gap:2px;margin:0 0 var(--s6);border-bottom:1px solid var(--ui-border);overflow-x:auto;scrollbar-width:none}
+.tools-nav::-webkit-scrollbar{display:none}
+.tools-nav a{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;padding:10px 12px;margin-bottom:-1px;border-bottom:2px solid transparent;color:var(--ui-fg-muted);font-size:.86rem;font-weight:500;text-decoration:none;white-space:nowrap}
+.tools-nav a:hover,.tools-nav a:focus-visible{color:var(--ui-fg)}
+.tools-nav a[aria-current]{color:var(--ui-fg);border-bottom-color:var(--ui-fg)}
+.tools-nav .icon{color:var(--ui-fg-subtle)}
+/* Histórico: uma linha por versão salva. */
+.deckver-list{padding:0;overflow:hidden}
+.deckver-row{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) var(--s4);border-bottom:1px solid var(--ui-border);color:inherit;text-decoration:none}
+.deckver-row:last-child{border-bottom:0}
+.deckver-row:hover,.deckver-row:focus-visible{background:var(--ui-muted)}
+.deckver-art{flex:0 0 auto;width:64px;height:44px;border-radius:var(--ui-radius-sm);background:linear-gradient(135deg,var(--ui-muted),var(--ui-accent))}
+.deckver-art[style]{background-image:var(--art);background-size:cover;background-position:center 25%}
+.deckver-main{display:grid;gap:2px;flex:1;min-width:0}
+.deckver-main strong{font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deckver-main small,.deckver-meta{color:var(--ui-fg-subtle);font-size:.78rem}
+.deckver-main small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deckver-meta{display:grid;gap:2px;flex:0 0 auto;text-align:right;font-variant-numeric:tabular-nums}
+.deckver-meta span{color:var(--ui-fg-muted)}
+.deckver-go{flex:0 0 auto;color:var(--ui-fg-subtle)}
+/* Comparar: escolha dos dois decks e o caminho de um até o outro (tirar, colocar, iguais). */
+.deckcmp-form{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto;align-items:end;gap:var(--s3);padding:var(--s4) var(--s5);margin:0 0 var(--s5)}
+.deckcmp-form label{display:grid;gap:6px;margin:0}
+.deckcmp-form select{width:100%;margin:0}
+.deckcmp-arrow{display:grid;place-items:center;height:40px;color:var(--ui-fg-subtle)}
+.deckcmp-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s2) var(--s3);margin-bottom:var(--s3)}
+.deckcmp-head h2{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);margin:0;font-size:1.1rem}
+.deckcmp-head h2 a{color:inherit;text-decoration:none}.deckcmp-head h2 a:hover{text-decoration:underline}
+.deckcmp-head h2 .icon{color:var(--ui-fg-subtle)}
+.deckcmp-summary{display:flex;flex-wrap:wrap;gap:var(--s2);margin:0 0 var(--s4)}
+.deckcmp-chip{display:inline-flex;align-items:baseline;gap:6px;padding:4px 12px;border:1px solid var(--ui-border);border-radius:999px;background:var(--ui-card);color:var(--ui-fg-muted);font-size:.82rem}
+.deckcmp-chip b{color:var(--ui-fg);font-variant-numeric:tabular-nums}
+.deckcmp-chip.is-out b,.deckcmp-delta.is-out{color:var(--ui-danger)}
+.deckcmp-chip.is-in b,.deckcmp-delta.is-in{color:var(--ui-success)}
+.deckcmp-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4);align-items:start}
+.deckcmp-col,.deckcmp-same{padding:var(--s4) var(--s5);margin:0}
+.deckcmp-col h3,.deckcmp-same summary{display:flex;align-items:baseline;gap:var(--s2);margin:0;font-size:.92rem;font-weight:600}
+.deckcmp-col h3 span,.deckcmp-same summary span{color:var(--ui-fg-subtle);font-size:.78rem;font-weight:500;font-variant-numeric:tabular-nums}
+.deckcmp-same{margin-top:var(--s4)}
+.deckcmp-same summary{cursor:pointer}
+.deckcmp-none{margin:var(--s3) 0 0;color:var(--ui-fg-subtle);font-size:.84rem}
+.deckcmp-list{list-style:none;margin:var(--s3) 0 0;padding:0}
+.deckcmp-list li{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:baseline;gap:var(--s2);padding:6px 0;border-bottom:1px solid var(--ui-muted);font-size:.88rem}
+.deckcmp-list li:last-child{border-bottom:0}
+.deckcmp-delta{font-weight:600;font-variant-numeric:tabular-nums;text-align:right;color:var(--ui-fg-muted)}
+.deckcmp-name{min-width:0;overflow-wrap:anywhere}
+.deckcmp-name small{margin-left:6px;padding:1px 6px;border:1px solid var(--ui-border);border-radius:999px;color:var(--ui-fg-subtle);font-size:.68rem;white-space:nowrap}
+.deckcmp-qty{color:var(--ui-fg-subtle);font-size:.78rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.deckcmp-same .deckcmp-list{columns:2;column-gap:var(--s6)}
+.deckcmp-same .deckcmp-list li{break-inside:avoid}
+@media(max-width:700px){
+  .tools-nav .icon{display:none}
+  .tools-nav a{padding:10px}
+  .deckver-row{flex-wrap:wrap;padding:var(--s3)}
+  .deckver-art{width:52px;height:40px}
+  .deckver-meta{order:3;flex:1 0 100%;display:flex;justify-content:space-between;text-align:left;padding-left:calc(52px + var(--s3))}
+  .deckcmp-form{grid-template-columns:1fr;padding:var(--s4)}
+  .deckcmp-arrow{height:auto;transform:rotate(90deg)}
+  .deckcmp-cols{grid-template-columns:1fr}
+  .deckcmp-col,.deckcmp-same{padding:var(--s4)}
+  .deckcmp-same .deckcmp-list{columns:1}
+}

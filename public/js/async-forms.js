@@ -117,7 +117,8 @@
             if (document.documentElement.getAttribute(a.name) !== a.value) document.documentElement.setAttribute(a.name, a.value);
         });
         // Um <dialog> aberto (ex.: escolher deck da vitrine) fecha pelo jeito certo antes da atualizacao.
-        document.querySelectorAll('dialog[open]').forEach(function (d) { if (typeof d.close === 'function') d.close(); });
+        // Excecao: janela com data-async-keep (ex.: adicionar cartas ao deck) continua aberta, sem ser tocada.
+        document.querySelectorAll('dialog[open]:not([data-async-keep])').forEach(function (d) { if (typeof d.close === 'function') d.close(); });
 
         // Passa o HTML interno (string): um <body> de outro documento seria tratado como um filho novo
         // e a pagina inteira seria trocada, perdendo foco, ouvintes e o estado dos <details>.

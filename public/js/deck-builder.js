@@ -32,7 +32,11 @@
                 b.disabled = true;
                 b.textContent = 'Adicionando…';
                 // A lista de resultados fica na tela (data-async-keep): da para adicionar varias cartas seguidas.
-                document.addEventListener('manaleague:updated', function () { b.disabled = false; b.textContent = label; }, { once: true });
+                document.addEventListener('manaleague:updated', function () {
+                    b.disabled = false; b.textContent = label;
+                    // A janela cobre a lista: o aviso diz o que entrou e onde.
+                    setStatus(card.name + (board === 'side' ? ' entrou no sideboard.' : board === 'commander' ? ' agora é comandante.' : ' entrou no deck.'));
+                }, { once: true });
                 if (form.requestSubmit) form.requestSubmit(); else form.submit();
             });
             return b;
@@ -253,7 +257,101 @@
         });
     }
 
-    function boot() { init(); initBoardDrag(); }
+    // Janela "Adicionar cartas": duas abas (buscar carta por carta ou colar uma lista).
+    function initAddDialog() {
+        var dialog = document.getElementById('deck-add');
+        if (!dialog) return;
+        var tabs = dialog.querySelectorAll('[data-add-tab]');
+
+        function select(tab) {
+            tabs.forEach(function (other) {
+                var on = other === tab;
+                other.setAttribute('aria-selected', on ? 'true' : 'false');
+                other.tabIndex = on ? 0 : -1;
+                document.getElementById(other.getAttribute('aria-controls')).hidden = !on;
+            });
+            var field = document.getElementById(tab.getAttribute('aria-controls')).querySelector('input[type=search], textarea');
+            if (field) field.focus();
+        }
+
+        tabs.forEach(function (tab, index) {
+            tab.tabIndex = tab.getAttribute('aria-selected') === 'true' ? 0 : -1;
+            tab.addEventListener('click', function () { select(tab); });
+            tab.addEventListener('keydown', function (event) {
+                if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+                event.preventDefault();
+                var next = tabs[(index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+                select(next); next.focus();
+            });
+        });
+
+        // Lista enviada: a janela fecha para mostrar o deck; o campo esvazia quando a página voltar.
+        var importForm = dialog.querySelector('[data-add-import]');
+        if (importForm) importForm.addEventListener('submit', function () {
+            setTimeout(function () { if (dialog.open) dialog.close(); }, 0);
+            document.addEventListener('manaleague:updated', function () { importForm.reset(); }, { once: true });
+        });
+    }
+
+    // Janela da carta: tocar (ou clicar/Enter) no nome de uma carta da lista mostra a imagem grande, o tipo e o custo.
+    // No computador a prévia ao passar o mouse continua; a janela é o caminho de quem está no celular.
+    function initCardView() {
+        var dialog = document.getElementById('deck-card-view');
+        if (!dialog || typeof dialog.showModal !== 'function') return;
+
+        function open(name) {
+            var line = name.closest('.card-line, .cmdr-card');
+            var qty = line && line.querySelector('.card-qty');
+            var cost = line && line.querySelector('.card-cost');
+            var image = dialog.querySelector('[data-card-view-image]');
+            var costBox = dialog.querySelector('[data-card-view-cost]');
+            var title = name.dataset.cardName || name.getAttribute('title') || '';
+
+            dialog.querySelector('#deck-card-view-title').textContent = title;
+            // Troca o <img> por um novo: se só mudasse o src, o navegador seguraria a carta anterior na tela até a nova baixar.
+            var fresh = image.cloneNode(false);
+            fresh.removeAttribute('src');
+            fresh.alt = '';
+            fresh.classList.add('is-loading');
+            fresh.addEventListener('load', function () { fresh.classList.remove('is-loading'); fresh.alt = title; });
+            image.replaceWith(fresh);
+            fresh.src = name.dataset.cardImage;
+            dialog.querySelector('[data-card-view-type]').textContent = name.dataset.cardType || '';
+            costBox.textContent = '';
+            if (cost) Array.prototype.forEach.call(cost.childNodes, function (node) { costBox.appendChild(node.cloneNode(true)); });
+
+            var extra = [];
+            if (qty && qty.textContent.trim()) extra.push(qty.textContent.trim() + (qty.textContent.trim() === '1' ? ' cópia' : ' cópias'));
+            if (name.dataset.cardSet) extra.push('Edição ' + name.dataset.cardSet);
+            if (name.querySelector('.foil-mark')) extra.push('Foil');
+            dialog.querySelector('[data-card-view-extra]').textContent = extra.join(' · ');
+
+            if (!dialog.open) dialog.showModal();
+        }
+
+        // Começa a baixar a imagem assim que o dedo (ou o mouse) encosta, antes do clique: a janela já abre com ela a caminho.
+        var warmed = {};
+        document.addEventListener('pointerdown', function (event) {
+            var name = event.target.closest && event.target.closest('[data-card-view]');
+            var url = name && name.dataset.cardImage;
+            if (!url || warmed[url]) return;
+            warmed[url] = new Image();
+            warmed[url].src = url;
+        }, { passive: true });
+
+        document.addEventListener('click', function (event) {
+            var name = event.target.closest && event.target.closest('[data-card-view]');
+            if (name) open(name);
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            if (!event.target.matches || !event.target.matches('.card-name[data-card-view]')) return;
+            event.preventDefault();
+            open(event.target);
+        });
+    }
+
+    function boot() { init(); initBoardDrag(); initAddDialog(); initCardView(); }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

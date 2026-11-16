@@ -14,7 +14,9 @@
 <div class="card-line"
      @if($movable) draggable="true" data-move-url="{{ route('decks.cards.update', [$deck, $card]) }}" data-board="{{ $card->board }}" data-qty="{{ $card->quantity }}" data-name="{{ $card->name }}" @endif>
     <span class="card-qty">{{ $card->quantity }}</span>
-    <span class="card-name" tabindex="0" title="{{ $card->name }}">
+    {{-- Tocar (ou clicar/Enter) no nome abre a carta numa janela: é a prévia do computador para quem está no celular. --}}
+    <span class="card-name" tabindex="0" title="{{ $card->name }}"
+          @if($card->image_url) role="button" aria-haspopup="dialog" data-card-view data-card-image="{{ $card->image_url }}" data-card-type="{{ $card->type_line }}" data-card-set="{{ strtoupper((string) $card->set_code) }}" @endif>
         <span class="card-face">{{ $faces[0] ?? $card->name }}
             @if($card->foil)<span class="foil-mark" role="img" title="Foil" aria-label="Foil">✦</span>@endif
             @if($ownership)<span class="owned-badge {{ $ownership['class'] }}" title="No deck: {{ $ownership['need'] }} · Na sua coleção: {{ $ownership['have'] }}">{{ $ownership['need'] }}/{{ $ownership['have'] }}</span>@endif

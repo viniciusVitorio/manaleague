@@ -66,6 +66,44 @@ class DeckController extends Controller
         abort_unless($isOwner || $isFriend, 403);
         abort_unless($isOwner || $deck->is_visible_to_friends, 404);
 
+        return $this->page($request, $deck, $isOwner);
+    }
+
+    /**
+     * Deck aberto pelo link público (ML-023): qualquer pessoa, sem conta, vê a lista como um amigo veria.
+     * Fora do Google (noindex) e sem Referer: as imagens das cartas vêm do Scryfall e o token não pode ir junto.
+     */
+    public function publicShow(Request $request, string $token): Response
+    {
+        $deck = Deck::findShared($token);
+        abort_unless($deck, 404);
+
+        return response($this->page($request, $deck, false, true))
+            ->header('Cache-Control', 'no-store, private')->header('X-Robots-Tag', 'noindex, nofollow')->header('Referrer-Policy', 'no-referrer');
+    }
+
+    /** Cria o link público do deck, ou troca por um novo (o anterior para de funcionar). Só o dono. */
+    public function share(Request $request, Deck $deck): RedirectResponse
+    {
+        $this->ensureOwner($request, $deck);
+        $renewed = (bool) $deck->share_token;
+        $deck->enableShareLink();
+
+        return redirect()->route('decks.show', $deck)->with('deck_dialog', 'share')
+            ->with('status', $renewed ? 'Link novo criado. O link anterior parou de funcionar.' : 'Link criado. Quem tiver o link vê o deck, mesmo sem conta.');
+    }
+
+    public function unshare(Request $request, Deck $deck): RedirectResponse
+    {
+        $this->ensureOwner($request, $deck);
+        $deck->disableShareLink();
+
+        return redirect()->route('decks.show', $deck)->with('deck_dialog', 'share')->with('status', 'Link desativado. Quem tinha o link não vê mais o deck.');
+    }
+
+    /** Página do deck: a do dono (com edição e coleção) ou a de quem só vê (amigo ou link público). */
+    private function page(Request $request, Deck $deck, bool $isOwner, bool $public = false): View
+    {
 
         $deck->load('profile');
         $summary = $this->builder->summary($deck);
@@ -87,7 +125,7 @@ class DeckController extends Controller
         // Cartas que nunca saíram como comum (tag "Inválida"; só em deck de Pauper).
         $invalidNames = \App\Services\Decks\PauperLegalityService::invalidNames($deck->cards, $deck->format);
 
-        return view('decks.show', compact('deck', 'summary', 'isOwner', 'owned', 'needed', 'hasCollection', 'showOwnership', 'exportText', 'bannedNames', 'invalidNames'));
+        return view('decks.show', compact('deck', 'summary', 'isOwner', 'public', 'owned', 'needed', 'hasCollection', 'showOwnership', 'exportText', 'bannedNames', 'invalidNames'));
     }
 
     /** Baixa o deck em .csv no padrão do ManaBox. Mesma regra de acesso da página do deck. */

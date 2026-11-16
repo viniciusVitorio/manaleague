@@ -21,7 +21,7 @@ class DeckToolsController extends Controller {
     }
     public function compare(Request $request, DeckAccessService $access, DeckComparisonService $comparison) {
         $data = $request->validate(['left' => 'nullable|integer|min:1', 'right' => 'nullable|integer|min:1']);
-        $decks = $access->visible($request->user())->orderBy('name')->get();
+        $decks = $access->visible($request->user())->with('profile')->orderBy('name')->get();
         $left = isset($data['left']) ? $access->visible($request->user())->findOrFail($data['left']) : null;
         $right = isset($data['right']) ? $access->visible($request->user())->findOrFail($data['right']) : null;
         $rows = $left && $right ? $comparison->compare($left, $right) : null;

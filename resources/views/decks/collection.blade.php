@@ -185,7 +185,7 @@
                 <span class="cover-bar" aria-hidden="true"><span style="width: {{ $c['percent'] }}%"></span></span>
             </a>
         @empty
-            <x-ui.empty icon="layers" title="Nenhum deck ainda." text="Monte um deck e veja aqui quanto dele você já tem." :href="route('decks.index').'#novo-deck'" action="Novo deck" />
+            <x-ui.empty icon="layers" title="Nenhum deck ainda." text="Monte um deck e veja aqui quanto dele você já tem." :href="route('decks.index', ['novo' => 1])" action="Novo deck" />
         @endforelse
     </x-ui.card>
 

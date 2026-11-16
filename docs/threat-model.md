@@ -23,6 +23,7 @@
 | Information Disclosure | `.env`/chaves no Git | Critico | `.gitignore`, `APP_KEY` obrigatoria via ambiente (sem valor padrao), GitHub Secrets e Trivy |
 | Information Disclosure | e-mail de um usuario exposto a outro | Medio | pedidos de amizade exibem apenas apelido; perfis privados |
 | Information Disclosure | adivinhar pagina publica | Medio | slug com sufixo aleatorio de 16 chars (~82 bits) + `throttle:60,1`; sem IDs sequenciais |
+| Information Disclosure | link de deck compartilhado vazar ou ser adivinhado | Baixo | ML-023: token de 160 bits, so o hash e consultado (o token fica cifrado com a `APP_KEY`), `throttle:60,1`, `noindex` e `no-referrer`; o dono troca ou desativa o link a qualquer momento e a pagina nao expoe edicao, colecao nem e-mail |
 | Information Disclosure / XSS | carregar script ou frame externo | Medio | escape do Blade, CSP `default-src 'self'`, `frame-ancestors 'self'`, `object-src 'none'` |
 | Denial of Service | muitas tentativas de login/convite/arena | Medio | rate limit na borda (Cloudflare: 10 req/10 s por IP nas rotas de autenticacao) + throttle por rota no Laravel com o IP real |
 | Tampering / Injection | SQLi, XSS, LFI, RCE, scanners e Log4Shell antes de chegar no PHP | Alto | WAF na origem: ModSecurity v3 + OWASP CRS v4 (imagem oficial `owasp/modsecurity-crs`, paranoia 1, limiar 5) e Free Managed Ruleset na Cloudflare; regressao em `docker/waf/waf-smoke.sh` na CI |
@@ -73,6 +74,7 @@
 17. jogada com lugar inexistente, variacao zero, texto no lugar de numero, tipo inventado ou lote com mais de 50: HTTP 422, nada gravado;
 18. Reverb fora do ar: a pagina responde normalmente (falha so registrada no log) e as telas seguem no polling;
 19. pagina com tempo real nao expoe o segredo do Reverb; a API do Reverb nao responde pela borda (CI).
+20. link de deck trocado, desativado, inventado ou fora do formato: HTTP 404; outra conta criando ou desativando o link de um deck: HTTP 403; o token nao aparece no JSON do deck nem em texto puro no banco.
 
 ## Riscos residuais
 

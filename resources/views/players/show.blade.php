@@ -240,7 +240,7 @@
                     @endif
                 </div>
             @empty
-                <p class="muted">Você ainda não tem decks. <a href="{{ route('decks.index') }}#novo-deck">Criar o primeiro</a></p>
+                <p class="muted">Você ainda não tem decks. <a href="{{ route('decks.index', ['novo' => 1]) }}">Criar o primeiro</a></p>
             @endforelse
             <p class="muted small showcase-picker-empty" hidden>Nenhum deck com esse nome.</p>
         </div>

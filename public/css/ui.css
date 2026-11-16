@@ -409,6 +409,55 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 .async-toast.is-leaving { opacity: 0; }
 
 /* ---------- Endereço do perfil (prefixo fixo + campo) ---------- */
+/* Editar perfil: menu de seções à esquerda (fixo na rolagem) e uma coluna de cartões; cada cartão termina num rodapé com a ação. */
+.settings-layout{display:grid;grid-template-columns:200px minmax(0,1fr);gap:var(--s8);align-items:start;max-width:980px}
+.settings-nav{position:sticky;top:84px;display:flex;flex-direction:column;gap:2px}
+.settings-nav a{display:flex;align-items:center;gap:var(--s2);padding:8px 10px;border-radius:var(--ui-radius-sm);color:var(--ui-fg-muted);font-size:.86rem;font-weight:500;white-space:nowrap}
+.settings-nav a:hover,.settings-nav a.is-current{background:var(--ui-accent);color:var(--ui-fg)}
+.settings-nav svg{flex:0 0 auto;color:var(--ui-fg-subtle)}
+.settings-main{display:grid;gap:var(--s4);min-width:0}
+.settings-card{margin:0;padding:0;overflow:hidden;scroll-margin-top:76px}
+.settings-card form{margin:0}
+.settings-card-body{padding:var(--s6)}
+.settings-card-body>h2{margin:0;font-size:1.05rem}
+.settings-card-desc{margin:4px 0 var(--s4);color:var(--ui-fg-muted);font-size:.85rem}
+.settings-card-body>label:first-of-type,.settings-fields>label{margin-top:0}
+.settings-card-body>:last-child,.settings-card-body>:last-child>label,.settings-card-body .pref-group:last-child .small-note{margin-bottom:0}
+.settings-card-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s2) var(--s4);min-height:57px;padding:var(--s3) var(--s6);border-top:1px solid var(--ui-border);background:var(--ui-muted)}
+.settings-card-foot .small-note{flex:1 1 260px;margin:0}
+.settings-card-foot>.ui-btn,.settings-card-foot>form{margin-left:auto}
+.settings-fields{display:grid;grid-template-columns:1fr 1fr;gap:0 var(--s4);align-items:start}
+.settings-fields-emoji{grid-template-columns:minmax(0,1fr) auto}
+.settings-fields-emoji .emoji-input{width:64px;height:41px;font-size:1.3rem}
+.settings-form{display:grid;gap:var(--s4);margin:0}
+.settings-actions{display:flex;justify-content:flex-end;gap:var(--s2)}
+.settings-danger,.settings-danger:hover{color:var(--ui-danger)}
+.settings-danger:hover{border-color:var(--ui-danger)}
+.settings-card select{width:100%}
+.settings-inline{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2)}
+.settings-inline input[type=file]{flex:1 1 220px;width:auto;min-width:0;margin:0}
+.settings-card .avatar-upload{align-items:center;gap:var(--s5)}
+.settings-card .avatar-upload-actions label{margin:0}
+.settings-card .handle-input{margin:0;max-width:460px}
+.settings-card .pref-group{margin:0 0 var(--s5)}
+.settings-card .pref-group:last-child{margin-bottom:0}
+.settings-card .check-label{margin:0}
+@media(max-width:900px){
+  .settings-layout{grid-template-columns:1fr;gap:var(--s4)}
+  .settings-nav{position:static;flex-direction:row;gap:var(--s2);overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+  .settings-nav::-webkit-scrollbar{display:none}
+  .settings-nav a{flex:0 0 auto;padding:6px 12px;border:1px solid var(--ui-border);border-radius:999px;background:var(--ui-card)}
+  .settings-nav svg{display:none}
+}
+@media(max-width:600px){
+  .settings-card-body{padding:var(--s4)}
+  .settings-card-foot{padding:var(--s3) var(--s4)}
+  .settings-fields{grid-template-columns:1fr;gap:var(--s3)}
+  .settings-fields-emoji{grid-template-columns:1fr}
+  .settings-card .avatar-upload{align-items:flex-start}
+  .settings-card-foot>.ui-btn{width:100%}
+  .settings-actions .ui-btn-primary{flex:1}
+}
 .handle-input{display:flex;align-items:stretch;margin:6px 0 14px}
 .handle-input span{display:flex;align-items:center;max-width:55%;padding:0 10px;border:1px solid var(--ui-border-strong);border-right:0;border-radius:7px 0 0 7px;background:var(--ui-muted);color:var(--ui-fg-muted);font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .handle-input input{flex:1;min-width:0;margin:0;border-radius:0 7px 7px 0}
@@ -417,6 +466,97 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 .deck-export textarea{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.78rem;white-space:pre;overflow-x:auto}
 .deck-export-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
 .deck-export-actions .small-note{margin:0}
+.deck-export-actions form{margin:0}
+/* Link público do deck (ML-023): campo com o link, copiar, trocar e desativar; dono e avatar na página pública. */
+.deck-share input[readonly]{width:100%;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.78rem}
+.deck-share .small-note{margin:10px 0 0}
+/* Página do deck: no topo, exportar e compartilhar (abrem janela); "Adicionar cartas" na lista abre a janela com busca ou lista colada; na direita só a curva. */
+.deck-hero{overflow:visible}
+.deck-hero:before{border-radius:inherit}
+.deck-edit{align-items:center;z-index:6}
+.deck-edit .ui-btn-outline,.deck-edit .ui-icon-btn{background:var(--ui-card)}
+.deck-edit .ui-btn-outline:hover,.deck-edit .ui-icon-btn:hover{background:var(--ui-accent)}
+.deck-share-on{width:7px;height:7px;margin-left:auto;border-radius:999px;background:var(--ui-success)}
+/* Cabeçalho da lista acompanha a rolagem: "Adicionar cartas" fica sempre à mão em listas longas. */
+.deck-list-head{position:sticky;top:57px;z-index:5;margin:-10px -10px 6px;padding:10px;background:var(--ui-card);border-radius:var(--ui-radius-sm)}
+.type-breakdown div{position:relative}
+.type-breakdown div::after{content:"";position:absolute;left:0;bottom:-1px;width:var(--share,0);height:2px;border-radius:2px;background:var(--ui-fg-subtle)}
+/* CMC médio no gráfico: número ao lado do título e linha tracejada na posição dele (--at = fração da largura; o 6px é o vão entre colunas). */
+.curve-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s3)}
+.curve-head h2{margin:0}
+.curve-stat{display:flex;flex-direction:column;align-items:flex-end;gap:2px;margin:0;line-height:1.2}
+.curve-stat span{font-size:.72rem;color:var(--ui-fg-subtle)}
+.curve-stat b{font-size:1.15rem;color:var(--ui-fg);font-variant-numeric:tabular-nums}
+.mana-curve{position:relative}
+.curve-avg{position:absolute;top:0;bottom:20px;left:calc((100% + 6px) * var(--at) - 3px);width:0;border-left:2px dashed #fff;mix-blend-mode:difference;opacity:.8} /* branco + difference: a linha inverte o que está atrás e aparece tanto sobre a coluna quanto sobre o fundo, nos dois temas */
+.curve-avg::before{content:"";position:absolute;inset:0 -6px}
+.curve-count{position:relative;z-index:1;padding:0 2px;background:var(--ui-card)}
+.curve-count:empty{background:none}
+.deck-list-head{flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:var(--s3)}
+.deck-list-head h2{display:flex;flex-direction:column;gap:2px;min-width:0;margin:0;line-height:1.2}
+.deck-list-count{font-size:.8rem;font-weight:500;line-height:1.2;color:var(--ui-fg-subtle);font-variant-numeric:tabular-nums}
+.deck-list-head .section-heading-side{flex:0 0 auto;flex-wrap:nowrap;gap:var(--s2);margin-left:auto}
+@media(max-width:480px){.deck-list-label{display:none}}
+.deck-dialog.deck-add{width:min(660px,calc(100% - 32px))}
+.deck-add-tabs{display:flex;gap:var(--s2);padding:var(--s3) var(--s4) 0}
+.deck-add-tabs button{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:0 var(--s3);border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);background:transparent;color:var(--ui-fg-muted);font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;transition:background-color .15s,border-color .15s,color .15s}
+.deck-add-tabs button:hover{color:var(--ui-fg)}
+.deck-add-tabs button[aria-selected="true"]{background:var(--ui-accent);border-color:var(--ui-border-strong);color:var(--ui-fg)}
+.deck-add-tabs button:focus-visible{outline:2px solid var(--ui-ring);outline-offset:2px}
+.deck-add [role="tabpanel"][hidden]{display:none}
+.deck-dialog.deck-add .ui-dialog-body{max-height:calc(100dvh - 250px)}
+.deck-add form .ui-dialog-body{max-height:calc(100dvh - 310px)}
+.deck-add-bar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3)}
+.deck-add-bar input[type=search]{flex:1 1 260px;width:auto;min-width:0;margin:0}
+.deck-add-bar .search-source,.deck-add-bar .foil-pick{margin:0}
+.deck-add .small-note{margin:var(--s2) 0 0}
+.deck-add .card-results{grid-template-columns:repeat(auto-fill,minmax(250px,1fr));max-height:none;overflow:visible}
+.deck-add .card-results:empty{display:none}
+/* Comandante em destaque: arte ao fundo (mesmo véu do topo do deck), carta à esquerda e os dados ao lado. Dois comandantes dividem a linha. */
+.cmdr-zone{display:grid;gap:var(--s4);margin-bottom:20px}
+.cmdr-zone.is-pair{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cmdr-card{position:relative;display:flex;align-items:center;gap:var(--s5);padding:var(--s5);margin:0;overflow:hidden}
+.cmdr-card::before{content:"";position:absolute;inset:0;background-image:linear-gradient(90deg,var(--ui-glass-strong) 35%,var(--ui-glass-soft)),var(--cover,none);background-size:cover;background-position:center 25%}
+.cmdr-card>*{position:relative}
+.cmdr-thumb{flex:0 0 auto;width:132px;padding:0;border:0;background:none;border-radius:4.75% / 3.5%;cursor:pointer;line-height:0;transition:transform .15s ease}
+.cmdr-thumb:hover{transform:translateY(-2px)}
+.cmdr-thumb:focus-visible{outline:2px solid var(--ui-fg);outline-offset:3px}
+.cmdr-thumb img{width:100%;height:auto;border-radius:inherit;box-shadow:0 10px 28px rgba(0,0,0,.45)}
+.cmdr-info{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+.cmdr-info .eyebrow{display:inline-flex;align-items:center;gap:6px;margin:0}
+.cmdr-info h2{margin:0;font-size:1.3rem;line-height:1.2;overflow-wrap:anywhere}
+.cmdr-type{margin:0;color:var(--ui-fg-muted);font-size:.86rem}
+.cmdr-info form{margin:var(--s2) 0 0 -8px}
+.cmdr-zone.is-pair .cmdr-thumb{width:104px}
+.cmdr-zone.is-pair .cmdr-info h2{font-size:1.1rem}
+@media(max-width:700px){
+  .cmdr-zone.is-pair{grid-template-columns:1fr}
+  .cmdr-card{gap:var(--s4);padding:var(--s4)}
+  .cmdr-thumb,.cmdr-zone.is-pair .cmdr-thumb{width:96px}
+  .cmdr-info h2,.cmdr-zone.is-pair .cmdr-info h2{font-size:1.1rem}
+}
+@media(prefers-reduced-motion:reduce){.cmdr-thumb{transition:none}}
+/* Janela da carta (toque no nome): a imagem ocupa a janela e encolhe em telas baixas para nunca precisar rolar. */
+.card-name[data-card-view]{cursor:pointer}
+.deck-card-view{width:min(360px,calc(100% - 32px))}
+.deck-card-view .ui-dialog-head h2{min-width:0;overflow-wrap:anywhere}
+.deck-card-view img{display:block;width:auto;max-width:100%;height:auto;max-height:calc(100dvh - 230px);margin:0 auto;border-radius:4.75% / 3.5%;background:var(--ui-muted)}
+.deck-card-view img.is-loading{aspect-ratio:488 / 680;width:100%;animation:deck-card-view-pulse 1.1s ease-in-out infinite}
+@keyframes deck-card-view-pulse{50%{opacity:.55}}
+@media(prefers-reduced-motion:reduce){.deck-card-view img.is-loading{animation:none}}
+.deck-card-view-meta{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);margin-top:var(--s3);font-size:.88rem;color:var(--ui-fg)}
+.deck-card-view .small-note{margin:4px 0 0}
+.deck-dialog{width:min(520px,calc(100% - 32px))}
+.deck-dialog .ui-dialog-body{overflow-y:auto;max-height:calc(100dvh - 190px)}
+.deck-dialog textarea{width:100%}
+.deck-dialog .small-note{margin:10px 0 0}
+.deck-dialog .ui-dialog-foot .small-note{margin:0}
+@media(min-width:901px){.deck-layout{grid-template-columns:minmax(0,1fr) 320px}}
+.deck-owner{display:inline-flex;align-items:center;gap:6px}
+.deck-owner .deck-owner-avatar{width:22px;height:22px;font-size:.7rem}
+.deck-public-hint{margin-bottom:var(--s4)}
+.deck-public-hint p{margin:0}
+.deck-public-hint a{color:var(--ui-fg);text-decoration:underline;text-underline-offset:3px}
 
 /* ---------- Repetir torneio ---------- */
 .repeat-form{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:0 var(--s3);align-items:end}

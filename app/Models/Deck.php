@@ -12,10 +12,40 @@ class Deck extends Model
 
     protected $fillable = ['name', 'colors', 'format', 'is_primary', 'is_visible_to_friends'];
 
+    // Link público: só muda por enableShareLink/disableShareLink e nunca vai para JSON.
+    protected $hidden = ['share_token', 'share_token_hash'];
+
 
     // cover_card_id fica fora do $fillable de proposito: so muda pela rota propria (DeckController::cover),
     // que valida se a carta pertence a este deck.
-    protected function casts(): array { return ['is_primary' => 'boolean', 'is_visible_to_friends' => 'boolean', 'cover_card_id' => 'integer', 'showcase_position' => 'integer', 'cards_updated_at' => 'datetime']; }
+    protected function casts(): array { return ['is_primary' => 'boolean', 'is_visible_to_friends' => 'boolean', 'cover_card_id' => 'integer', 'showcase_position' => 'integer', 'cards_updated_at' => 'datetime', 'share_token' => 'encrypted', 'shared_at' => 'datetime']; }
+
+    /**
+     * Cria (ou troca) o link público do deck: qualquer pessoa com ele vê a lista, sem conta. Um link novo revoga o anterior.
+     * O token fica cifrado (para o dono copiar de novo) e a busca usa só o hash dele.
+     */
+    public function enableShareLink(): string
+    {
+        $token = bin2hex(random_bytes(20));
+        $this->forceFill(['share_token' => $token, 'share_token_hash' => hash('sha256', $token), 'shared_at' => now()])->save();
+
+        return $token;
+    }
+
+    public function disableShareLink(): void
+    {
+        $this->forceFill(['share_token' => null, 'share_token_hash' => null, 'shared_at' => null])->save();
+    }
+
+    public function shareUrl(): ?string
+    {
+        return $this->share_token ? route('decks.public', $this->share_token) : null;
+    }
+
+    public static function findShared(string $token): ?self
+    {
+        return static::query()->where('share_token_hash', hash('sha256', $token))->first();
+    }
 
     /** Marca que a lista de cartas mudou agora (só cartas; capa, nome e principal não contam). */
     public static function touchList(int $deckId): void

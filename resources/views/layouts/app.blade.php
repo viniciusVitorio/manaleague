@@ -15,8 +15,8 @@
     <meta property="og:title" content="{{ $og['title'] }}">
     <meta property="og:description" content="{{ $og['description'] }}">
     <meta property="og:url" content="{{ url()->current() }}">
-    <meta property="og:image" content="{{ asset('android-chrome-512x512.png') }}">
-    <meta name="twitter:card" content="summary">
+    <meta property="og:image" content="{{ ($og['image'] ?? null) ?: asset('android-chrome-512x512.png') }}">
+    <meta name="twitter:card" content="{{ ! empty($og['image']) ? 'summary_large_image' : 'summary' }}">
     <link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/app.css') }}">
     <link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/ui.css') }}">
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
