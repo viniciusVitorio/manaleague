@@ -29,6 +29,10 @@ lista e formulário de **Desafios** (`challenges/index`, `challenges/create`), *
 | Lista de desafios como página de entrada e formulário em tela própria ("Desafiar amigo") | Formulário de criar no topo da lista |
 | Escolha por cartões (amigos com foto) e por chips (melhor de 1/3/5) | `<select>` para poucas opções |
 | Contador de vida: confete, canhões, balões e fogos na vitória, com duração longa (≈7s) | — |
+| Página do deck: na direita só a curva de mana (com o CMC médio no gráfico); no canto do topo, o menu "⋯" com Compartilhar, Exportar, Editar e Trocar capa, que abrem janela (`ui-dialog`); na lista, o botão "Adicionar cartas" abre uma janela com duas abas, buscar carta por carta ou colar uma lista | Coluna da direita com cinco cartões empilhados (buscar, importar, exportar, link, curva): "poluído" e num lugar estranho no computador |
+| Tocar (ou clicar) no nome de uma carta abre a janela da carta com a imagem grande; no computador a prévia ao passar o mouse continua | Prévia só no hover, que não existe no celular |
+| Telas de configuração (Editar perfil, Editar deck): menu de seções à esquerda + uma coluna de cartões `settings-card` com rodapé de ação (`settings-*` no `ui.css`) | Duas colunas de cartões com alturas desiguais no computador |
+| Aba Decks: lista na largura toda, "Novo deck" em janela, gerenciar cada deck no menu "⋯" do cartão; no celular cada deck é uma linha | Coluna lateral com o formulário de novo deck e quatro botões no rodapé de cada cartão |
 | Uma seção por história: o Rival já mostra o retrospecto, então o "Confronto direto" saiu do perfil | Seção de números soltos (vitórias/derrotas em texto) sem visual, ou duas seções contando a mesma coisa |
 
 ---
@@ -70,7 +74,7 @@ Toda cor nova tem que funcionar nos dois.
 ### Ícones
 
 - Só `<x-icon name="...">` (Lucide, 14–16px). Disponíveis: search, sun, moon, upload, download, repeat, sparkles, dollar,
-  heart, megaphone, link, pin, trash, medal, user-plus, globe, lock, info, check-check, pencil, settings, layout-dashboard,
+  heart, megaphone, link, pin, trash, medal, user-plus, globe, lock, eye, eye-off, image, info, check-check, pencil, settings, layout-dashboard,
   trophy, swords, bell, plus, user, users, log-out, menu, x, chevron-right, chevron-down, arrow-right, calendar, activity,
   circle-check, clock, inbox, layers, library, chart, shield, flag, target, ellipsis, crown, alert, home.
 - Precisa de outro? Adicione o path do Lucide em `components/icon.blade.php` (licença ISC), não use emoji no lugar.

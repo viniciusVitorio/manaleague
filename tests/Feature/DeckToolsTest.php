@@ -22,7 +22,7 @@ class DeckToolsTest extends TestCase
         $this->post('/decks/'.$deck->id.'/versions', ['label' => 'Primeira'])->assertRedirect();
         $version = DeckVersion::query()->sole();
         $this->get('/me/deck-history/'.$version->id)->assertOk()->assertSee('Mountain');
-        $this->get('/decks/compare?left='.$deck->id.'&right='.$other->id)->assertOk()->assertSee('Mountain')->assertSee('-24');
+        $this->get('/decks/compare?left='.$deck->id.'&right='.$other->id)->assertOk()->assertSee('Mountain')->assertSee('-24')->assertSee('para tirar')->assertSee('Inverter');
         $this->actingAs(User::factory()->create())->get('/me/deck-history/'.$version->id)->assertNotFound();
         $this->get('/decks/compare?left='.$deck->id.'&right='.$other->id)->assertNotFound();
     }

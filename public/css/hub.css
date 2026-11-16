@@ -182,6 +182,45 @@ button.ui-link:hover{color:var(--ui-fg)}
 .deck-card-actions form{margin:0}
 .deck-card-actions .deck-card-del{margin-left:auto}
 .deck-card-actions form:has(.deck-card-del){margin-left:auto}
+/* Aba Decks: lista na largura toda, barra com filtros e ferramentas, menu "..." em cada cartão e "Novo deck" em janela. */
+.deck-hub-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s2) var(--s4);margin:var(--s6) 0 var(--s3)}
+.deck-hub-bar .deck-filter{margin:0}
+.deck-hub-tools{display:flex;flex-wrap:wrap;gap:4px;margin-left:auto}
+.deck-hub-cards{grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:var(--s4)}
+.deck-hub-cards .deck-card{position:relative;overflow:visible;background:var(--ui-card)}
+.deck-hub-cards .deck-card-art{border-radius:calc(var(--ui-radius) - 1px) calc(var(--ui-radius) - 1px) 0 0}
+.deck-hub-cards .deck-card-body{padding:var(--s3) var(--s4) var(--s4)}
+.deck-hub-cards .deck-card-tags{right:48px}
+.deck-card-menu{position:absolute;top:8px;right:8px}
+.deck-card-menu>.ui-icon-btn{width:30px;height:30px;background:rgba(9,9,11,.8);border-color:rgba(255,255,255,.15);color:#fafafa}
+.deck-card-menu>.ui-icon-btn:hover{background:rgba(9,9,11,.95)}
+.deck-card-menu .ui-menu{min-width:190px}
+.deck-card-menu .deck-card-del,.deck-card-menu .deck-card-del .icon{color:var(--ui-danger)}
+.deck-new-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3)}
+.deck-new select{width:100%}
+.deck-new .small-note{margin:-4px 0 0}
+.deck-new-foot{justify-content:flex-end}
+@media(max-width:640px){
+  /* Celular: resumo em 3 colunas compactas e cada deck vira uma linha (arte à esquerda, dados à direita). */
+  .dash-stats.dash-stats-3.deck-hub-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2)}
+  .deck-hub-stats .ui-stat{padding:var(--s2) var(--s3)}
+  .deck-hub-stats .ui-stat-icon,.deck-hub-stats .ui-stat-hint{display:none}
+  .deck-hub-stats .ui-stat-label{font-size:.7rem;line-height:1.25;min-height:2.5em}
+  .deck-hub-stats .ui-stat-value{font-size:1.05rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .deck-hub-bar{margin-top:var(--s4)}
+  .deck-hub-tools{margin-left:0}
+  .deck-hub-cards{grid-template-columns:1fr;gap:var(--s2)}
+  .deck-hub-cards .deck-card{flex-direction:row}
+  .deck-hub-cards .deck-card-art{flex:0 0 108px;aspect-ratio:auto;min-height:96px;border-radius:calc(var(--ui-radius) - 1px) 0 0 calc(var(--ui-radius) - 1px)}
+  .deck-hub-cards .deck-card-tags{left:6px;top:6px;right:6px;flex-direction:column;align-items:flex-start}
+  .deck-hub-cards .deck-card-body{min-width:0;padding:var(--s3);padding-right:44px}
+  .deck-hub-cards .deck-card-title{flex-direction:column;align-items:flex-start;gap:4px}
+  .deck-hub-cards .deck-card-title a{max-width:100%}
+  .deck-card-menu>.ui-icon-btn{background:var(--ui-card);border-color:var(--ui-border);color:var(--ui-fg)}
+  .deck-card-menu>.ui-icon-btn:hover{background:var(--ui-accent)}
+  .deck-new-row{grid-template-columns:1fr}
+  .deck-new-foot .ui-btn-primary{flex:1}
+}
 .deck-new{display:grid;gap:var(--s3)}
 .deck-new label{margin:0}
 .deck-tools-list{display:grid}

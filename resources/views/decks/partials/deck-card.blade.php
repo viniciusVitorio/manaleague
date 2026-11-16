@@ -15,6 +15,7 @@
             @if($deck->is_primary)<span class="deck-tag is-primary">★ Principal</span>@endif
             @if($manage && ! $deck->is_visible_to_friends)<span class="deck-tag"><x-icon name="lock" :size="11" />Privado</span>@endif
             @if($manage && $deck->showcase_position)<span class="deck-tag" title="Aparece na vitrine do seu perfil">Na vitrine</span>@endif
+            @if($manage && $deck->share_token_hash)<span class="deck-tag" title="Tem link de compartilhamento ativo"><x-icon name="link" :size="11" />Link</span>@endif
         </span>
     </a>
     <div class="deck-card-body">
@@ -36,14 +37,19 @@
         @endif
         @if($coverage)<span class="deck-card-bar" aria-hidden="true"><span style="width: {{ $coverage['percent'] }}%"></span></span>@endif
     </div>
+    {{-- Gerenciar (só o dono, na aba Decks): menu "..." no canto da arte. O cartão inteiro já abre o deck. --}}
     @if($manage)
-        <div class="deck-card-actions">
-            <a class="ui-btn ui-btn-outline ui-btn-sm" href="{{ route('decks.show', $deck) }}">Abrir</a>
-            <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{{ route('decks.edit', $deck) }}">Editar</a>
-            @unless($deck->is_primary)
-                <form method="POST" action="{{ route('decks.primary', $deck) }}">@csrf @method('PATCH')<button class="ui-btn ui-btn-ghost ui-btn-sm" title="Tornar principal" aria-label="Tornar {{ $deck->name }} o deck principal">★</button></form>
-                <form method="POST" action="{{ route('decks.destroy', $deck) }}" onsubmit="return confirm('Excluir este deck e todas as cartas?')">@csrf @method('DELETE')<button class="ui-btn ui-btn-ghost ui-btn-sm deck-card-del" aria-label="Excluir {{ $deck->name }}"><x-icon name="trash" /></button></form>
-            @endunless
+        <div class="ui-dropdown deck-card-menu">
+            <button type="button" class="ui-icon-btn" data-menu-button aria-expanded="false" aria-controls="deck-card-menu-{{ $deck->id }}" aria-label="Ações de {{ $deck->name }}" title="Ações do deck"><x-icon name="ellipsis" /></button>
+            <div class="ui-menu ui-menu-end" id="deck-card-menu-{{ $deck->id }}" hidden>
+                <a class="ui-menu-item" href="{{ route('decks.show', $deck) }}"><x-icon name="layers" />Abrir</a>
+                <a class="ui-menu-item" href="{{ route('decks.edit', $deck) }}"><x-icon name="pencil" />Editar</a>
+                @unless($deck->is_primary)
+                    <form method="POST" action="{{ route('decks.primary', $deck) }}">@csrf @method('PATCH')<button class="ui-menu-item"><x-icon name="crown" />Tornar principal</button></form>
+                    <div class="ui-menu-sep"></div>
+                    <form method="POST" action="{{ route('decks.destroy', $deck) }}" data-confirm="Excluir este deck e todas as cartas?">@csrf @method('DELETE')<button class="ui-menu-item deck-card-del"><x-icon name="trash" />Excluir</button></form>
+                @endunless
+            </div>
         </div>
     @endif
 </article>

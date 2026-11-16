@@ -39,6 +39,14 @@ class DecksPageTest extends TestCase
         $this->assertStringNotContainsString('Cartas nos decks', $html);
         $this->assertMatchesRegularExpression('#class="site-nav-link" href="'.preg_quote(route('decks.index'), '#').'"\s+aria-current="page"#', $html);
 
+        // "Novo deck" abre em janela (sem coluna lateral); gerenciar cada deck fica no menu do cartão.
+        $this->assertStringContainsString('data-dialog-open="novo-deck"', $html);
+        $this->assertStringContainsString('<dialog class="ui-dialog deck-dialog" id="novo-deck"', $html);
+        $this->assertStringNotContainsString('hub-side', $html);
+        $this->assertStringNotContainsString('data-open-on-load', $html);
+        $this->assertStringContainsString('Tornar principal', $html);
+        $this->get('/me/decks?novo=1')->assertOk()->assertSee('data-open-on-load', false);
+
         $this->get('/me/decks?format=Commander')->assertSee('Atraxa')->assertDontSee('Elfos');
         $this->get('/me/decks?format=Draft')->assertSee('Nenhum deck de Draft.');
     }

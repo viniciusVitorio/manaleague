@@ -19,7 +19,8 @@ class CrudManagementTest extends TestCase
         $first = $profile->decks()->create(['name' => 'Mono Red', 'colors' => 'R', 'is_primary' => true]);
         $second = $profile->decks()->create(['name' => 'Dimir', 'colors' => 'UB']);
 
-        $this->actingAs($user)->get(route('decks.edit', $second))->assertOk()->assertSee('Dimir');
+        $this->actingAs($user)->get(route('decks.edit', $second))->assertOk()->assertSee('Dimir')
+            ->assertSeeInOrder(['Dados do deck', 'Visibilidade', 'Salvar alterações', 'Excluir deck'])->assertSee(route('decks.destroy', $second), false);
         $this->actingAs($user)->patch(route('decks.update', $second), [
             'name' => 'Dimir Faeries', 'colors' => 'UB',
         ])->assertRedirect();
