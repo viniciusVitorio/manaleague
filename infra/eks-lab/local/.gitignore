@@ -1,0 +1,4 @@
+.env.local
+*.cookies
+artifacts/
+.tls-fixture.*/

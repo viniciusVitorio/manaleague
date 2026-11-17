@@ -175,10 +175,11 @@ jobs:
     name: Deploy to AWS EC2
     runs-on: ubuntu-latest
     needs: [security, sonar, waf]
-    # Em release os jobs anteriores sao pulados (nao falham); !failure() deixa o deploy seguir so com a sincronizacao.
+    # Lab branch copy: never access production for release/tag events.
+    # The original main worktree is unchanged; main push deployment remains supported.
     if: >-
       !failure() && !cancelled() &&
-      ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release')
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: production
     concurrency:
       group: manaleague-production

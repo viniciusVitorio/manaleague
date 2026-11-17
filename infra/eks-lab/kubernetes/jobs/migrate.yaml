@@ -1,0 +1,115 @@
+{
+  "apiVersion": "batch/v1",
+  "kind": "Job",
+  "metadata": {
+    "name": "migrate-__RELEASE__",
+    "namespace": "manaleague-eks-lab"
+  },
+  "spec": {
+    "backoffLimit": 0,
+    "activeDeadlineSeconds": 600,
+    "ttlSecondsAfterFinished": 86400,
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "migrate",
+          "role": "job"
+        }
+      },
+      "spec": {
+        "serviceAccountName": "lab-app",
+        "automountServiceAccountToken": true,
+        "securityContext": {
+          "fsGroup": 82,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "terminationGracePeriodSeconds": 45,
+        "containers": [
+          {
+            "name": "migrate",
+            "image": "lab-app:dev",
+            "imagePullPolicy": "IfNotPresent",
+            "envFrom": [
+              {
+                "configMapRef": {
+                  "name": "manaleague-config"
+                }
+              },
+              {
+                "secretRef": {
+                  "name": "manaleague-secrets"
+                }
+              }
+            ],
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": true,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              },
+              "runAsNonRoot": true,
+              "runAsUser": 82,
+              "runAsGroup": 82
+            },
+            "resources": {
+              "requests": {
+                "cpu": "100m",
+                "memory": "128Mi"
+              },
+              "limits": {
+                "cpu": "500m",
+                "memory": "384Mi"
+              }
+            },
+            "volumeMounts": [
+              {
+                "name": "storage",
+                "mountPath": "/var/www/html/storage"
+              },
+              {
+                "name": "cache",
+                "mountPath": "/var/www/html/bootstrap/cache"
+              },
+              {
+                "name": "tmp",
+                "mountPath": "/tmp"
+              }
+            ],
+            "args": [
+              "php",
+              "artisan",
+              "migrate",
+              "--force",
+              "--no-interaction"
+            ]
+          }
+        ],
+        "volumes": [
+          {
+            "name": "storage",
+            "emptyDir": {
+              "sizeLimit": "128Mi"
+            }
+          },
+          {
+            "name": "cache",
+            "emptyDir": {
+              "sizeLimit": "32Mi"
+            }
+          },
+          {
+            "name": "tmp",
+            "emptyDir": {
+              "sizeLimit": "64Mi"
+            }
+          }
+        ],
+        "restartPolicy": "Never"
+      }
+    }
+  }
+}

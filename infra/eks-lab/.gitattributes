@@ -1,0 +1,5 @@
+# Arquivos executados no Linux precisam de LF, inclusive no checkout Windows.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.webp binary

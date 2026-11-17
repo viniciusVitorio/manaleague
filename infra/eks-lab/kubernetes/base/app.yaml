@@ -1,0 +1,244 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "manaleague",
+    "namespace": "manaleague-eks-lab"
+  },
+  "spec": {
+    "replicas": 2,
+    "revisionHistoryLimit": 2,
+    "strategy": {
+      "type": "RollingUpdate",
+      "rollingUpdate": {
+        "maxUnavailable": 0,
+        "maxSurge": 1
+      }
+    },
+    "selector": {
+      "matchLabels": {
+        "app": "manaleague"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "manaleague",
+          "role": "app"
+        }
+      },
+      "spec": {
+        "serviceAccountName": "lab-app",
+        "automountServiceAccountToken": true,
+        "securityContext": {
+          "fsGroup": 82,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "terminationGracePeriodSeconds": 90,
+        "containers": [
+          {
+            "name": "app",
+            "image": "lab-app:dev",
+            "imagePullPolicy": "IfNotPresent",
+            "lifecycle": {"preStop": {"exec": {"command": ["sleep", "30"]}}},
+            "envFrom": [
+              {
+                "configMapRef": {
+                  "name": "manaleague-config"
+                }
+              },
+              {
+                "secretRef": {
+                  "name": "manaleague-secrets"
+                }
+              }
+            ],
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": true,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              },
+              "runAsNonRoot": true,
+              "runAsUser": 82,
+              "runAsGroup": 82
+            },
+            "resources": {
+              "requests": {
+                "cpu": "100m",
+                "memory": "128Mi"
+              },
+              "limits": {
+                "cpu": "500m",
+                "memory": "384Mi"
+              }
+            },
+            "volumeMounts": [
+              {
+                "name": "storage",
+                "mountPath": "/var/www/html/storage"
+              },
+              {
+                "name": "cache",
+                "mountPath": "/var/www/html/bootstrap/cache"
+              },
+              {
+                "name": "tmp",
+                "mountPath": "/tmp"
+              }
+            ],
+            "ports": [
+              {
+                "name": "fpm",
+                "containerPort": 9000
+              }
+            ],
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/up",
+                "port": 8080
+              },
+              "initialDelaySeconds": 15,
+              "periodSeconds": 15,
+              "timeoutSeconds": 3,
+              "failureThreshold": 3
+            },
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/readyz",
+                "port": 8080
+              },
+              "periodSeconds": 5,
+              "timeoutSeconds": 3,
+              "failureThreshold": 3
+            },
+            "startupProbe": {
+              "httpGet": {
+                "path": "/up",
+                "port": 8080
+              },
+              "periodSeconds": 5,
+              "failureThreshold": 30
+            }
+          },
+          {
+            "name": "web",
+            "image": "lab-web:dev",
+            "imagePullPolicy": "IfNotPresent",
+            "lifecycle": {"preStop": {"exec": {"command": ["sleep", "30"]}}},
+            "ports": [
+              {
+                "name": "http",
+                "containerPort": 8080
+              }
+            ],
+            "env": [
+              {
+                "name": "APP_FASTCGI",
+                "value": "127.0.0.1:9000"
+              },
+              {
+                "name": "LAB_VPC_CIDR",
+                "value": "__VPC_CIDR__"
+              },
+              {
+                "name": "MODSEC_DEFAULT_PHASE1_ACTION",
+                "value": "phase:1,pass,log,auditlog,tag:'manaleague-eks-lab'"
+              },
+              {
+                "name": "MODSEC_DEFAULT_PHASE2_ACTION",
+                "value": "phase:2,pass,log,auditlog,tag:'manaleague-eks-lab'"
+              }
+            ],
+            "securityContext": {
+              "runAsNonRoot": true,
+              "runAsUser": 101,
+              "runAsGroup": 101,
+              "allowPrivilegeEscalation": false,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            },
+            "resources": {
+              "requests": {
+                "cpu": "50m",
+                "memory": "64Mi"
+              },
+              "limits": {
+                "cpu": "300m",
+                "memory": "192Mi"
+              }
+            },
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/readyz",
+                "port": "http"
+              },
+              "periodSeconds": 5,
+              "timeoutSeconds": 3
+            }
+          }
+        ],
+        "volumes": [
+          {
+            "name": "storage",
+            "emptyDir": {
+              "sizeLimit": "128Mi"
+            }
+          },
+          {
+            "name": "cache",
+            "emptyDir": {
+              "sizeLimit": "32Mi"
+            }
+          },
+          {
+            "name": "tmp",
+            "emptyDir": {
+              "sizeLimit": "64Mi"
+            }
+          }
+        ],
+        "topologySpreadConstraints": [
+          {
+            "maxSkew": 1,
+            "topologyKey": "kubernetes.io/hostname",
+            "whenUnsatisfiable": "ScheduleAnyway",
+            "labelSelector": {
+              "matchLabels": {
+                "app": "manaleague"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "manaleague",
+    "namespace": "manaleague-eks-lab"
+  },
+  "spec": {
+    "selector": {
+      "app": "manaleague"
+    },
+    "ports": [
+      {
+        "name": "http",
+        "port": 80,
+        "targetPort": "http"
+      }
+    ]
+  }
+}

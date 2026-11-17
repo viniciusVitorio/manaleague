@@ -27,6 +27,7 @@ permissions:
 
 jobs:
   sync:
+    if: github.ref == 'refs/heads/main'
     name: Run daily tasks
     runs-on: ubuntu-latest
     environment: production

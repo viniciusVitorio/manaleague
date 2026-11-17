@@ -1,0 +1,4 @@
+*.py text eol=lf
+*.md text eol=lf
+# Registry response bytes are hashed by tests; do not normalize line endings.
+provenance/* -text

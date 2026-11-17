@@ -1,0 +1,21 @@
+[
+  {
+    "name": "runner",
+    "version": "2.337.0",
+    "image": "ghcr.io/actions/actions-runner@sha256:e5496277be5d09bc968b3d64911b74e219ac4a3f2edce956a3ecf9271bea1ef4",
+    "source": "https://ghcr.io/v2/actions/actions-runner/manifests/2.337.0",
+    "build_source": "https://raw.githubusercontent.com/actions/runner/v2.337.0/images/Dockerfile",
+    "manifest_file": "provenance/runner-index.json",
+    "index_digest": "sha256:e5496277be5d09bc968b3d64911b74e219ac4a3f2edce956a3ecf9271bea1ef4",
+    "amd64_digest": "sha256:5036480998280bb21e32ade9fe1b02b493861ac314b62ba1aea320b94f56ec97"
+  },
+  {
+    "name": "aws-cli",
+    "version": "2.40.4",
+    "image": "public.ecr.aws/aws-cli/aws-cli@sha256:f97d3b708124c28ffa2f6cf2ff6c4c7bf79eeac7c5942b0140a506d911245b81",
+    "source": "https://public.ecr.aws/v2/aws-cli/aws-cli/manifests/2.40.4",
+    "manifest_file": "provenance/aws-cli-index.json",
+    "index_digest": "sha256:eaf444b45380050f920ab07492754aa76223dd90234e51c1f92c2e9391b5ee6b",
+    "amd64_digest": "sha256:f97d3b708124c28ffa2f6cf2ff6c4c7bf79eeac7c5942b0140a506d911245b81"
+  }
+]

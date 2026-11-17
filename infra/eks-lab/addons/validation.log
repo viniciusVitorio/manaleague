@@ -1,0 +1,62 @@
+Official controller policy SHA-256 (LF): 16f232c9d9f79366fe949c4550ad517a202380058a9e48d45a4e215044a20a6a MATCH
+$ C:/Users/vinic/AppData/Local/hermes/cache/scratch/terraform-bin/terraform.exe version -no-color
+Terraform v1.17.2
+on windows_amd64
++ provider registry.terraform.io/hashicorp/aws v6.73.0
+exit_code=0
+$ C:/Users/vinic/AppData/Local/hermes/cache/scratch/terraform-bin/terraform.exe fmt -check -recursive -no-color
+
+exit_code=0
+$ C:/Users/vinic/AppData/Local/hermes/cache/scratch/terraform-bin/terraform.exe validate -no-color
+Success! The configuration is valid.
+exit_code=0
+$ C:/Users/vinic/AppData/Local/hermes/cache/scratch/terraform-bin/terraform.exe test -no-color
+tests\guards.tftest.hcl... in progress
+  run "reject_three_nodes"... pass
+  run "reject_cross_account_operator"... pass
+  run "reject_wildcard_subject"... pass
+  run "reject_unknown_addon"... pass
+  run "identity_and_storage_guards"... pass
+tests\guards.tftest.hcl... tearing down
+tests\guards.tftest.hcl... pass
+tests\integration.tftest.hcl... in progress
+  run "network_policy_enabled"... pass
+  run "ingress_uses_terraform_security_groups"... pass
+  run "immutable_repository_subject"... pass
+  run "deploy_can_describe_only_lab_repositories"... pass
+  run "reject_world_clients"... pass
+  run "reject_empty_clients"... pass
+  run "reject_broad_clients"... pass
+  run "reject_ipv6_clients"... pass
+  run "reject_malformed_clients"... pass
+  run "reject_immutable_wildcard_subject"... pass
+  run "reject_nonnumeric_immutable_ids"... pass
+  run "reject_partial_immutable_ids"... pass
+  run "reject_wrong_environment"... pass
+tests\integration.tftest.hcl... tearing down
+tests\integration.tftest.hcl... pass
+tests\offline.tftest.hcl... in progress
+  run "safe_defaults"... pass
+  run "two_nodes_two_azs"... pass
+  run "reject_world_api"... pass
+  run "reject_wrong_account"... pass
+  run "reject_old_version"... pass
+tests\offline.tftest.hcl... tearing down
+tests\offline.tftest.hcl... pass
+tests\rds.tftest.hcl... in progress
+  run "deploy_database_policy_and_output_contract"... pass
+  run "private_database_public_nodes_topology"... pass
+  run "database_only_accepts_lab_nodes"... pass
+  run "postgres17_minimal_managed_storage_and_tls"... pass
+  run "disposable_database_has_real_backups"... pass
+  run "credentials_never_generated_or_read_by_terraform"... pass
+  run "deploy_read_only_exact_database_and_managed_secret"... pass
+  run "rds_outputs_match_pipeline_contract"... pass
+  run "two_node_option_preserves_private_single_az_rds"... pass
+  run "required_rds_not_an_in_cluster_database"... pass
+tests\rds.tftest.hcl... tearing down
+tests\rds.tftest.hcl... pass
+
+Success! 33 passed, 0 failed.
+exit_code=0
+PASS: local validation only; no AWS API, infrastructure plan/apply, or Kubernetes calls executed.

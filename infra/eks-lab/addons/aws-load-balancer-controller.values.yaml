@@ -1,0 +1,25 @@
+# Merge this static file with `terraform output -json load_balancer_controller_helm_values`.
+# JSON is YAML-compatible. Script installs Helm separately; root Terraform is AWS-only.
+replicaCount: 1
+revisionHistoryLimit: 2
+image:
+  repository: public.ecr.aws/eks/aws-load-balancer-controller
+  tag: v3.6.3
+defaultTargetType: ip
+watchNamespace: manaleague-eks-lab
+# Dedicated Terraform SG is supplied explicitly on every Ingress.
+# No automatic controller mutation of node security groups is permitted/needed.
+enableBackendSecurityGroup: false
+enableShield: false
+enableWaf: false
+enableWafv2: false
+serviceAccount:
+  create: true
+  name: aws-load-balancer-controller
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi

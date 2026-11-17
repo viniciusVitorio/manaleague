@@ -1,0 +1,23 @@
+# Somente dados locais do laboratorio; nunca versionar credenciais/state/plan.
+.env
+.env.*
+!.env.example
+.local/
+.generated/
+.rendered/
+.render/
+.state/
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfplan
+**/*.tfvars
+!**/*.tfvars.example
+**/outputs.json
+**/terraform-output.json
+**/secrets.yaml
+**/secrets.json
+**/kubeconfig*
+**/__pycache__/
+**/*.pyc
+validation-results/

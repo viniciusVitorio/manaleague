@@ -1,0 +1,24 @@
+{
+  "apiVersion": "kustomize.config.k8s.io/v1beta1",
+  "kind": "Kustomization",
+  "namespace": "manaleague-eks-lab",
+  "resources": [
+    "app-config.yaml",
+    "app.yaml",
+    "reverb.yaml",
+    "scheduler.yaml",
+    "daily-tasks.yaml",
+    "ingress.yaml",
+    "network-policies.yaml"
+  ],
+  "images": [
+    {
+      "name": "lab-app",
+      "newTag": "dev"
+    },
+    {
+      "name": "lab-web",
+      "newTag": "dev"
+    }
+  ]
+}

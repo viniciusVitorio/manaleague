@@ -1,0 +1,11 @@
+.terraform/
+.state/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.plan
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+# .terraform.lock.hcl MUST remain tracked.

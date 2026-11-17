@@ -1,0 +1,118 @@
+name: manaleague-eks-lab
+x-env: &lab-env
+  APP_NAME: ManaLeague EKS Lab
+  APP_ENV: eks-lab
+  APP_KEY: ${APP_KEY:?Generate disposable .env.local first}
+  APP_DEBUG: "false"
+  APP_URL: http://localhost:18080
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: warning
+  DB_CONNECTION: pgsql
+  LAB_DATABASE_MODE: local
+  DB_SSLMODE: disable
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_DATABASE: manaleague_eks_lab
+  DB_USERNAME: manaleague_lab
+  DB_PASSWORD: ${DB_PASSWORD:?Generate disposable .env.local first}
+  DB_URL: ""
+  SESSION_DRIVER: database
+  SESSION_COOKIE: manaleague_eks_lab_session
+  SESSION_ENCRYPT: "true"
+  SESSION_SECURE_COOKIE: "false"
+  SESSION_HTTP_ONLY: "true"
+  CACHE_STORE: database
+  CACHE_PREFIX: manaleague-eks-lab-
+  QUEUE_CONNECTION: sync
+  MAIL_MAILER: log
+  AVATAR_DISK: local
+  AWS_EC2_METADATA_DISABLED: "true"
+  BROADCAST_CONNECTION: reverb
+  REVERB_HOST: reverb
+  REVERB_PORT: "8080"
+  REVERB_SCHEME: http
+  REVERB_ALLOWED_ORIGINS: localhost,127.0.0.1
+x-app: &app
+  image: lab-app:dev
+  environment: *lab-env
+  read_only: true
+  tmpfs:
+    - /tmp:uid=82,gid=82,mode=1777
+    - /var/www/html/storage:uid=82,gid=82,mode=0770
+    - /var/www/html/bootstrap/cache:uid=82,gid=82,mode=0770
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  mem_limit: 384m
+  stop_grace_period: 45s
+  depends_on:
+    postgres:
+      condition: service_healthy
+x-web: &web
+  image: lab-web:dev
+  environment:
+    APP_FASTCGI: 127.0.0.1:9000
+    LAB_VPC_CIDR: 10.77.0.0/24
+    MODSEC_DEFAULT_PHASE1_ACTION: "phase:1,pass,log,auditlog,tag:'manaleague-eks-lab'"
+    MODSEC_DEFAULT_PHASE2_ACTION: "phase:2,pass,log,auditlog,tag:'manaleague-eks-lab'"
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  mem_limit: 160m
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_DB: manaleague_eks_lab
+      POSTGRES_USER: manaleague_lab
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Generate disposable .env.local first}
+      POSTGRES_INITDB_ARGS: --auth=scram-sha-256
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    command: [postgres, -c, shared_buffers=64MB, -c, max_connections=40]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U manaleague_lab -d manaleague_eks_lab']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    mem_limit: 256m
+    security_opt: ["no-new-privileges:true"]
+  app:
+    <<: *app
+  app2:
+    <<: *app
+  web:
+    <<: *web
+    network_mode: service:app
+    depends_on: [app]
+  web2:
+    <<: *web
+    network_mode: service:app2
+    depends_on: [app2]
+  reverb:
+    <<: *app
+    command: [php, artisan, "reverb:start", --host=0.0.0.0, --port=8080, --no-interaction]
+    mem_limit: 128m
+  edge:
+    image: lab-web:dev
+    entrypoint: [nginx, -c, /etc/nginx/lab-edge.conf, -g, 'daemon off;']
+    volumes: ["./edge.conf:/etc/nginx/lab-edge.conf:ro"]
+    ports: ["127.0.0.1:18080:8080"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 64m
+    depends_on: [web, web2, reverb]
+  migrate:
+    <<: *app
+    profiles: [tools]
+    command: [php, artisan, migrate, --force, --no-interaction]
+  seed:
+    <<: *app
+    profiles: [tools]
+    environment:
+      <<: *lab-env
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+    command: [php, infra/eks-lab/runtime/seed.php]
+networks:
+  default:
+    ipam:
+      config: [{subnet: 10.77.0.0/24}]
+volumes:
+  postgres-data:

@@ -1,0 +1,165 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "reverb",
+    "namespace": "manaleague-eks-lab"
+  },
+  "spec": {
+    "replicas": 1,
+    "strategy": {
+      "type": "Recreate"
+    },
+    "selector": {
+      "matchLabels": {
+        "app": "reverb"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "reverb",
+          "role": "reverb"
+        }
+      },
+      "spec": {
+        "serviceAccountName": "lab-app",
+        "automountServiceAccountToken": true,
+        "securityContext": {
+          "fsGroup": 82,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "terminationGracePeriodSeconds": 45,
+        "containers": [
+          {
+            "name": "reverb",
+            "image": "lab-app:dev",
+            "imagePullPolicy": "IfNotPresent",
+            "envFrom": [
+              {
+                "configMapRef": {
+                  "name": "manaleague-config"
+                }
+              },
+              {
+                "secretRef": {
+                  "name": "manaleague-secrets"
+                }
+              }
+            ],
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": true,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              },
+              "runAsNonRoot": true,
+              "runAsUser": 82,
+              "runAsGroup": 82
+            },
+            "resources": {
+              "requests": {
+                "cpu": "50m",
+                "memory": "64Mi"
+              },
+              "limits": {
+                "cpu": "300m",
+                "memory": "128Mi"
+              }
+            },
+            "volumeMounts": [
+              {
+                "name": "storage",
+                "mountPath": "/var/www/html/storage"
+              },
+              {
+                "name": "cache",
+                "mountPath": "/var/www/html/bootstrap/cache"
+              },
+              {
+                "name": "tmp",
+                "mountPath": "/tmp"
+              }
+            ],
+            "args": [
+              "php",
+              "artisan",
+              "reverb:start",
+              "--host=0.0.0.0",
+              "--port=8080",
+              "--no-interaction"
+            ],
+            "ports": [
+              {
+                "name": "ws",
+                "containerPort": 8080
+              }
+            ],
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/up",
+                "port": "ws"
+              },
+              "periodSeconds": 5
+            },
+            "livenessProbe": {
+              "tcpSocket": {
+                "port": "ws"
+              },
+              "initialDelaySeconds": 10,
+              "periodSeconds": 15
+            }
+          }
+        ],
+        "volumes": [
+          {
+            "name": "storage",
+            "emptyDir": {
+              "sizeLimit": "128Mi"
+            }
+          },
+          {
+            "name": "cache",
+            "emptyDir": {
+              "sizeLimit": "32Mi"
+            }
+          },
+          {
+            "name": "tmp",
+            "emptyDir": {
+              "sizeLimit": "64Mi"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "reverb",
+    "namespace": "manaleague-eks-lab",
+    "annotations": {
+      "alb.ingress.kubernetes.io/healthcheck-path": "/up"
+    }
+  },
+  "spec": {
+    "selector": {
+      "app": "reverb"
+    },
+    "ports": [
+      {
+        "name": "ws",
+        "port": 8080,
+        "targetPort": "ws"
+      }
+    ]
+  }
+}

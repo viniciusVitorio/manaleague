@@ -1,0 +1,55 @@
+{
+  "resolved_at": "2026-11-17T09:12:17.986790-03:00",
+  "actions": {
+    "actions/checkout": {
+      "ref": "v4",
+      "sha": "11d5960a326750d5838078e36cf38b85af677262",
+      "source": "https://api.github.com/repos/actions/checkout/commits/v4"
+    },
+    "shivammathur/setup-php": {
+      "ref": "v2",
+      "sha": "eb7c497e18156a6bbabfef1d3a82760b9eda3962",
+      "source": "https://api.github.com/repos/shivammathur/setup-php/commits/v2"
+    },
+    "hashicorp/setup-terraform": {
+      "ref": "v3",
+      "sha": "b9cd54a3c349d3f38e8881555d616ced269862dd",
+      "source": "https://api.github.com/repos/hashicorp/setup-terraform/commits/v3"
+    },
+    "azure/setup-kubectl": {
+      "ref": "v4",
+      "sha": "776406bce94f63e41d621b960d78ee25c8b76ede",
+      "source": "https://api.github.com/repos/azure/setup-kubectl/commits/v4"
+    },
+    "azure/setup-helm": {
+      "ref": "v4",
+      "sha": "1a275c3b69536ee54be43f2070a358922e12c8d4",
+      "source": "https://api.github.com/repos/azure/setup-helm/commits/v4"
+    },
+    "actions/setup-go": {
+      "ref": "v5",
+      "sha": "40f1582b2485089dde7abd97c1529aa768e1baff",
+      "source": "https://api.github.com/repos/actions/setup-go/commits/v5"
+    },
+    "aquasecurity/trivy-action": {
+      "ref": "v0.36.0",
+      "sha": "ed142fd0673e97e23eac54620cfb913e5ce36c25",
+      "source": "https://api.github.com/repos/aquasecurity/trivy-action/commits/v0.36.0"
+    },
+    "actions/upload-artifact": {
+      "ref": "v4",
+      "sha": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+      "source": "https://api.github.com/repos/actions/upload-artifact/commits/v4"
+    },
+    "actions/download-artifact": {
+      "ref": "v4",
+      "sha": "d3f86a106a0bac45b974a628896c90dbdf5c8093",
+      "source": "https://api.github.com/repos/actions/download-artifact/commits/v4"
+    },
+    "aws-actions/configure-aws-credentials": {
+      "ref": "v4",
+      "sha": "7474bc4690e29a8392af63c5b98e7449536d5c3a",
+      "source": "https://api.github.com/repos/aws-actions/configure-aws-credentials/commits/v4"
+    }
+  }
+}

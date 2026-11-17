@@ -1,0 +1,249 @@
+name: Isolated EKS lab
+
+on:
+  push:
+    branches: [eks-lab]
+  pull_request:
+    branches: [eks-lab]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eks-lab-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_DB: manaleague_test
+          POSTGRES_USER: manaleague
+          POSTGRES_PASSWORD: local-test-password
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U manaleague -d manaleague_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '5432'
+      DB_DATABASE: manaleague_test
+      DB_USERNAME: manaleague
+      DB_PASSWORD: local-test-password
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Prepare isolated test environment (never copy production credentials)
+        run: cp .env.example .env
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pdo_sqlite, intl, gd, exif
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - run: php artisan test
+      - run: node --test tests/js/*.test.cjs
+      - run: composer audit --locked --no-interaction
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: '1.17.2'
+          terraform_wrapper: false
+      - uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
+        with:
+          version: v1.37.0
+      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+        with:
+          version: v3.19.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25.0'
+          cache: false
+      - name: Install pinned local validators
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          go install github.com/yannh/kubeconform/cmd/kubeconform@v0.7.0
+      - name: Validate workflows, scripts, isolated Terraform and Kubernetes schemas (no cloud API)
+        run: bash infra/eks-lab/scripts/verify.sh
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.76.2
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+  images:
+    # Gate is intentionally skipped on PRs; still run build/smoke/scans there.
+    if: ${{ !cancelled() && needs.checks.result == 'success' }}
+    runs-on: ubuntu-latest
+    needs: [checks, gate]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Build both lab targets once
+        run: |
+          docker build -f infra/eks-lab/docker/Dockerfile --target app -t lab-app:dev .
+          docker build -f infra/eks-lab/docker/Dockerfile --target web -t lab-web:dev .
+      - name: Smoke tested local images (never build during publish)
+        run: bash infra/eks-lab/scripts/smoke.sh
+      - name: Verify PostgreSQL TLS using disposable local certificates (no AWS)
+        run: bash infra/eks-lab/local/test-tls-fixture.sh
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.76.2
+          image-ref: lab-app:dev
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.76.2
+          image-ref: lab-web:dev
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Export the exact smoke-tested images
+        if: needs.gate.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/lab-images"
+          docker save lab-app:dev lab-web:dev | gzip -1 > "$RUNNER_TEMP/lab-images/images.tar.gz"
+          cd "$RUNNER_TEMP/lab-images"
+          sha256sum images.tar.gz > images.tar.gz.sha256
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: needs.gate.outputs.enabled == 'true'
+        with:
+          name: eks-lab-images-${{ github.sha }}
+          path: ${{ runner.temp }}/lab-images/
+          if-no-files-found: error
+          retention-days: 2
+          compression-level: 0
+
+  gate:
+    timeout-minutes: 5
+    if: github.ref == 'refs/heads/eks-lab' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment: eks-lab
+    outputs:
+      enabled: ${{ steps.gate.outputs.enabled }}
+    steps:
+      - id: gate
+        env:
+          LAB_DEPLOY_ENABLED: ${{ vars.LAB_DEPLOY_ENABLED }}
+        run: |
+          if [[ "$LAB_DEPLOY_ENABLED" == true ]]; then
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+            echo 'Cloud jobs disabled. Provision the isolated lab manually, configure the eks-lab Environment and stable-egress runner, then set LAB_DEPLOY_ENABLED=true.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  publish:
+    if: needs.gate.outputs.enabled == 'true' && github.ref == 'refs/heads/eks-lab' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [checks, images, gate]
+    runs-on: ubuntu-latest
+    environment: eks-lab
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      app_image: ${{ steps.publish.outputs.app_image }}
+      web_image: ${{ steps.publish.outputs.web_image }}
+    env:
+      LAB_DEPLOY_ENABLED: ${{ vars.LAB_DEPLOY_ENABLED }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+      EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
+      ECR_APP_REPOSITORY: ${{ vars.ECR_APP_REPOSITORY }}
+      ECR_WEB_REPOSITORY: ${{ vars.ECR_WEB_REPOSITORY }}
+      RELEASE: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: eks-lab-images-${{ github.sha }}
+          path: ${{ runner.temp }}/lab-images
+      - name: Verify and load tested image artifact
+        working-directory: ${{ runner.temp }}/lab-images
+        run: |
+          set -euo pipefail
+          sha256sum -c images.tar.gz.sha256
+          gzip -dc images.tar.gz | docker load
+      - name: Reject wrong lab role before requesting OIDC credentials
+        run: |
+          [[ "$AWS_ACCOUNT_ID" =~ ^[0-9]{12}$ ]]
+          [[ "$AWS_ROLE_ARN" == "arn:aws:iam::${AWS_ACCOUNT_ID}:role/manaleague-eks-lab-github-deploy" ]]
+          [[ "$EKS_CLUSTER_NAME" == manaleague-eks-lab && "$LAB_DEPLOY_ENABLED" == true ]]
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          unset-current-credentials: true
+          role-session-name: eks-lab-publish-${{ github.run_id }}
+      - name: Publish immutable SHA tags, verify existing retries, emit digests
+        id: publish
+        run: bash infra/eks-lab/scripts/lab.sh publish --allow-cloud --confirm-lab manaleague-eks-lab --expected-account "$AWS_ACCOUNT_ID"
+
+  deploy:
+    if: github.ref == 'refs/heads/eks-lab' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: publish
+    # Dedicated NON-production runner, stable egress in the cluster API allow-list.
+    # Never open the cluster endpoint to hosted-runner IPs dynamically.
+    runs-on: [self-hosted, linux, eks-lab]
+    environment: eks-lab
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: manaleague-eks-lab-deploy
+      cancel-in-progress: false
+    env:
+      LAB_DEPLOY_ENABLED: ${{ vars.LAB_DEPLOY_ENABLED }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+      EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
+      ECR_APP_REPOSITORY: ${{ vars.ECR_APP_REPOSITORY }}
+      ECR_WEB_REPOSITORY: ${{ vars.ECR_WEB_REPOSITORY }}
+      APP_IMAGE: ${{ needs.publish.outputs.app_image }}
+      WEB_IMAGE: ${{ needs.publish.outputs.web_image }}
+      RELEASE: ${{ github.sha }}
+      APP_URL: ${{ vars.APP_URL }}
+      AVATAR_BUCKET: ${{ vars.AVATAR_BUCKET }}
+      APP_ROLE_ARN: ${{ vars.APP_ROLE_ARN }}
+      VPC_CIDR: ${{ vars.VPC_CIDR }}
+      SUBNET_IDS: ${{ vars.SUBNET_IDS }}
+      ALLOWED_CIDRS: ${{ vars.ALLOWED_CIDRS }}
+      ALB_SECURITY_GROUP_ID: ${{ vars.ALB_SECURITY_GROUP_ID }}
+      APP_KEY: ${{ secrets.APP_KEY }}
+      DB_HOST: ${{ vars.DB_HOST }}
+      VPC_ID: ${{ vars.VPC_ID }}
+      RDS_MASTER_SECRET_ARN: ${{ vars.RDS_MASTER_SECRET_ARN }}
+      DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Reject wrong lab role before requesting OIDC credentials
+        run: |
+          [[ "$AWS_ACCOUNT_ID" =~ ^[0-9]{12}$ ]]
+          [[ "$AWS_ROLE_ARN" == "arn:aws:iam::${AWS_ACCOUNT_ID}:role/manaleague-eks-lab-github-deploy" ]]
+          [[ "$EKS_CLUSTER_NAME" == manaleague-eks-lab && "$LAB_DEPLOY_ENABLED" == true ]]
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          unset-current-credentials: true
+          role-session-name: eks-lab-deploy-${{ github.run_id }}
+      - uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
+        with:
+          version: v1.37.0
+      - name: Guard exact cluster, render, migrate, discover ALB URL and verify HTTP/WebSocket
+        run: bash infra/eks-lab/scripts/lab.sh deploy --allow-cloud --confirm-lab manaleague-eks-lab --expected-account "$AWS_ACCOUNT_ID"

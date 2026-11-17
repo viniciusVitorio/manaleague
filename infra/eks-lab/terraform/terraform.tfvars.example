@@ -1,0 +1,24 @@
+# Never put access keys, database passwords or production credentials in Terraform.
+# Copy to terraform.tfvars (gitignored), then replace EVERY example value below.
+expected_account_id = "123456789012"
+provisioner_principal_arn = "arn:aws:iam::123456789012:role/REPLACE_WITH_TRUSTED_LAB_OPERATOR"
+github_oidc_provider_arn = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+# Verify exact OIDC subject against your real repository/environment; owner capitalization matters.
+# Immutable-ID subject is also accepted, with IDs on BOTH names:
+# github_oidc_subject = "repo:viniciusVitorio@123456/manaleague@789012:environment:eks-lab"
+# These example IDs are NOT verified repository IDs; use the actual token claim.
+github_oidc_subject = "repo:viniciusVitorio/manaleague:environment:eks-lab"
+# Documentation-only TEST-NET addresses: replace with your real /32 and authorized stable runner egress /32.
+api_public_access_cidrs = ["203.0.113.10/32", "198.51.100.20/32"]
+# Authoritative ALB client allowlist (custom SG ignores the Ingress inbound-cidrs annotation).
+allowed_client_cidrs = ["203.0.113.10/32"]
+aws_region = "us-east-1"
+kubernetes_version = "1.37"
+node_count = 1
+# node_count = 2 means one managed node in EACH AZ, not two in a random AZ.
+# RDS is REQUIRED and intentionally fixed at the smallest lab profile:
+# PostgreSQL major 17 (AWS chooses available 17.x), db.t4g.micro, Single-AZ, encrypted 20GiB gp3.
+# DB identifier manaleague-eks-lab; DB manaleague_eks_lab; user manaleague_lab.
+# RDS generates/manages the password in Secrets Manager. No password tfvar or secret value in state.
+# Only managed-secret ARN metadata is output; retrieve the value during authorized deployment.
+# addon_versions = { vpc-cni = "vX.Y.Z-eksbuild.N" } # optionally pin reviewed compatible versions

@@ -1,0 +1,7 @@
+{
+  "source": "https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem",
+  "sha256": "90a6f1a7978a1b1b096dca6c57511ca48d3b8cf052f8e704baf358f34ea2f21b",
+  "downloaded_at": "2026-11-16T22:45:28.007487+00:00",
+  "content": "Public Amazon RDS CA certificates; not a credential",
+  "update": "Fetch over verified HTTPS from the exact source, review CA changes, refresh checksum, rebuild images."
+}
