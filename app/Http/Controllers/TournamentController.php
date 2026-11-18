@@ -63,7 +63,8 @@ class TournamentController extends Controller
         $profile = auth()->user()->playerProfile()->with('decks')->first();
         $entry = $profile ? $tournament->players->firstWhere('player_profile_id', $profile->id) : null;
         $lifeLogs = app(LifeLogService::class)->viewableInTournament($tournament, auth()->user());
-        return view('tournaments.show', compact('tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'friends', 'recap', 'profile', 'entry', 'bannedDecks', 'lifeLogs'));
+        $prizes = app(\App\Services\PrizeService::class)->forTournament($tournament);
+        return view('tournaments.show', compact('prizes', 'tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'friends', 'recap', 'profile', 'entry', 'bannedDecks', 'lifeLogs'));
     }
 
     public function edit(Tournament $tournament): View
@@ -113,6 +114,10 @@ class TournamentController extends Controller
             $copy->club_id = $club?->id;
             $copy->round_minutes = $tournament->round_minutes;
             $copy->save();
+            // A premiação se repete na próxima edição (o organizador pode mudar antes de encerrar).
+            foreach ($tournament->prizes()->get() as $prize) {
+                $copy->prizes()->create($prize->only(['placement', 'kind', 'quantity', 'style', 'label', 'image_path']));
+            }
 
             if ($validated['copy_players'] ?? false) {
                 // Mesma inscrição (nome, perfil e deck); check-in e resultados começam do zero.
@@ -170,7 +175,9 @@ class TournamentController extends Controller
     public function destroy(Tournament $tournament): RedirectResponse
     {
         $this->authorize('delete', $tournament);
+        $images = $tournament->prizes()->whereNotNull('image_path')->pluck('image_path')->all();
         DB::transaction(fn () => $tournament->delete());
+        app(\App\Services\PrizeService::class)->forgetImages($images);
         return redirect()->route('tournaments.index')->with('status', 'Torneio excluido.');
     }
 

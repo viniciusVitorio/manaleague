@@ -51,6 +51,7 @@
                 <div class="ui-menu ui-menu-end" id="menu-account" hidden>
                     <div class="ui-menu-label"><strong>{{ $user->playerProfile?->nickname ?: $user->name }}</strong><span>{{ $user->email }}</span></div>
                     <a class="ui-menu-item" href="{{ route('profiles.index') }}"><x-icon name="user" />Meu perfil</a>
+                    <a class="ui-menu-item" href="{{ route('prizes.index') }}"><x-icon name="gift" />Meus prêmios</a>
                     <a class="ui-menu-item" href="{{ route('friends.index') }}"><x-icon name="users" />Amigos @if($pendingFriends)<span class="ui-count ui-count-inline" aria-label="{{ $pendingFriends }} {{ $pendingFriends === 1 ? 'pedido de amizade pendente' : 'pedidos de amizade pendentes' }}">{{ $pendingFriends }}</span>@endif</a>
                     @if(config('ranked.enabled') && $user->isAdmin())<a class="ui-menu-item" href="{{ route('ranked.admin') }}"><x-icon name="flag" />Moderação</a>@endif
                     <a class="ui-menu-item" href="{{ route('profiles.edit') }}#preferencias"><x-icon name="settings" />Preferências</a>
@@ -71,6 +72,7 @@
             @endforeach
             <div class="ui-menu-sep" role="separator"></div>
             <a class="site-mobile-link" href="{{ route('profiles.index') }}"><x-icon name="user" />Meu perfil</a>
+            <a class="site-mobile-link" href="{{ route('prizes.index') }}"><x-icon name="gift" />Meus prêmios</a>
             <a class="site-mobile-link" href="{{ route('friends.index') }}"><x-icon name="users" />Amigos @if($pendingFriends)<span class="ui-count ui-count-inline" aria-label="{{ $pendingFriends }} {{ $pendingFriends === 1 ? 'pedido de amizade pendente' : 'pedidos de amizade pendentes' }}">{{ $pendingFriends }}</span>@endif</a>
             <form method="POST" action="{{ route('logout') }}">@csrf<button class="site-mobile-link"><x-icon name="log-out" />Sair</button></form>
         </div>

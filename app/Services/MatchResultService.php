@@ -46,6 +46,8 @@ class MatchResultService
             if ($t->system === 'round_robin' && $t->status === 'finals' && ! $t->matches()->whereIn('stage', ['final', 'third_place'])->where('status', 'pending')->exists()) {
                 $t->update(['status' => 'finished']);
             }
+            // Encerrou agora, ou a final foi corrigida depois de encerrado: os prêmios seguem a classificação final.
+            app(PrizeService::class)->sync($t);
             Log::info('match.result_saved', ['user_id' => auth()->id(), 'tournament_id' => $t->id, 'match_id' => $m->id, 'before' => $before, 'after' => $values]);
             foreach (Player::query()->whereIn('id', $m->pod_player_ids ?? [$m->player_one_id, $m->player_two_id])->with('profile')->get() as $player) {
                 if ($player->profile) app(AchievementService::class)->sync($player->profile);

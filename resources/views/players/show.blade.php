@@ -48,6 +48,7 @@
                         </div>
                     </details>
                     @endif
+                    @if($isOwner && $pendingPrizes)<a href="{{ route('prizes.index') }}">🎁 {{ $pendingPrizes }} {{ $pendingPrizes === 1 ? 'prêmio' : 'prêmios' }} a receber</a>@endif
                     @if($isOwner)<span>Código: <b>{{ $profile->formattedFriendCode() }}</b></span>@endif
                 </div>
             </div>
@@ -170,6 +171,7 @@
     </div>
 </section>
 @endif
+@include('players.partials.trophies')
 @php($filledSlots = collect($showcase['slots'])->filter())
 @if($isOwner || $filledSlots->isNotEmpty())
 @push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/hub.css') }}">@endpush

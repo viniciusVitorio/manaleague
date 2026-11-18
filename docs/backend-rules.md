@@ -91,6 +91,7 @@ Como organizar controller, service, model, migration e regra de negócio. Comple
   `X-Robots-Tag: noindex` e `Referrer-Policy: no-referrer` (as imagens das cartas vêm do Scryfall). Use os métodos do
   `Deck` (`enableShareLink`, `disableShareLink`, `shareUrl`, `findShared`); os campos são `$hidden`.
 - **Avatar:** emoji único (servidor valida 1 grafema pictográfico; `PlayerProfile::emoji()` corta valores antigos).
+- **Premiação:** tudo passa pelo `PrizeService`. Quem encerra um torneio (ou corrige a final) chama `sync($tournament)` dentro da transação; ele não duplica e tira o prêmio de quem saiu do pódio. `kind` é `booster` ou `trophy`; `placement` 0 é participação. Entrega de booster é privada (dono e organizador); troféu segue a visibilidade do perfil. Arte de troféu só entra por `PrizeService::save` (quadrado de 512 px via `AvatarService::storeSquare`); quem apaga prêmio ou torneio chama `forgetImages` depois do commit. Aviso no sino só pelo `CommunityEvents` (`tournament.prizes`, depois do commit).
 
 ## 6. Banco e migrations
 

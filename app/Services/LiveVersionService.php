@@ -8,9 +8,11 @@ use App\Models\CommunityNotification;
 use App\Models\GameMatch;
 use App\Models\MatchResultSubmission;
 use App\Models\Player;
+use App\Models\PrizeAward;
 use App\Models\RankedMatch;
 use App\Models\RankedResultSubmission;
 use App\Models\Tournament;
+use App\Models\TournamentPrize;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
@@ -104,6 +106,7 @@ class LiveVersionService
             'tournaments' => $this->stamp(Tournament::query()->whereHas('players', fn ($q) => $q->whereKey($playerIds))),
             'matches' => $this->stamp(clone $matches),
             'submissions' => $this->stamp(MatchResultSubmission::query()->whereIn('match_id', $matches->select('id'))),
+            'prizes' => $profileId ? $this->stamp(PrizeAward::query()->where('player_profile_id', $profileId)) : null,
         ];
     }
 
@@ -143,12 +146,15 @@ class LiveVersionService
     private function tournament(Tournament $tournament): array
     {
         $matches = GameMatch::query()->where('tournament_id', $tournament->id);
+        $prizes = TournamentPrize::query()->where('tournament_id', $tournament->id);
 
         return [
             'tournament' => [$tournament->status, (string) $tournament->updated_at],
             'players' => $this->stamp(Player::query()->where('tournament_id', $tournament->id)),
             'matches' => $this->stamp(clone $matches),
             'submissions' => $this->stamp(MatchResultSubmission::query()->whereIn('match_id', $matches->select('id'))),
+            'prizes' => $this->stamp(clone $prizes),
+            'awards' => $this->stamp(PrizeAward::query()->whereIn('tournament_prize_id', $prizes->select('id'))),
         ];
     }
 

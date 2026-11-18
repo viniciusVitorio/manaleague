@@ -2,6 +2,7 @@
 @section('content')
 <div class="auth-shell"><div class="card auth-card invite-card"><span class="eyebrow">Convite para torneio</span><h1>{{ $tournament->name }}</h1><p class="muted">{{ $tournament->format }} @if($tournament->tournament_date) · {{ $tournament->tournament_date->format('d/m/Y') }} @endif</p>
 @include('tournaments.partials.rules-note')
+@if($prizeSummary)<p class="house-rules"><strong>Premiação:</strong> {{ implode(' · ', $prizeSummary) }}</p>@endif
 @if($tournament->status===\App\Models\Tournament::STATUS_SETUP)
 @php($canPickDeck = ! $tournament->requiresDeck() || $profile->decks->contains(fn ($deck) => $tournament->acceptsDeck($deck)))
 @if($entry)

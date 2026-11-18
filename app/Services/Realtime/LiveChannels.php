@@ -9,9 +9,11 @@ use App\Models\GameMatch;
 use App\Models\MatchResultSubmission;
 use App\Models\Player;
 use App\Models\PlayerProfile;
+use App\Models\PrizeAward;
 use App\Models\RankedMatch;
 use App\Models\RankedResultSubmission;
 use App\Models\Tournament;
+use App\Models\TournamentPrize;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -83,6 +85,8 @@ class LiveChannels
             $model instanceof RankedMatch => $this->forRanked($model),
             $model instanceof RankedResultSubmission => ($ranked = RankedMatch::find($model->ranked_match_id)) ? $this->forRanked($ranked) : [],
             $model instanceof CommunityNotification => [self::user((int) $model->user_id)],
+            $model instanceof TournamentPrize => ($tournament = Tournament::find($model->tournament_id)) ? $this->forTournament($tournament, withPlayers: false) : [],
+            $model instanceof PrizeAward => $this->forAward($model),
             default => [],
         }));
     }
@@ -118,6 +122,18 @@ class LiveChannels
         $profiles = $playerIds ? Player::query()->whereKey($playerIds)->pluck('player_profile_id')->all() : [];
 
         return [...($tournament ? $this->forTournament($tournament, withPlayers: false) : []), ...$this->users($profiles)];
+    }
+
+    /**
+     * Prêmio entregue ou recebido: a página do torneio (organizador) e as telas de quem ganhou.
+     *
+     * @return list<string>
+     */
+    private function forAward(PrizeAward $award): array
+    {
+        $tournament = Tournament::find(TournamentPrize::query()->whereKey($award->tournament_prize_id)->value('tournament_id'));
+
+        return [...($tournament ? $this->forTournament($tournament, withPlayers: false) : []), ...$this->users([$award->player_profile_id])];
     }
 
     /** @return list<string> */

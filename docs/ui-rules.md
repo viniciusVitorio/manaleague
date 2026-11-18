@@ -74,7 +74,7 @@ Toda cor nova tem que funcionar nos dois.
 ### Ícones
 
 - Só `<x-icon name="...">` (Lucide, 14–16px). Disponíveis: search, sun, moon, upload, download, repeat, sparkles, dollar,
-  heart, megaphone, link, pin, trash, medal, user-plus, globe, lock, eye, eye-off, image, info, check-check, pencil, settings, layout-dashboard,
+  heart, megaphone, link, gift, pin, trash, medal, user-plus, globe, lock, eye, eye-off, image, info, check-check, pencil, settings, layout-dashboard,
   trophy, swords, bell, plus, user, users, log-out, menu, x, chevron-right, chevron-down, arrow-right, calendar, activity,
   circle-check, clock, inbox, layers, library, chart, shield, flag, target, ellipsis, crown, alert, home.
 - Precisa de outro? Adicione o path do Lucide em `components/icon.blade.php` (licença ISC), não use emoji no lugar.

@@ -26,6 +26,7 @@ class PublicArenaController extends Controller
         $slug = $tournament->public_slug;
         // Gráfico da partida: o jogador vê o das próprias partidas (o organizador vê todos na página dele).
         $lifeLogs = app(LifeLogService::class)->viewableInTournament($tournament, auth()->user());
-        return view('arena.public', compact('snapshot', 'slug', 'tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'recap', 'profile', 'entry', 'lifeLogs'));
+        $prizes = app(\App\Services\PrizeService::class)->forTournament($tournament);
+        return view('arena.public', compact('prizes', 'snapshot', 'slug', 'tournament', 'ranking', 'rounds', 'final', 'thirdPlace', 'recap', 'profile', 'entry', 'lifeLogs'));
     }
 }

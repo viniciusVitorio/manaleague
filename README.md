@@ -11,7 +11,7 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 | Area | What you can do |
 |---|---|
 | **Account** | e-mail confirmation for new accounts, signed expiring links and resend with cooldown; existing accounts keep access |
-| **Tournaments** | round-robin leagues, Swiss, single or double elimination and Commander pods; finals and third-place match; standard format rules or custom house rules; repeat a tournament with the same settings |
+| **Tournaments** | round-robin leagues, Swiss, single or double elimination and Commander pods; finals and third-place match; standard format rules or custom house rules; repeat a tournament with the same settings; prizes per placement (boosters and a trophy or medal, with an optional image stored as a 512×512 square), handed out automatically when the tournament ends |
 | **Event day** | sign-up by invite link or QR code, player check-in on the event day, round timer and removal of no-shows |
 | **Live** | players submit scores from their phones, with confirmation or dispute; public tournament page (no account needed) and TV mode; pairings, scores, the round timer and notifications show up in real time (WebSocket) |
 | **Challenges** | 1v1 matches between friends, casual or ranked: the Challenges page has the ones in progress, answered right on their cards (accept, send the score, confirm or dispute), and your rivalries; finished series live in My matches. A score the opponent does not confirm or dispute within 7 days is confirmed automatically |
@@ -19,7 +19,7 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 | **Life counter** | life counter for tournament matches, challenges and Ranked, shared between the players' phones in real time (works offline and syncs back); counters are only available from their registered match. Matches played with it get a life chart of each game, with misclicks filtered out. Clicking a played match in My matches opens its summary: players, decks, score, winner, the ELO each player won or lost in ranked matches, and the life chart, which can be collapsed |
 | **Decks** | deck building with Scryfall search, import and export (Arena format and ManaBox CSV), foils, banned-card tag, Pauper legality check (cards never printed at common are tagged and blocked from official-rules tournaments), opening-hand simulator, version history and deck comparison; share a deck through a link that anyone can open, even without an account, and turn it off at any time |
 | **Collection** | ManaBox CSV import, search only your own cards and see what is missing to build a deck |
-| **Profile** | personal address (`/p/your-handle`), photo or emoji, showcase, stats, recent form and achievements (some of them secret) |
+| **Profile** | personal address (`/p/your-handle`), photo or emoji, showcase, stats, recent form, achievements (some of them secret) and a shelf with the trophies and medals won in tournaments, up to 3 of them highlighted; "Meus prêmios" lists the boosters still to be collected |
 | **Community** | friends, dashboard, feed, notifications and clubs |
 | **Patch notes** | an in-app tab with what changed in each version, published from GitHub Releases |
 
