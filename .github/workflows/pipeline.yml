@@ -2,9 +2,9 @@ name: SSDLC Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [main, eks-lab]
   pull_request:
-    branches: [main]
+    branches: [main, eks-lab]
   # Patch notes: publicar, editar ou apagar uma GitHub Release so sincroniza a aba de patch notes
   # na producao (nao testa nem reimplanta codigo). O push na main continua sendo o deploy de codigo.
   release:

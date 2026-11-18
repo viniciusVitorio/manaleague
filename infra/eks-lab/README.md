@@ -20,7 +20,8 @@ O laboratório não substitui a produção. `main`, EC2/Compose, domínio, banco
 | `tests/` | Regressões dos scripts e isolamento dos workflows |
 | `runner/` | Gerador offline e testes do runner efêmero restrito; não registra nem cria recursos |
 | `CI.md` | Etapas da CI sem AWS, gate de CD, Actions pinadas e limites da validação |
-| `../../.github/workflows/eks-lab.yml` | CI → imagens testadas → ECR por SHA → EKS por digest |
+| `../../.github/workflows/pipeline.yml` | CI automática igual à main: testes, segurança, SonarCloud e WAF; deploy EC2 bloqueado na eks-lab |
+| `../../.github/workflows/eks-lab.yml` | Workflow adicional **somente manual**: imagens testadas → ECR por SHA → EKS por digest; gate false |
 | `ARCHITECTURE.md` | Diagrama Mermaid, decisões, custos e roteiro da apresentação |
 
 ## Arquitetura implementada

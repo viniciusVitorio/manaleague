@@ -1,10 +1,6 @@
-name: Isolated EKS lab
+name: EKS lab checks and deploy (manual)
 
 on:
-  push:
-    branches: [eks-lab]
-  pull_request:
-    branches: [eks-lab]
   workflow_dispatch:
 
 permissions:

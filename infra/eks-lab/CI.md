@@ -1,8 +1,24 @@
 # CI/CD do laboratório sem infraestrutura AWS ativa
 
-A pipeline está em `.github/workflows/eks-lab.yml` e só responde a push/PR na branch `eks-lab` ou disparo manual. **O workflow não provisiona nem destrói infraestrutura.** A AWS continua desmontada; `LAB_DEPLOY_ENABLED=false` é o estado seguro padrão.
+## CI automática: o mesmo fluxo da main
 
-## Etapas e condições
+A CI de push/PR da `eks-lab` usa `.github/workflows/pipeline.yml`, com o mesmo nome **SSDLC Pipeline** e os mesmos jobs da `main`: `test` → `security`, `sonar`, `waf` → `deploy`.
+
+- PHPUnit/PostgreSQL com cobertura, Composer Audit/Trivy, SonarCloud com quality gate e os testes WAF/IP/Reverb foram mantidos como na `main`.
+- O deploy EC2 continua restrito a **push na main**. Na `eks-lab`, ele fica **skipped**, sem ler credenciais de produção nem executar comandos AWS/SSH.
+- As validações extras de Terraform/Kubernetes, builds do runtime EKS e o smoke específico do laboratório **não são mais uma segunda CI automática**.
+- Esta alteração está somente na branch `eks-lab`; não modifica a `main` nem o ambiente de produção.
+
+## Workflow adicional EKS: somente manual
+
+`.github/workflows/eks-lab.yml` agora tem apenas `workflow_dispatch`; não é disparado por push ou PR. Seu nome é **EKS lab checks and deploy (manual)**. Não foi disparado nesta correção. A disponibilidade do botão de disparo depende do registro do workflow no GitHub/default branch; não inserir esse arquivo na `main` sem autorização só para expor o botão.
+
+**O workflow não provisiona nem destrói infraestrutura.** A AWS continua desmontada; `LAB_DEPLOY_ENABLED=false` é o estado seguro padrão.
+
+O timeout de `/readyz` durante a queda do banco, observado na run `44183828568`, **continua pendente** no smoke específico do EKS. Alterar os gatilhos não corrige esse runtime e uma CI SSDLC verde não equivale a esse teste aprovado nem a deploy EKS validado. O teste Docker local bloqueado por aprovação não foi repetido.
+
+
+## Etapas e condições do workflow adicional manual
 
 | Etapa | Gate false | Após futura autorização/configuração do gate true |
 |---|---|---|
@@ -14,13 +30,13 @@ A pipeline está em `.github/workflows/eks-lab.yml` e só responde a push/PR na 
 | Publicação ECR por SHA/digest | **Skipped**, sem pedir credenciais AWS | Só com checks/images aprovados, branch correta e role OIDC exata |
 | Deploy EKS | **Skipped**, nenhum runner/cluster é necessário para a CI | Runner dedicado, conta/cluster/RDS/namespace conferidos; migrations/seed/rollout/probes |
 
-PRs têm o job gate skipped, mas **não perdem os testes de imagens**: a condição explícita permite build/smoke/scans após checks bem-sucedidos. Falha/cancelamento dos checks não deve produzir release.
+As etapas acima pertencem **somente ao workflow adicional manual**. O push/PR normal executa a SSDLC Pipeline da main descrita no início; não dispara este workflow EKS.
 
 ## Reprodutibilidade e segurança
 
-- Actions do workflow do lab são fixadas por SHA completo; referências oficiais usadas na resolução estão em `tests/action-pins.json`. Esses pins devem ser revistos conscientemente, não trocados por um SHA inventado.
-- Terraform1.17.2, kubectl1.37.0, Helm3.19.0 e Trivy0.76.2 são explícitos; o lockfile fixa o provider AWS. O mesmo `scripts/verify.sh` é usado localmente e na CI.
-- O `.env` de teste é criado **somente a partir do `.env.example` público**; APP_ENV=testing, banco descartável e chave de fixture do PHPUnit. Nunca copiar `.env`/credenciais de produção.
+- A CI SSDLC mantém as referências de Actions da `main`. No workflow adicional manual do lab, as Actions são fixadas por SHA completo; referências oficiais usadas na resolução estão em `tests/action-pins.json`. Esses pins devem ser revistos conscientemente, não trocados por um SHA inventado.
+- No workflow adicional manual, Terraform1.17.2, kubectl1.37.0, Helm3.19.0 e Trivy0.76.2 são explícitos; o lockfile fixa o provider AWS. O mesmo `scripts/verify.sh` pode ser usado localmente, sem ser parte da CI automática SSDLC.
+- No workflow adicional manual, o `.env` de teste é criado **somente a partir do `.env.example` público**; APP_ENV=testing, banco descartável e chave de fixture do PHPUnit. A CI SSDLC mantém o PostgreSQL de serviço e a configuração PHPUnit da main. Nunca copiar `.env`/credenciais de produção.
 - O WAF mantém o usuário nginx não-root e recebe atualizações dos pacotes OS afetados por alertas corrigíveis. Não foram adicionadas exceções para esconder CVEs.
 - Imagens têm allowlist de código, sem `.git`, state/tfvars privados, storage ou `.env` locais. O publish futuro usa as imagens que passaram pelo smoke, não recompila outro resultado.
 - A boundary do controller impede retagging independente e limita LB por nome/subnets/SG e listeners/rules por ARN exato. TGs continuam usando ownership pela tag do cluster: a AWS não oferece condição VPC em CreateTargetGroup. Outro principal que pré-etiquete um TG estrangeiro como lab pode violar essa premissa. Isso não é uma fronteira absoluta contra comprometimento de conta; manter watch namespace/VPC, tags confiáveis e revisar isolamento antes de reativar. Nenhuma dessas roles está ativa após o teardown.
