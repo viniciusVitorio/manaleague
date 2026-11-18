@@ -197,6 +197,22 @@ class DeckController extends Controller
         return back()->with('status', 'Deck principal atualizado.');
     }
 
+    /** Descrição curta do deck: uma frase do dono, sem quebra de linha, que aparece no topo para todos que podem ver o deck. */
+    public function description(Request $request, Deck $deck): RedirectResponse
+    {
+        $this->ensureOwner($request, $deck);
+        $text = $request->input('description');
+        $request->merge(['description' => is_string($text) ? Str::squish($text) : $text]);
+        $validated = $request->validate(['description' => ['nullable', 'string', 'max:'.Deck::DESCRIPTION_MAX]], [
+            'description.max' => 'A descrição pode ter até '.Deck::DESCRIPTION_MAX.' caracteres.',
+        ]);
+        $description = filled($validated['description'] ?? null) ? $validated['description'] : null;
+
+        $deck->update(['description' => $description]);
+
+        return back()->with('status', $description === null ? 'Descrição removida.' : 'Descrição salva.');
+    }
+
     /** Escolhe a carta do banner. card_id vazio volta para a escolha automatica. */
     public function cover(Request $request, Deck $deck): RedirectResponse
     {

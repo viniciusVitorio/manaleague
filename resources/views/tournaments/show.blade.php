@@ -57,6 +57,7 @@
                 @if($inSetup && $canManage)<button type="button" class="ui-menu-item" data-dialog-open="tourney-share"><x-icon name="link" />Compartilhar</button>@endif
                 <a class="ui-menu-item" target="_blank" rel="noopener" href="{{ route('arena.tv', $tournament->public_slug) }}"><x-icon name="layout-dashboard" />Modo TV ↗</a>
                 @if($canManage)
+                    @unless($finished)<a class="ui-menu-item" href="{{ route('tournaments.prizes.edit', $tournament) }}"><x-icon name="gift" />Premiação</a>@endunless
                     <a class="ui-menu-item" href="{{ route('tournaments.show', [$tournament, 'repetir' => 1]) }}#repetir"><x-icon name="repeat" />Repetir torneio</a>
                     @if($clubManage)<form method="POST" action="{{ route('clubs.tournaments.unlink', [$tournament->club, $tournament]) }}" data-confirm="Tirar este torneio do clube? Ele sai do ranking do clube e volta a ser só do criador.">@csrf @method('DELETE')<button class="ui-menu-item"><x-icon name="shield" />Desvincular do clube</button></form>@endif
                     <form method="POST" action="{{ route('tournaments.destroy', $tournament) }}" data-confirm="Excluir o torneio e todos os resultados?">@csrf @method('DELETE')<button class="ui-menu-item is-danger"><x-icon name="trash" />Excluir torneio</button></form>
@@ -93,7 +94,7 @@
 @include('tournaments.partials.my-entry')
 
 {{-- ENCERRADO: campeão e pódio num card só --}}
-@if($finished)@include('tournaments.partials.champion-card')@endif
+@if($finished)@include('tournaments.partials.champion-card')@include('tournaments.partials.prizes', ['manage' => $canManage])@endif
 
 {{-- EM ANDAMENTO: a rodada atual, com cronômetro e o próximo passo --}}
 @if($running && $currentRound !== null)
@@ -188,6 +189,9 @@
 </div>
 @endif
 
+{{-- Premiação: antes de encerrar fica depois da rodada (ou das inscrições); encerrado, sobe para junto do campeão. --}}
+@unless($finished)@include('tournaments.partials.prizes', ['manage' => $canManage])@endunless
+
 {{-- Classificação: só depois que o torneio começa (antes disso ela repetiria a lista de jogadores, zerada) --}}
 @unless($inSetup)
 <section class="card section-card" aria-labelledby="standings-title">
@@ -207,7 +211,7 @@
 @if($canManage)
 <details class="card tourney-repeat" id="repetir" @if($repeatOpen) open @endif>
     <summary><span><span class="eyebrow">Liga toda semana?</span><strong>Repetir torneio</strong></span></summary>
-    <p class="muted">Cria um torneio novo com o mesmo formato, sistema e regras{{ $tournament->club_id ? ', no mesmo clube' : '' }}. Ele começa em preparação, com links de inscrição novos.</p>
+    <p class="muted">Cria um torneio novo com o mesmo formato, sistema, regras e premiação{{ $tournament->club_id ? ', no mesmo clube' : '' }}. Ele começa em preparação, com links de inscrição novos.</p>
     <form method="POST" action="{{ route('tournaments.repeat', $tournament) }}" class="repeat-form">@csrf
         <label>Nome<input name="name" value="{{ old('name', $repeat['name']) }}" maxlength="120" required></label>
         <label>Data<input type="date" name="tournament_date" value="{{ old('tournament_date', $repeat['date']) }}" required></label>

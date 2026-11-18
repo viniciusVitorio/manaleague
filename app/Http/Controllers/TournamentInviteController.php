@@ -17,7 +17,8 @@ class TournamentInviteController extends Controller
         $profile = $request->user()->ensurePlayerProfile();
         $profile->load('decks');
         $entry = $tournament->players()->where('player_profile_id', $profile->id)->first();
-        return view('tournaments.invite', compact('tournament', 'profile', 'entry'));
+        $prizeSummary = app(\App\Services\PrizeService::class)->summary($tournament);
+        return view('tournaments.invite', compact('tournament', 'profile', 'entry', 'prizeSummary'));
     }
 
     public function store(Request $request, string $token): RedirectResponse

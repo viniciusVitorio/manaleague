@@ -46,7 +46,7 @@
     <x-round-timer :ends-at="$timerEndsAt" class="public-timer" />
 </header>
 
-@if($finished)@include('tournaments.partials.champion-card')@endif
+@if($finished)@include('tournaments.partials.champion-card')@include('tournaments.partials.prizes')@endif
 @include('tournaments.partials.my-entry')
 
 {{-- EM ANDAMENTO: as mesas da rodada atual primeiro --}}
@@ -61,6 +61,8 @@
     <div class="match-grid tourney-matches">@foreach($currentMatches as $match)@include('tournaments.partials.competition-match', ['live' => true, 'table' => $loop->iteration])@endforeach</div>
 </section>
 @endif
+
+@unless($finished)@include('tournaments.partials.prizes')@endunless
 
 @if($inSetup)
 {{-- PREPARAÇÃO: só quem já está inscrito; a classificação aparece quando o torneio começar --}}

@@ -33,7 +33,37 @@ final class AvatarService
 
     public function store(PlayerProfile $profile, UploadedFile $file): void
     {
-        $bytes = $this->normalize($file);
+        $path = $this->put($this->normalize($file, (int) config('avatars.size'), crop: true), 'foto', ['profile_id' => $profile->id]);
+
+        $old = $profile->avatar_path;
+        $profile->forceFill(['avatar_path' => $path])->save();
+        $this->deleteQuietly($old);
+    }
+
+    /**
+     * Guarda outra imagem do app (ex.: arte de troféu) com o mesmo tratamento da foto de perfil: reencodada em WebP
+     * quadrado de $size px, sem metadados, com nome UUID, no mesmo disco e prefixo (a policy do bucket só libera esse).
+     * Sem recorte: a imagem inteira cabe no quadrado, com fundo transparente nas sobras.
+     *
+     * @return string caminho gravado, para url() e delete()
+     */
+    public function storeSquare(UploadedFile $file, int $size): string
+    {
+        return $this->put($this->normalize($file, $size, crop: false), 'imagem', ['kind' => 'square']);
+    }
+
+    /** Apaga uma imagem guardada. Falha do storage só vai para o log. */
+    public function delete(?string $path): void
+    {
+        $this->deleteQuietly($path);
+    }
+
+    /**
+     * @param  string  $what  como a mensagem de erro chama o arquivo ("foto", "imagem")
+     * @param  array<string, mixed>  $context  para o log em caso de falha
+     */
+    private function put(string $bytes, string $what, array $context): string
+    {
         $path = config('avatars.directory').'/'.Str::uuid()->toString().'.webp';
 
         try {
@@ -44,16 +74,14 @@ final class AvatarService
             ]);
         } catch (Throwable $e) {
             $saved = false;
-            Log::warning('avatar.upload_failed', ['profile_id' => $profile->id, 'error' => $e->getMessage()]);
+            Log::warning('avatar.upload_failed', [...$context, 'error' => $e->getMessage()]);
         }
 
         if ($saved === false) {
-            throw new AvatarException('Não foi possível salvar a foto agora. Tente de novo em instantes.');
+            throw new AvatarException("Não foi possível salvar a {$what} agora. Tente de novo em instantes.");
         }
 
-        $old = $profile->avatar_path;
-        $profile->forceFill(['avatar_path' => $path])->save();
-        $this->deleteQuietly($old);
+        return $path;
     }
 
     public function remove(PlayerProfile $profile): void
@@ -169,8 +197,11 @@ final class AvatarService
         }
     }
 
-    /** Decodifica a imagem enviada e devolve um WebP quadrado, sem metadados. */
-    private function normalize(UploadedFile $file): string
+    /**
+     * Decodifica a imagem enviada e devolve um WebP quadrado de $size px, sem metadados.
+     * $crop recorta o centro (foto de perfil); sem ele a imagem inteira é encaixada no quadrado.
+     */
+    private function normalize(UploadedFile $file, int $size, bool $crop): string
     {
         $source = $file->getRealPath();
         $info = $source ? @getimagesize($source) : false;
@@ -185,7 +216,7 @@ final class AvatarService
         }
         $minSide = (int) config('avatars.min_side');
         if (min($width, $height) < $minSide) {
-            throw new AvatarException("A foto precisa ter pelo menos {$minSide}×{$minSide} pixels.");
+            throw new AvatarException(($crop ? 'A foto' : 'A imagem')." precisa ter pelo menos {$minSide}×{$minSide} pixels.");
         }
 
         $this->ensureMemory($width * $height);
@@ -203,17 +234,23 @@ final class AvatarService
             $image = $this->applyExifOrientation($image, $source);
         }
 
-        $size = (int) config('avatars.size');
         $side = min(imagesx($image), imagesy($image));
         $canvas = imagecreatetruecolor($size, $size);
         imagealphablending($canvas, false);
         imagesavealpha($canvas, true);
         imagefill($canvas, 0, 0, imagecolorallocatealpha($canvas, 0, 0, 0, 127));
-        imagecopyresampled(
-            $canvas, $image, 0, 0,
-            intdiv(imagesx($image) - $side, 2), intdiv(imagesy($image) - $side, 2),
-            $size, $size, $side, $side,
-        );
+        if ($crop) {
+            imagecopyresampled(
+                $canvas, $image, 0, 0,
+                intdiv(imagesx($image) - $side, 2), intdiv(imagesy($image) - $side, 2),
+                $size, $size, $side, $side,
+            );
+        } else {
+            $scale = $size / max(imagesx($image), imagesy($image));
+            $w = max(1, (int) round(imagesx($image) * $scale));
+            $h = max(1, (int) round(imagesy($image) * $scale));
+            imagecopyresampled($canvas, $image, intdiv($size - $w, 2), intdiv($size - $h, 2), 0, 0, $w, $h, imagesx($image), imagesy($image));
+        }
         unset($image);
 
         ob_start();

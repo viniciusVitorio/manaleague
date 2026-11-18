@@ -42,7 +42,7 @@ class DeckCardController extends Controller
         }
 
         $board = $validated['board'] ?? DeckCard::BOARD_MAIN;
-        if ($board === DeckCard::BOARD_COMMANDER && ! $this->canCommand($card)) {
+        if ($board === DeckCard::BOARD_COMMANDER && ! DeckCard::typeCanCommand($card['type_line'])) {
             return back()->withErrors(['card' => "{$card['name']} não pode ser comandante (precisa ser criatura lendária ou ter o texto de comandante)."]);
         }
 
@@ -96,6 +96,28 @@ class DeckCardController extends Controller
         return back();
     }
 
+    /** Coloca uma carta da lista no comando; com "replace", ela entra no lugar daquele comandante. */
+    public function promote(Request $request, Deck $deck, DeckCard $card): RedirectResponse
+    {
+        $this->ensureOwner($request, $deck);
+        abort_unless($card->deck_id === $deck->id, 404);
+        $validated = $request->validate(['replace' => ['nullable', 'integer']]);
+
+        $this->builder->makeCommander($deck, $card, $validated['replace'] ?? null);
+
+        return back()->with('status', "{$card->name} agora é comandante.");
+    }
+
+    public function demote(Request $request, Deck $deck, DeckCard $card): RedirectResponse
+    {
+        $this->ensureOwner($request, $deck);
+        abort_unless($card->deck_id === $deck->id, 404);
+
+        $this->builder->removeCommander($deck, $card);
+
+        return back()->with('status', "{$card->name} voltou para o deck.");
+    }
+
     public function destroy(Request $request, Deck $deck, DeckCard $card): RedirectResponse
     {
         $this->ensureOwner($request, $deck);
@@ -122,14 +144,6 @@ class DeckCardController extends Controller
         }
 
         return $redirect;
-    }
-
-    private function canCommand(array $card): bool
-    {
-        $type = (string) $card['type_line'];
-
-        return (str_contains($type, 'Legendary') && (str_contains($type, 'Creature') || str_contains($type, 'Planeswalker')))
-            || str_contains($type, 'Background');
     }
 
     private function ensureOwner(Request $request, Deck $deck): void

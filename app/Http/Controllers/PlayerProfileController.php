@@ -12,6 +12,7 @@ use App\Services\AchievementService;
 use App\Services\Decks\CollectionService;
 use App\Services\FriendshipService;
 use App\Services\PlayerStatsService;
+use App\Services\PrizeService;
 use App\Services\Ranked\RankTierResolver;
 use App\Services\Ranked\SeasonService;
 use App\Models\ProfileHandleHold;
@@ -54,8 +55,10 @@ class PlayerProfileController extends Controller
         $ranked = $this->ranked($profile, $profile->account_user_id === $request->user()->id);
 
         $showcase = $this->showcase($decks, $summary, true);
+        $trophies = app(PrizeService::class)->trophies($profile);
+        $pendingPrizes = app(PrizeService::class)->pendingCount($profile);
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked'));
+        return view('players.show', compact('trophies', 'pendingPrizes', 'profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked'));
     }
 
     /**
@@ -111,8 +114,11 @@ class PlayerProfileController extends Controller
         $tradeBinder = ($isOwner || $friendshipStatus === FriendshipService::ACCEPTED) ? app(CollectionService::class)->tradeBinder($profile->account_user_id) : null;
 
         $showcase = $this->showcase($decks, $summary, $isOwner);
+        $trophies = app(PrizeService::class)->trophies($profile);
+        // Boosters a receber são assunto do dono: visitante nunca vê.
+        $pendingPrizes = $isOwner ? app(PrizeService::class)->pendingCount($profile) : 0;
 
-        return view('players.show', compact('profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked', 'profileFriends', 'tradeBinder'));
+        return view('players.show', compact('trophies', 'pendingPrizes', 'profile', 'summary', 'achievements', 'friendRequests', 'friendshipStatus', 'decks', 'showcase', 'friendsCount', 'showPreferredDeck', 'ranked', 'profileFriends', 'tradeBinder'));
     }
 
     /** Patente por formato (temporadas em andamento) + historico. Visivel para quem pode ver o perfil. */

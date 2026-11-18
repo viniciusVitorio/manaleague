@@ -8,6 +8,9 @@
     // $public: aberto pelo link público (ML-023), por qualquer pessoa, até sem conta. Mostra o deck como um amigo veria.
     $public = $public ?? false;
     $boardLabel = ['main' => 'Deck', 'side' => 'Sideboard', 'commander' => 'Comandante'];
+    // Escolha do comandante: só o dono, em deck Commander. As candidatas são as cartas da própria lista que podem comandar.
+    $canPickCommander = $isOwner && $deck->isCommander();
+    $commanderCandidates = $canPickCommander ? $summary['commander_candidates'] : collect();
     // Prévia do link no WhatsApp: nome do deck, formato, dono e tamanho; a imagem é a carta da capa.
     $title = $deck->name.' · ManaLeague';
     $og = ['title' => '🃏 '.$deck->name, 'image' => $summary['cover'],
@@ -39,6 +42,7 @@
             @unless($isOwner)<span class="deck-owner">por <x-avatar :of="$deck->profile" class="ui-avatar deck-owner-avatar" aria-hidden="true" /><b><x-profile-link :of="$deck->profile">{{ $deck->profile->nickname }}</x-profile-link></b></span>@endunless
             @if($deck->cards_updated_at)<span title="{{ $deck->cards_updated_at->format('d/m/Y H:i') }}">Lista atualizada <time datetime="{{ $deck->cards_updated_at->toIso8601String() }}">{{ $deck->cards_updated_at->diffForHumans() }}</time></span>@endif
         </div>
+        @if(filled($deck->description))<p class="deck-hero-about">{{ $deck->description }}</p>@endif
     </div>
     {{-- Ações do deck no canto: o menu "..." com compartilhar, exportar, editar e capa. Quem só vê tem o Exportar. --}}
     @if($isOwner)
@@ -49,6 +53,7 @@
                 <button type="button" class="ui-menu-item" data-dialog-open="deck-share"><x-icon name="link" />Compartilhar @if($deck->share_token)<span class="deck-share-on" title="Link ativo"></span><span class="sr-only">(link ativo)</span>@endif</button>
                 @if($exportText !== '')<button type="button" class="ui-menu-item" data-dialog-open="deck-export"><x-icon name="download" />Exportar lista</button>@endif
                 <a class="ui-menu-item" href="{{ route('decks.edit', $deck) }}"><x-icon name="pencil" />Editar deck</a>
+                <button type="button" class="ui-menu-item" data-dialog-open="deck-description"><x-icon name="info" />{{ filled($deck->description) ? 'Editar descrição' : 'Adicionar descrição' }}</button>
                 @if($summary['cover_options']->isNotEmpty())<button type="button" class="ui-menu-item" data-toggle="cover-picker" aria-controls="cover-picker" aria-expanded="false"><x-icon name="image" />Trocar capa</button>@endif
             </div>
         </div>
@@ -88,9 +93,11 @@
 
 <div class="deck-layout">
 <div>
-    @if($summary['commanders']->isNotEmpty())
-    {{-- Comandante em destaque: um cartão por comandante, com a arte ao fundo, a carta (toque abre a janela da carta), nome, tipo e custo. --}}
-    <section class="cmdr-zone @if($summary['commanders']->count() > 1) is-pair @endif" aria-label="{{ $summary['commanders']->count() > 1 ? 'Comandantes' : 'Comandante' }}">
+    @if($summary['commanders']->isNotEmpty() || $canPickCommander)
+    {{-- Comandante em destaque: um cartão por comandante, com a arte ao fundo, a carta (toque abre a janela da carta), nome, tipo e custo.
+         Para o dono de um deck Commander a área também recebe cartas arrastadas da lista. --}}
+    <section class="cmdr-zone @if($canPickCommander) drop-zone @endif @if($summary['commanders']->count() > 1) is-pair @endif" aria-label="{{ $summary['commanders']->count() > 1 ? 'Comandantes' : 'Comandante' }}"
+             @if($canPickCommander) data-drop-board="commander" data-drop-label="Comandante" @endif>
         @foreach($summary['commanders'] as $card)
             <article class="card cmdr-card" @if($card->art_url) style="--cover: url('{{ $card->art_url }}')" @endif>
                 @if($card->image_url)
@@ -104,10 +111,34 @@
                     <h2>{{ $card->name }} @if(in_array($card->name, $bannedNames, true))<span class="ban-tag" title="Banida no {{ $deck->format }}">Banido</span>@endif</h2>
                     @if($card->type_line)<p class="cmdr-type">{{ $card->type_line }}</p>@endif
                     <span class="card-cost">@foreach($card->manaGroups() as $group)<span class="cost-group">@include('partials.mana-cost', ['symbols' => $group])</span>@endforeach</span>
-                    @if($isOwner)<form method="POST" action="{{ route('decks.cards.destroy', [$deck, $card]) }}">@csrf @method('DELETE')<button class="ui-btn ui-btn-ghost ui-btn-sm" aria-label="Remover {{ $card->name }} do comando"><x-icon name="x" />Remover</button></form>@endif
+                    @if($isOwner)
+                    <div class="cmdr-actions">
+                        @if($commanderCandidates->isNotEmpty())<button type="button" class="ui-btn ui-btn-outline ui-btn-sm" data-dialog-open="deck-commander" data-commander-slot="{{ $card->id }}" data-commander-title="Trocar {{ $card->shortName() }}" aria-label="Trocar {{ $card->name }}"><x-icon name="repeat" />Trocar</button>@endif
+                        <form method="POST" action="{{ route('decks.cards.commander.remove', [$deck, $card]) }}">@csrf @method('DELETE')<button class="ui-btn ui-btn-ghost ui-btn-sm" aria-label="Mover {{ $card->name }} para o deck">Mover para o deck</button></form>
+                        <form method="POST" action="{{ route('decks.cards.destroy', [$deck, $card]) }}">@csrf @method('DELETE')<button class="ui-btn ui-btn-ghost ui-btn-sm" title="Apaga a carta do deck" aria-label="Remover {{ $card->name }} do deck"><x-icon name="x" />Remover</button></form>
+                    </div>
+                    @endif
                 </div>
             </article>
         @endforeach
+        @if($canPickCommander && $summary['commanders']->isEmpty())
+            <article class="card cmdr-empty">
+                <x-icon name="crown" size="20" />
+                <div class="cmdr-empty-text">
+                    <h2>Escolha o comandante</h2>
+                    @if($commanderCandidates->isNotEmpty())
+                        <p>{{ $commanderCandidates->count() === 1 ? '1 carta da sua lista pode comandar este deck.' : $commanderCandidates->count().' cartas da sua lista podem comandar este deck.' }}<span class="cmdr-drag-note"> Você também pode arrastar a carta para cá.</span></p>
+                    @else
+                        <p>Nenhuma carta da sua lista pode comandar. Busque uma criatura lendária para começar.</p>
+                    @endif
+                </div>
+                @if($commanderCandidates->isNotEmpty())
+                    <button type="button" class="ui-btn ui-btn-outline ui-btn-sm" data-dialog-open="deck-commander"><x-icon name="crown" />Escolher comandante</button>
+                @else
+                    <button type="button" class="ui-btn ui-btn-outline ui-btn-sm" data-dialog-open="deck-add"><x-icon name="search" />Buscar comandante</button>
+                @endif
+            </article>
+        @endif
     </section>
     @endif
 
@@ -250,6 +281,59 @@
         </footer>
     </form>
 </dialog>
+
+<dialog class="ui-dialog deck-dialog" id="deck-description" aria-labelledby="deck-description-title">
+    <header class="ui-dialog-head">
+        <h2 id="deck-description-title">Descrição do deck</h2>
+        <button type="button" class="ui-icon-btn" data-dialog-close aria-label="Fechar" title="Fechar"><x-icon name="x" /></button>
+    </header>
+    <form method="POST" action="{{ route('decks.description', $deck) }}">@csrf @method('PATCH')
+        <div class="ui-dialog-body">
+            <label for="deck-description-text" class="sr-only">Descrição do deck</label>
+            <textarea id="deck-description-text" name="description" rows="2" maxlength="{{ \App\Models\Deck::DESCRIPTION_MAX }}" placeholder="Em uma frase, como este deck joga?">{{ $deck->description }}</textarea>
+            <p class="muted small-note">Aparece no topo do deck para todos que podem vê-lo. Até {{ \App\Models\Deck::DESCRIPTION_MAX }} caracteres; deixe em branco para remover.</p>
+        </div>
+        <footer class="ui-dialog-foot">
+            <button class="ui-btn ui-btn-primary ui-btn-sm">Salvar descrição</button>
+            <button type="button" class="ui-btn ui-btn-ghost ui-btn-sm" data-dialog-close>Cancelar</button>
+        </footer>
+    </form>
+</dialog>
+
+@if($commanderCandidates->isNotEmpty())
+{{-- Escolher comandante: as cartas da lista que podem comandar. A coroa de uma carta abre só ela; "Trocar" mostra só a troca daquele comandante (deck-builder.js). --}}
+<dialog class="ui-dialog deck-dialog cmdr-dialog" id="deck-commander" aria-labelledby="deck-commander-title">
+    <header class="ui-dialog-head">
+        <h2 id="deck-commander-title">Escolher comandante</h2>
+        <button type="button" class="ui-icon-btn" data-dialog-close aria-label="Fechar" title="Fechar"><x-icon name="x" /></button>
+    </header>
+    <div class="ui-dialog-body">
+        <p class="muted small-note">Criaturas e planeswalkers lendários e Backgrounds da sua lista.@if($summary['commanders']->isNotEmpty()) O comandante trocado volta para o deck.@endif</p>
+        <div class="card-results" role="list">
+            @foreach($commanderCandidates as $candidate)
+                <div class="card-result" role="listitem" data-commander-row="{{ $candidate->id }}">
+                    @if($candidate->image_url)<img src="{{ $candidate->image_url }}" alt="" loading="lazy" width="61" height="85">@endif
+                    <div class="card-result-info">
+                        <strong>{{ $candidate->name }}</strong>
+                        <small>{{ $candidate->type_line }} · {{ $boardLabel[$candidate->board] }}</small>
+                        <div class="card-result-actions">
+                            @if($summary['commanders']->isEmpty())
+                                <form method="POST" action="{{ route('decks.cards.commander', [$deck, $candidate]) }}">@csrf<button class="ui-btn ui-btn-outline ui-btn-sm"><x-icon name="crown" />Tornar comandante</button></form>
+                            @endif
+                            @foreach($summary['commanders'] as $current)
+                                <form method="POST" action="{{ route('decks.cards.commander', [$deck, $candidate]) }}" data-commander-option="{{ $current->id }}">@csrf<input type="hidden" name="replace" value="{{ $current->id }}"><button class="ui-btn ui-btn-outline ui-btn-sm" aria-label="Colocar {{ $candidate->name }} no lugar de {{ $current->name }}"><x-icon name="repeat" />No lugar de {{ $current->shortName() }}</button></form>
+                            @endforeach
+                            @if($summary['commanders']->isNotEmpty() && $summary['commanders']->count() < \App\Models\DeckCard::MAX_COMMANDERS)
+                                <form method="POST" action="{{ route('decks.cards.commander', [$deck, $candidate]) }}" data-commander-option="partner">@csrf<button class="ui-btn ui-btn-ghost ui-btn-sm" aria-label="Adicionar {{ $candidate->name }} como parceiro"><x-icon name="plus" />Adicionar como parceiro</button></form>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+</dialog>
+@endif
 
 {{-- Link público (ML-023): o dono cria um link para mandar o deck a qualquer pessoa, mesmo sem conta; pode trocar ou desativar. --}}
 <dialog class="ui-dialog deck-dialog deck-share" id="deck-share" aria-labelledby="deck-share-title" @if(session('deck_dialog') === 'share') data-open-on-load @endif>

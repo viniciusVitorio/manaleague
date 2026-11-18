@@ -215,7 +215,11 @@
         // Delegado no document: cartas e zonas que chegam numa atualizacao sem recarregar continuam arrastaveis.
         function lineOf(event) { return event.target.closest && event.target.closest('[data-move-url]'); }
         function zoneOf(event) { return event.target.closest && event.target.closest('[data-drop-board]'); }
-        function accepts(zone) { return zone && dragged && dragged.dataset.board !== zone.dataset.dropBoard; }
+        // A área do comandante só aceita quem tem a coroa: as cartas da lista que podem comandar.
+        function accepts(zone) {
+            if (!zone || !dragged || dragged.dataset.board === zone.dataset.dropBoard) return false;
+            return zone.dataset.dropBoard !== 'commander' || !!dragged.querySelector('[data-commander-card]');
+        }
 
         document.addEventListener('dragstart', function (event) {
             var line = lineOf(event);
@@ -252,8 +256,28 @@
             zone.classList.remove('is-drop-target');
             var line = dragged;
             var board = zone.dataset.dropBoard;
+            // Soltar no comandante é o mesmo que tocar na coroa da carta.
+            if (board === 'commander') { line.querySelector('[data-commander-card]').click(); return; }
             if ((parseInt(line.dataset.qty, 10) || 1) > 1) choose(line, board, event.clientX, event.clientY);
             else move(line, board, 1);
+        });
+    }
+
+    // Janela "Escolher comandante": mostra tudo, só a carta da coroa tocada ou só a troca do comandante escolhido.
+    function initCommanderPicker() {
+        document.addEventListener('click', function (event) {
+            var trigger = event.target.closest && event.target.closest('[data-dialog-open="deck-commander"]');
+            var dialog = trigger && document.getElementById('deck-commander');
+            if (!dialog) return;
+            var card = trigger.dataset.commanderCard || '';
+            var slot = trigger.dataset.commanderSlot || '';
+            dialog.querySelectorAll('[data-commander-row]').forEach(function (row) {
+                row.hidden = !!card && row.dataset.commanderRow !== card;
+            });
+            dialog.querySelectorAll('[data-commander-option]').forEach(function (option) {
+                option.hidden = !!slot && option.dataset.commanderOption !== slot;
+            });
+            dialog.querySelector('#deck-commander-title').textContent = trigger.dataset.commanderTitle || 'Escolher comandante';
         });
     }
 
@@ -351,7 +375,7 @@
         });
     }
 
-    function boot() { init(); initBoardDrag(); initAddDialog(); initCardView(); }
+    function boot() { init(); initBoardDrag(); initCommanderPicker(); initAddDialog(); initCardView(); }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

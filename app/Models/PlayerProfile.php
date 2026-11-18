@@ -130,6 +130,7 @@ class PlayerProfile extends Model
     public function entries(): HasMany { return $this->hasMany(Player::class); }
     public function decks(): HasMany { return $this->hasMany(Deck::class); }
     public function achievements(): HasMany { return $this->hasMany(ProfileAchievement::class); }
+    public function prizeAwards(): HasMany { return $this->hasMany(PrizeAward::class); }
     public function handleHolds(): HasMany { return $this->hasMany(ProfileHandleHold::class); }
     public function friendedBy(): BelongsToMany { return $this->belongsToMany(User::class)->withPivot('status')->withTimestamps(); }
 }

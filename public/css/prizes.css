@@ -1,0 +1,119 @@
+/* Premiação de torneio: quadro de prêmios, formulário do organizador, lista de boosters e estante de troféus do perfil. */
+
+/* ---------- Cor da colocação e peça ---------- */
+/* Ouro, prata e bronze são os mesmos do pódio (competition.css); participação fica neutra. No tema claro, tons mais fechados para dar contraste. */
+.is-gold{--prize-tone:#e3b23c}
+.is-silver{--prize-tone:#a9b6c6}
+.is-bronze{--prize-tone:#c9803f}
+.is-plain{--prize-tone:var(--ui-fg-subtle)}
+html[data-theme="light"] .is-gold{--prize-tone:#a97800}
+html[data-theme="light"] .is-silver{--prize-tone:#66768a}
+html[data-theme="light"] .is-bronze{--prize-tone:#a35a22}
+.prize-icon{display:grid;place-items:center;flex:0 0 auto;width:38px;height:38px;border:1px solid color-mix(in srgb,var(--prize-tone) 42%,var(--ui-border));border-radius:50%;background:color-mix(in srgb,var(--prize-tone) 13%,transparent);color:var(--prize-tone)}
+/* Com arte enviada: sempre um quadrado (o arquivo já é 512×512), sem o círculo do ícone. */
+.prize-icon.has-image{overflow:hidden;border-color:color-mix(in srgb,var(--prize-tone) 42%,var(--ui-border));border-radius:var(--ui-radius-sm);background:var(--ui-muted)}
+.prize-icon.has-image img{display:block;width:100%;height:100%;object-fit:contain}
+
+/* Tela de poucos campos (Meus prêmios) fica numa coluna estreita no meio da página. */
+.prize-narrow{max-width:720px;margin-inline:auto}
+
+/* ---------- Quadro de prêmios (páginas do torneio) ---------- */
+.prize-board .section-heading{align-items:center}
+.prize-board-empty{margin:0}
+.prize-places{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:var(--s3);margin:0;padding:0;list-style:none}
+.prize-place{display:flex;flex-direction:column;gap:var(--s3);min-width:0;padding:var(--s3) var(--s4) var(--s4);border:1px solid var(--ui-border);border-top:3px solid var(--prize-tone);border-radius:var(--ui-radius-sm)}
+.prize-place-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px var(--s2)}
+.prize-place-label{color:var(--ui-fg);font-size:.86rem;font-weight:600}
+.prize-place-who{min-width:0;color:var(--ui-fg-muted);font-size:.8rem;overflow-wrap:anywhere}
+.prize-place-who a{color:var(--ui-fg-soft);font-weight:500}
+.prize-items{display:grid;gap:var(--s3);margin:0;padding:0;list-style:none}
+.prize-item{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);min-width:0}
+.prize-item-text{display:flex;flex:1 1 120px;flex-direction:column;min-width:0}
+.prize-item-text strong{font-size:.9rem;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.prize-item-text small{color:var(--ui-fg-subtle);font-size:.76rem}
+.prize-delivery{display:flex;flex:1 1 100%;align-items:center;gap:var(--s2)}
+.prize-delivery form{margin:0}
+.prize-delivery a.ui-badge:hover{border-color:var(--ui-border-strong)}
+.prize-deliveries{flex:1 1 100%}
+.prize-deliveries summary{display:inline-flex;align-items:center;gap:var(--s2);min-height:32px;color:var(--ui-fg-muted);font-size:.84rem;cursor:pointer}
+.prize-deliveries ul{display:grid;margin:var(--s1) 0 0;padding:0;list-style:none}
+.prize-deliveries li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s1) var(--s2);min-height:40px;padding:var(--s1) 0;border-top:1px solid var(--ui-border);font-size:.86rem}
+.prize-deliveries li>span{min-width:0;overflow-wrap:anywhere}
+.prize-deliveries .prize-delivery{flex:0 0 auto}
+@media(max-width:600px){.prize-places{grid-template-columns:1fr}}
+
+/* ---------- Formulário do organizador ---------- */
+/* Um card por colocação; cada prêmio é uma chave (ui-option + ui-switch) e os campos dele só aparecem com ela ligada. */
+/* Duas colunas no computador (1º | 2º, 3º | participação); a ordem de leitura é a mesma do celular. */
+.prize-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3)}
+.prize-form-card{padding:var(--s4) var(--s5) var(--s2);border-top:3px solid var(--prize-tone)}
+.prize-form-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px var(--s3);margin:0 0 var(--s1)}
+.prize-form-head h2{margin:0;font-size:1.05rem}
+.prize-form-head span{color:var(--ui-fg-muted);font-size:.8rem}
+.prize-form-part{margin:0;border-top:1px solid var(--ui-border)}
+.prize-form-part:first-of-type{border-top:0}
+.prize-form-part>.ui-option{border-bottom:0}
+.prize-form-part .ui-option-title{display:inline-flex;align-items:center;gap:6px}
+.prize-form-part .ui-option-title .icon{color:var(--ui-fg-subtle)}
+.prize-form-part:has(.ui-switch:checked) .ui-option-title .icon{color:var(--prize-tone)}
+.prize-form-body{display:none;gap:var(--s4);padding:var(--s1) 0 var(--s4)}
+.prize-form-part:has(.ui-switch:checked) .prize-form-body{display:grid}
+.prize-form-body label,.prize-form-body .choice-group{margin:0}
+.prize-form .choice-chip span{gap:6px}
+.prize-form-fields{display:grid;grid-template-columns:150px minmax(0,1fr);gap:var(--s3)}
+.prize-form-image{display:flex;align-items:flex-start;gap:var(--s3)}
+.prize-form-preview .prize-icon{width:72px;height:72px;border-radius:var(--ui-radius-sm)}
+.prize-form-image>div:last-child{display:grid;flex:1;gap:var(--s2);min-width:0}
+/* Campo de arquivo sem a caixa de input: só o botão do navegador, com cara de botão secundário. */
+.prize-form-image input[type=file]{width:auto;max-width:100%;padding:0;border:0;background:none;color:var(--ui-fg-muted);font-size:.82rem}
+.prize-form-image input[type=file]::file-selector-button{height:32px;margin-right:var(--s2);padding:0 var(--s3);border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);background:transparent;color:var(--ui-fg);font:inherit;font-weight:500;cursor:pointer;transition:background-color .15s,border-color .15s}
+.prize-form-image input[type=file]::file-selector-button:hover{border-color:var(--ui-border-strong);background:var(--ui-muted)}
+.prize-form-image-note{color:var(--ui-fg-muted);font-size:.78rem}
+.prize-form-image-note:empty{display:none}
+.prize-form-image-note.is-error{color:var(--ui-danger)}
+.prize-form-actions{display:flex;grid-column:1/-1;justify-content:flex-end;gap:var(--s2);margin-top:var(--s1)}
+@media(max-width:900px){.prize-form{grid-template-columns:1fr}}
+@media(max-width:480px){
+  .prize-form-card{padding:var(--s4) var(--s4) var(--s1)}
+  .prize-form-fields{grid-template-columns:1fr}
+  .prize-form-preview .prize-icon{width:56px;height:56px}
+  .prize-form-actions{flex-direction:column-reverse}
+  .prize-form-actions .ui-btn{justify-content:center}
+}
+
+/* ---------- Meus prêmios (boosters) ---------- */
+.prize-list+.prize-list{margin-top:var(--s4)}
+.prize-list-note{margin:0 0 var(--s2);color:var(--ui-fg-muted);font-size:.84rem}
+.prize-row{flex-wrap:wrap}
+.prize-row form{margin:0}
+.prize-row .ui-row-main{flex:1 1 200px}
+@media(max-width:480px){.prize-row .ui-row-title,.prize-row .ui-row-sub{white-space:normal}}
+
+/* ---------- Estante do perfil ---------- */
+/* Destaque: até 3 peças grandes, todas no mesmo quadrado. As outras ficam em linhas compactas. */
+.prize-featured,.prize-pieces{display:grid;gap:var(--s3);margin:0;padding:0;list-style:none}
+.prize-featured{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:var(--s3)}
+.prize-pieces{grid-template-columns:repeat(3,minmax(0,1fr))}
+.prize-piece{position:relative;display:flex;align-items:center;gap:var(--s3);min-width:0;padding:var(--s3);border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm)}
+.prize-piece .prize-icon{width:44px;height:44px}
+.prize-piece-text{display:flex;flex:1;flex-direction:column;min-width:0}
+.prize-piece-text strong{font-size:.9rem;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.prize-piece-text a{overflow:hidden;color:var(--ui-fg-muted);font-size:.8rem;text-overflow:ellipsis;white-space:nowrap}
+.prize-piece-text a:hover{color:var(--ui-fg)}
+.prize-piece-text small{color:var(--ui-fg-subtle);font-size:.74rem}
+.prize-pin{margin:0}
+.prize-pin .ui-icon-btn{color:var(--ui-fg-subtle)}
+.prize-pin .ui-icon-btn.is-on{color:var(--ui-fg)}
+.prize-piece.is-featured{flex-direction:column;gap:var(--s3);padding:var(--s5) var(--s3) var(--s4);border-top:3px solid var(--prize-tone);text-align:center}
+.prize-piece.is-featured .prize-icon{width:96px;height:96px}
+.prize-piece.is-featured .prize-piece-text{flex:0 0 auto;align-items:center;max-width:100%}
+.prize-piece.is-featured .prize-piece-text strong{font-size:1rem}
+.prize-piece.is-featured .prize-piece-text a{max-width:100%}
+.prize-piece.is-featured .prize-pin{position:absolute;top:var(--s1);right:var(--s1)}
+@media(max-width:900px){.prize-pieces{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:780px){
+  .prize-pieces,.prize-featured{grid-template-columns:1fr}
+  .prize-piece.is-featured{flex-direction:row;padding:var(--s3);padding-right:44px;text-align:left}
+  .prize-piece.is-featured .prize-icon{width:64px;height:64px}
+  .prize-piece.is-featured .prize-piece-text{flex:1;align-items:flex-start}
+}

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class DeckCard extends Model
 {
@@ -11,6 +12,9 @@ class DeckCard extends Model
     public const BOARD_SIDE = 'side';
     public const BOARD_COMMANDER = 'commander';
     public const BOARDS = [self::BOARD_COMMANDER, self::BOARD_MAIN, self::BOARD_SIDE];
+
+    /** Dois no máximo: comandante e parceiro (ou Background). */
+    public const MAX_COMMANDERS = 2;
 
     /** Grupos exibidos na lista do deck, na ordem de prioridade do type_line. */
     public const TYPE_GROUPS = [
@@ -51,6 +55,20 @@ class DeckCard extends Model
     public function isLand(): bool { return str_contains((string) $this->type_line, 'Land'); }
 
     public function isBasicLand(): bool { return str_contains((string) $this->type_line, 'Basic Land'); }
+
+    /** Tipos que podem comandar: criatura ou planeswalker lendário, ou Background. */
+    public static function typeCanCommand(?string $type): bool
+    {
+        $type = (string) $type;
+
+        return (str_contains($type, 'Legendary') && (str_contains($type, 'Creature') || str_contains($type, 'Planeswalker')))
+            || str_contains($type, 'Background');
+    }
+
+    public function canCommand(): bool { return self::typeCanCommand($this->type_line); }
+
+    /** Nome curto para botões: "Atraxa, Praetors' Voice" vira "Atraxa". */
+    public function shortName(): string { return Str::before($this->faceNames()[0] ?? $this->name, ','); }
 
     /** Converte "{2}{U}{U}" em simbolos para exibir com CSS. */
     public function manaSymbols(): array

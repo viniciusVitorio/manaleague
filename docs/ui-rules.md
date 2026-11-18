@@ -74,7 +74,7 @@ Toda cor nova tem que funcionar nos dois.
 ### Ícones
 
 - Só `<x-icon name="...">` (Lucide, 14–16px). Disponíveis: search, sun, moon, upload, download, repeat, sparkles, dollar,
-  heart, megaphone, link, pin, trash, medal, user-plus, globe, lock, eye, eye-off, image, info, check-check, pencil, settings, layout-dashboard,
+  heart, megaphone, link, gift, pin, trash, medal, user-plus, globe, lock, eye, eye-off, image, info, check-check, pencil, settings, layout-dashboard,
   trophy, swords, bell, plus, user, users, log-out, menu, x, chevron-right, chevron-down, arrow-right, calendar, activity,
   circle-check, clock, inbox, layers, library, chart, shield, flag, target, ellipsis, crown, alert, home.
 - Precisa de outro? Adicione o path do Lucide em `components/icon.blade.php` (licença ISC), não use emoji no lugar.
@@ -126,6 +126,7 @@ Card · Card · Card                (mesma largura, 12–16px entre eles)
 | `partials/confirm-all` | 2+ placares para confirmar | já incluso nas listas de partidas e desafios |
 | `.mm-open` (+ `mm-body`, `mm-score`, `mm-actions`, `mm-dispute`) | partida em andamento: linha que abre ao clicar (`<details id>`, fechada por padrão) com a ação dentro | placar com as fotos dos jogadores e mini contador − número + (`matches/partials/score-board` + `js/score-step.js`, o mesmo visual do resumo da partida; só leitura ao confirmar), contador de vida, confirmar/contestar; o `id` mantém aberta nas atualizações e um link `#id` já chega aberto; ver `matches/partials/open-match` (torneio) e `challenges/partials/open-challenge` (desafio) |
 | `.ui-hint` | explicação de regra | no topo da página, com ícone `info` |
+| `<input type="file" data-crop>` (`js/crop-core.js` + `js/image-crop.js`) | enviar imagem que vira quadrado (foto de perfil, arte de troféu) | ao escolher o arquivo abre a janela de recorte: a imagem aparece inteira com um quadrado de seleção que a pessoa arrasta, redimensiona pelos cantos ou desenha de novo (também zoom pelo controle, roda do mouse, dois dedos, setas e +/−); `data-crop="cover"` mantém a seleção dentro da imagem, `"contain"` deixa pegar a área toda com fundo transparente; `data-crop-shape="circle"` mostra o círculo do avatar; `data-crop-preview="#id"` recebe a prévia; avisos em `[data-crop-note]`. Sem suporte no navegador o arquivo sobe inteiro e o servidor ajusta |
 | `<dialog class="ui-dialog">` (+ `ui-dialog-head`, `ui-dialog-body`, `ui-dialog-foot`) | janela por cima da página (compartilhar link e QR) | abre com `[data-dialog-open="id"]`, inclusive de dentro de um menu; fecha no X `[data-dialog-close]`, no Esc ou no fundo (`nav.js`); ver `tournaments/show.blade.php` |
 
 ### Botões

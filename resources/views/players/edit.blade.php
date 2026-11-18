@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('content')
-@push('head')<script src="{{ \App\Support\VersionedAsset::url('js/emoji-input.js') }}" defer></script>@endpush
+@push('head')<script src="{{ \App\Support\VersionedAsset::url('js/emoji-input.js') }}" defer></script><script src="{{ \App\Support\VersionedAsset::url('js/crop-core.js') }}" defer></script><script src="{{ \App\Support\VersionedAsset::url('js/image-crop.js') }}" defer></script>@endpush
 @php($me = auth()->user())
 <header class="hero compact"><div><a class="back-link" href="{{ route('profiles.index') }}">← Meu perfil</a><span class="eyebrow">Configurações</span><h1>Editar perfil</h1><p>Gerencie sua identidade, sua senha e suas preferências.</p></div></header>
 
@@ -21,13 +21,14 @@
             <p class="settings-card-desc">Aparece no seu perfil, nas partidas e nos torneios.</p>
             @error('photo')<div class="alert alert-danger" role="alert">{{ $message }}</div>@enderror
             <div class="avatar-upload">
-                <x-avatar :of="$profile" class="profile-avatar large" />
+                <x-avatar :of="$profile" class="profile-avatar large" id="photo-preview" />
                 <form class="avatar-upload-actions" method="POST" action="{{ route('profiles.photo.update') }}" enctype="multipart/form-data">@csrf
-                    <label for="photo">Escolher foto <small>JPG, PNG ou WebP até {{ intdiv((int) config('avatars.max_kilobytes'), 1024) }} MB. Recortamos no centro em {{ config('avatars.size') }}×{{ config('avatars.size') }} e removemos os metadados (como localização).</small></label>
+                    <label for="photo">Escolher foto <small>JPG, PNG ou WebP até {{ intdiv((int) config('avatars.max_kilobytes'), 1024) }} MB. Você escolhe o recorte antes de enviar; guardamos em {{ config('avatars.size') }}×{{ config('avatars.size') }} e removemos os metadados (como localização).</small></label>
                     <div class="settings-inline">
-                        <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/webp" required>
+                        <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/webp" required data-crop="cover" data-crop-shape="circle" data-crop-size="512" data-crop-preview="#photo-preview" data-crop-title="Recortar foto de perfil">
                         <button class="ui-btn ui-btn-outline"><x-icon name="upload" />Enviar foto</button>
                     </div>
+                    <small class="crop-note" data-crop-note role="status" aria-live="polite"></small>
                 </form>
             </div>
         </div>

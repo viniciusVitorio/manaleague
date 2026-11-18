@@ -8,9 +8,11 @@ use App\Models\CommunityNotification;
 use App\Models\GameMatch;
 use App\Models\MatchResultSubmission;
 use App\Models\Player;
+use App\Models\PrizeAward;
 use App\Models\RankedMatch;
 use App\Models\RankedResultSubmission;
 use App\Models\Tournament;
+use App\Models\TournamentPrize;
 use App\Observers\LiveChangeObserver;
 use App\Services\Realtime\RealtimeService;
 use Illuminate\Support\ServiceProvider;
@@ -27,7 +29,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // Dados que as telas ao vivo mostram (mesmas tabelas do LiveVersionService).
         foreach ([Tournament::class, Player::class, GameMatch::class, MatchResultSubmission::class, Challenge::class,
-            CasualMatch::class, RankedMatch::class, RankedResultSubmission::class, CommunityNotification::class] as $model) {
+            CasualMatch::class, RankedMatch::class, RankedResultSubmission::class, CommunityNotification::class,
+            TournamentPrize::class, PrizeAward::class] as $model) {
             $model::observe(LiveChangeObserver::class);
         }
     }

@@ -66,6 +66,18 @@ class CommunityEvents
         foreach ($this->accountsForTournament($t) as $user) {
             $this->notifications->send($user, 'tournament.finished', $title, '/me/matches', "tournament:{$t->id}:finished:user:{$user->id}", ['tournament_id' => $t->id]);
         }
+        $this->prizesAwarded($t);
+    }
+
+    /** Quem ganhou prêmio recebe um aviso só, com a lista (troféu primeiro). Uma correção da final avisa o novo dono. */
+    private function prizesAwarded(Tournament $t): void
+    {
+        $won = app(\App\Services\PrizeService::class)->wonByAccount($t);
+        foreach ($won->isEmpty() ? [] : User::query()->whereIn('id', $won->keys())->get() as $user) {
+            $titles = $won[$user->id];
+            $list = count($titles) > 1 ? implode(', ', array_slice($titles, 0, -1)).' e '.end($titles) : $titles[0];
+            $this->notifications->send($user, 'tournament.prizes', "Você ganhou em {$t->name}: {$list}", '/me/prizes', "tournament:{$t->id}:prizes:user:{$user->id}", ['tournament_id' => $t->id]);
+        }
     }
 
     public function resultSubmitted(MatchResultSubmission $submission): void

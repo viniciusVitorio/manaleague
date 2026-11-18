@@ -26,7 +26,7 @@ class CompetitionService
             $round=(int)$t->matches()->max('round');
             if ($t->system==='round_robin'||$t->status!=='league'||$round!==$expectedRound) throw new LogicException('A rodada mudou ou o torneio já foi encerrado.');
             if ($t->matches()->where('status','pending')->exists()) throw new LogicException('Registre todos os resultados antes de avançar.');
-            if (in_array($t->system,['swiss','commander_pods'])&&$round>=$t->round_limit) { $t->update(['status'=>'finished']); return; }
+            if (in_array($t->system,['swiss','commander_pods'])&&$round>=$t->round_limit) { $t->update(['status'=>'finished']); app(PrizeService::class)->sync($t); return; }
             $this->generate($t,$round+1);
         });
     }
@@ -64,7 +64,7 @@ class CompetitionService
         $alive=array_values(array_filter($ids,fn($id)=>$losses[$id]<$limit));
         if (count($alive)===1) {
             $t->matches()->where('round',$round-1)->where('status','finished')->latest('id')->first()?->update(['stage'=>'final']);
-            $t->update(['status'=>'finished']); return;
+            $t->update(['status'=>'finished']); app(PrizeService::class)->sync($t); return;
         }
         if ($limit===1) { $this->pairs($t,$alive,$round,count($alive)===2?'final':'winners'); return; }
         $winners=array_values(array_filter($alive,fn($id)=>$losses[$id]===0));

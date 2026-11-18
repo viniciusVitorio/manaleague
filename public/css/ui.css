@@ -513,6 +513,8 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 .deck-add .card-results{grid-template-columns:repeat(auto-fill,minmax(250px,1fr));max-height:none;overflow:visible}
 .deck-add .card-results:empty{display:none}
 /* Comandante em destaque: arte ao fundo (mesmo véu do topo do deck), carta à esquerda e os dados ao lado. Dois comandantes dividem a linha. */
+/* Descrição curta no topo do deck: nunca passa de 2 linhas. */
+.deck-hero-about{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;margin:10px 0 0;color:var(--ui-fg-muted);font-size:.9rem;line-height:1.45;overflow-wrap:anywhere}
 .cmdr-zone{display:grid;gap:var(--s4);margin-bottom:20px}
 .cmdr-zone.is-pair{grid-template-columns:repeat(2,minmax(0,1fr))}
 .cmdr-card{position:relative;display:flex;align-items:center;gap:var(--s5);padding:var(--s5);margin:0;overflow:hidden}
@@ -526,7 +528,21 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 .cmdr-info .eyebrow{display:inline-flex;align-items:center;gap:6px;margin:0}
 .cmdr-info h2{margin:0;font-size:1.3rem;line-height:1.2;overflow-wrap:anywhere}
 .cmdr-type{margin:0;color:var(--ui-fg-muted);font-size:.86rem}
-.cmdr-info form{margin:var(--s2) 0 0 -8px}
+.cmdr-actions{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s2);margin-top:var(--s2)}
+.cmdr-actions form{margin:0}
+/* Deck Commander ainda sem comandante: o convite para escolher ocupa o lugar do cartão. */
+.cmdr-empty{display:flex;align-items:center;gap:var(--s4);padding:var(--s4) var(--s5);margin:0;border-style:dashed}
+.cmdr-empty>svg{flex:none;color:var(--ui-fg-muted)}
+.cmdr-empty-text{flex:1;min-width:0}
+.cmdr-empty-text h2{margin:0;font-size:1rem}
+.cmdr-empty-text p{margin:2px 0 0;color:var(--ui-fg-muted);font-size:.85rem}
+@media(hover:none){.cmdr-drag-note{display:none}}
+/* Coroa na linha da carta e janela de escolha (reaproveita os cartões da busca). */
+.cmdr-pick{display:inline-flex;align-items:center;justify-content:center;color:var(--ui-fg-muted)}
+.cmdr-pick:hover{color:var(--ui-fg)}
+.cmdr-dialog .card-results{max-height:none;overflow:visible;margin-top:var(--s3)}
+.cmdr-dialog .card-result[hidden]{display:none}
+.cmdr-dialog .card-result-actions form{margin:0}
 .cmdr-zone.is-pair .cmdr-thumb{width:104px}
 .cmdr-zone.is-pair .cmdr-info h2{font-size:1.1rem}
 @media(max-width:700px){
@@ -534,6 +550,9 @@ form.is-submitting [data-async-busy] { opacity: .6; }
   .cmdr-card{gap:var(--s4);padding:var(--s4)}
   .cmdr-thumb,.cmdr-zone.is-pair .cmdr-thumb{width:96px}
   .cmdr-info h2,.cmdr-zone.is-pair .cmdr-info h2{font-size:1.1rem}
+  .cmdr-empty{flex-wrap:wrap;padding:var(--s4)}
+  .cmdr-empty-text{flex-basis:calc(100% - 36px)}
+  .cmdr-empty .ui-btn{width:100%}
 }
 @media(prefers-reduced-motion:reduce){.cmdr-thumb{transition:none}}
 /* Janela da carta (toque no nome): a imagem ocupa a janela e encolhe em telas baixas para nunca precisar rolar. */
@@ -756,3 +775,24 @@ a.mm-link:hover .mm-go{transform:translateX(2px)}
 /* Aviso de notificação nova (live-notify.js): o toast inteiro é o link. */
 a.live-toast{display:block;color:var(--ui-fg);text-decoration:none}
 a.live-toast:hover{border-color:var(--ui-border-strong)}
+
+/* ---------- Recorte de imagem ---------- */
+/* Janela do js/image-crop.js (<input type="file" data-crop>): a imagem inteira com um quadrado de seleção para marcar a parte que vai ser enviada. */
+.crop-dialog{width:min(440px,calc(100% - 24px))}
+.crop-stage{position:relative;width:100%;aspect-ratio:1;overflow:hidden;border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);background:repeating-conic-gradient(var(--ui-muted) 0 25%,var(--ui-bg) 0 50%) 0 0/20px 20px;touch-action:none}
+.crop-stage canvas{display:block;width:100%;height:100%}
+.crop-stage canvas:focus-visible{outline:2px solid var(--ui-ring);outline-offset:-2px}
+/* O cursor diz o que o clique faz: mover a seleção, puxar um canto ou desenhar outra. */
+.crop-stage canvas{cursor:crosshair}
+.crop-stage canvas[data-crop-cursor=move]{cursor:move}
+.crop-stage canvas[data-crop-cursor=nw],.crop-stage canvas[data-crop-cursor=se]{cursor:nwse-resize}
+.crop-stage canvas[data-crop-cursor=ne],.crop-stage canvas[data-crop-cursor=sw]{cursor:nesw-resize}
+.crop-zoom{display:flex;align-items:center;gap:var(--s3);margin-top:var(--s3)}
+.crop-zoom label{margin:0;color:var(--ui-fg-soft);font-size:.82rem;font-weight:500}
+.crop-zoom input[type=range]{flex:1;min-width:0;height:32px;margin:0;padding:0;border:0;background:none;accent-color:var(--ui-primary)}
+.crop-hint{margin:var(--s2) 0 0;color:var(--ui-fg-subtle);font-size:.78rem}
+.crop-dialog .ui-dialog-foot{justify-content:flex-end}
+.crop-note{display:block;margin-top:var(--s2);color:var(--ui-fg-muted);font-size:.78rem}
+.crop-note:empty{display:none}
+.crop-note.is-error{color:var(--ui-danger)}
+@media(max-width:480px){.crop-dialog .ui-dialog-foot{flex-direction:column-reverse;align-items:stretch}.crop-dialog .ui-dialog-foot .ui-btn{justify-content:center}}
