@@ -2,7 +2,7 @@
 {{-- Premiação do torneio: um card por colocação (1º, 2º, 3º, participação). Cada prêmio é uma chave: ligou, aparecem só os campos dele. --}}
 {{-- A ordem é a mesma do quadro do torneio: primeiro o troféu ou medalha (colecionável), depois os boosters (prêmio físico). --}}
 {{-- No computador os cards ficam em duas colunas: 1º | 2º em cima, 3º | participação embaixo. No celular, um embaixo do outro. --}}
-@push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/prizes.css') }}"><script src="{{ \App\Support\VersionedAsset::url('js/prize-form.js') }}" defer></script>@endpush
+@push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/prizes.css') }}"><script src="{{ \App\Support\VersionedAsset::url('js/crop-core.js') }}" defer></script><script src="{{ \App\Support\VersionedAsset::url('js/image-crop.js') }}" defer></script><script src="{{ \App\Support\VersionedAsset::url('js/prize-form.js') }}" defer></script>@endpush
 @section('content')
 @php
     $imageKb = \App\Models\TournamentPrize::IMAGE_MAX_KILOBYTES;
@@ -52,15 +52,15 @@
                     <label>Nome <small>Opcional. Sem nome, fica "Troféu de {{ $defaultName }}" (ou a peça escolhida).</small>
                         <input name="prizes[{{ $placement }}][trophy_label]" maxlength="{{ \App\Models\TournamentPrize::LABEL_MAX }}" value="{{ old("prizes.$placement.trophy_label", $trophy?->label) }}" placeholder="Ex.: Taça Liga de Verão">
                     </label>
-                    <div class="prize-form-image is-{{ $tone }}" data-prize-image-box>
+                    <div class="prize-form-image is-{{ $tone }}" data-prize-image-box data-crop-box>
                         {{-- data-async-keep: a prévia escolhida não some se a página se atualizar sozinha. --}}
                         <div class="prize-form-preview" data-prize-image-preview data-async-keep>
                             @if($hasImage)@include('partials.prize-icon', ['prize' => $trophy, 'size' => 22])@else<span class="prize-icon" aria-hidden="true"><x-icon name="image" :size="22" /></span>@endif
                         </div>
                         <div>
-                            <label for="prize-image-{{ $placement }}">Imagem <small>Opcional. Sem imagem, vale o ícone da peça. JPG, PNG ou WebP. A imagem é guardada em {{ $imageSide }}×{{ $imageSide }}.</small></label>
-                            <input type="file" id="prize-image-{{ $placement }}" name="images[{{ $placement }}]" accept="image/jpeg,image/png,image/webp" data-prize-image data-max-kb="{{ $imageKb }}">
-                            <small class="prize-form-image-note" data-prize-image-note role="status" aria-live="polite"></small>
+                            <label for="prize-image-{{ $placement }}">Imagem <small>Opcional. Sem imagem, vale o ícone da peça. JPG, PNG ou WebP. Você escolhe o recorte ao selecionar o arquivo; guardamos em {{ $imageSide }}×{{ $imageSide }}.</small></label>
+                            <input type="file" id="prize-image-{{ $placement }}" name="images[{{ $placement }}]" accept="image/jpeg,image/png,image/webp" data-prize-image data-max-kb="{{ $imageKb }}" data-crop="contain" data-crop-size="{{ $imageSide }}" data-crop-title="Recortar imagem: {{ $label }}">
+                            <small class="prize-form-image-note" data-prize-image-note data-crop-note role="status" aria-live="polite"></small>
                             @if($hasImage)<label class="check-label"><input type="checkbox" name="prizes[{{ $placement }}][remove_image]" value="1"> Remover a imagem atual</label>@endif
                         </div>
                     </div>

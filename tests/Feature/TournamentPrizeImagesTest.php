@@ -56,6 +56,21 @@ class TournamentPrizeImagesTest extends TestCase
         $this->actingAs(User::factory()->create())->get(route('profiles.show', $champion))->assertOk()->assertSee($img, false);
     }
 
+    public function test_both_upload_forms_offer_the_crop_before_sending(): void
+    {
+        [$t, $owner] = $this->arena();
+
+        // Troféu: pode afastar até a imagem caber inteira; sai no lado padrão das artes.
+        $this->actingAs($owner)->get(route('tournaments.prizes.edit', $t))->assertOk()
+            ->assertSee('js/image-crop.js', false)->assertSee('js/crop-core.js', false)
+            ->assertSee('data-crop="contain" data-crop-size="'.TournamentPrize::IMAGE_SIZE.'"', false);
+        // Foto de perfil: sempre cobre o quadrado, com o círculo em que ela aparece no site.
+        $this->get(route('profiles.edit'))->assertOk()
+            ->assertSee('js/image-crop.js', false)
+            ->assertSee('data-crop="cover" data-crop-shape="circle"', false)
+            ->assertSee('id="photo-preview"', false);
+    }
+
     public function test_replacing_or_removing_the_image_cleans_the_old_file(): void
     {
         [$t, $owner] = $this->arena();
