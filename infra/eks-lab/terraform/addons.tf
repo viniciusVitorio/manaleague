@@ -6,11 +6,14 @@ data "aws_eks_addon_version" "compatible" {
   most_recent        = false
 }
 resource "aws_eks_addon" "cni" {
-  cluster_name                = aws_eks_cluster.lab.name
-  addon_name                  = "vpc-cni"
-  addon_version               = lookup(var.addon_versions, "vpc-cni", data.aws_eks_addon_version.compatible["vpc-cni"].version)
-  service_account_role_arn    = aws_iam_role.irsa["vpc_cni"].arn
-  configuration_values        = jsonencode({ enableNetworkPolicy = "true" })
+  cluster_name             = aws_eks_cluster.lab.name
+  addon_name               = "vpc-cni"
+  addon_version            = lookup(var.addon_versions, "vpc-cni", data.aws_eks_addon_version.compatible["vpc-cni"].version)
+  service_account_role_arn = aws_iam_role.irsa["vpc_cni"].arn
+  configuration_values = jsonencode({
+    enableNetworkPolicy = "true"
+    env                 = { ADDITIONAL_ENI_TAGS = jsonencode({ "manaleague.io/eks-lab-vpc" = aws_vpc.lab.id }) }
+  })
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "PRESERVE"
   depends_on                  = [aws_iam_role_policy_attachment.vpc_cni]
@@ -23,6 +26,6 @@ resource "aws_eks_addon" "runtime" {
   service_account_role_arn    = each.key == "aws-ebs-csi-driver" ? aws_iam_role.irsa["ebs_csi"].arn : null
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "PRESERVE"
-  configuration_values        = each.key == "aws-ebs-csi-driver" ? jsonencode({ controller = { replicaCount = 1 } }) : each.key == "coredns" ? jsonencode({ replicaCount = 1 }) : null
+  configuration_values        = each.key == "aws-ebs-csi-driver" ? jsonencode({ controller = { replicaCount = 1, extraVolumeTags = { "manaleague.io/cluster" = local.name } } }) : each.key == "coredns" ? jsonencode({ replicaCount = 1 }) : null
   depends_on                  = [aws_eks_node_group.lab, aws_iam_role_policy_attachment.ebs_csi]
 }

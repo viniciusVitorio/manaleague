@@ -23,7 +23,7 @@ locals {
 resource "aws_iam_role" "irsa" {
   for_each             = local.irsa_accounts
   name                 = "${local.name}-${replace(each.key, "_", "-")}"
-  permissions_boundary = each.key == "load_balancer_controller" ? aws_iam_policy.controller_boundary.arn : null
+  permissions_boundary = each.key == "load_balancer_controller" ? aws_iam_policy.controller_boundary.arn : each.key == "vpc_cni" ? aws_iam_policy.vpc_cni_boundary.arn : each.key == "ebs_csi" ? aws_iam_policy.ebs_csi_boundary.arn : null
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -34,9 +34,63 @@ resource "aws_iam_role" "irsa" {
     }]
   })
 }
+# Keep the managed V2 policy; the boundary intersects it with cluster ownership.
+# EBS volumes/snapshots and instance resources do NOT support ec2:Vpc here.
+# Source and destination resources require separate conditions on create APIs.
+# Extra driver tags cover both volumes and snapshots (controller.go ExtraTags).
+# Snapshot ARNs have an empty account field; existing snapshots also require Owner.
+# CopyVolumes follows the live AWS-managed V2 source/destination tag pattern:
+# its machine-readable SAR currently omits the source ResourceTag keys.
+# https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AmazonEBSCSIDriverPolicyV2.html
+# https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/v1.68.0/pkg/driver/controller.go
+resource "aws_iam_policy" "ebs_csi_boundary" {
+  name = "${local.name}-ebs-csi-boundary"
+  policy = jsonencode({ Version = "2012-10-17", Statement = [
+    { Sid = "ReadOnlyDiscovery", Effect = "Allow", Action = "ec2:Describe*", Resource = "*" },
+    { Sid = "CreateOwnedVolumes", Effect = "Allow", Action = ["ec2:CreateVolume", "ec2:CopyVolumes"], Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:volume/*", Condition = { StringEquals = { "aws:RequestTag/manaleague.io/cluster" = local.name, "aws:RequestTag/ebs.csi.aws.com/cluster" = "true" } } },
+    { Sid = "OwnedVolumeLifecycleAndSources", Effect = "Allow", Action = ["ec2:AttachVolume", "ec2:DetachVolume", "ec2:ModifyVolume", "ec2:DeleteVolume", "ec2:CreateSnapshot", "ec2:CopyVolumes"], Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:volume/*", Condition = { StringEquals = { "ec2:ResourceTag/manaleague.io/cluster" = local.name, "ec2:ResourceTag/ebs.csi.aws.com/cluster" = "true" } } },
+    { Sid = "LabNodeTargets", Effect = "Allow", Action = ["ec2:AttachVolume", "ec2:DetachVolume"], Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:instance/*", Condition = { StringEquals = { "ec2:ResourceTag/eks:eks-cluster-name" = local.name, "ec2:ResourceTag/manaleague.io/eks-lab-vpc" = aws_vpc.lab.id } } },
+    { Sid = "CreateOwnedSnapshots", Effect = "Allow", Action = "ec2:CreateSnapshot", Resource = "arn:aws:ec2:${var.aws_region}::snapshot/*", Condition = { StringEquals = { "aws:RequestTag/manaleague.io/cluster" = local.name, "aws:RequestTag/ebs.csi.aws.com/cluster" = "true" } } },
+    { Sid = "OwnedSnapshotLifecycleAndSources", Effect = "Allow", Action = ["ec2:CreateVolume", "ec2:DeleteSnapshot", "ec2:LockSnapshot", "ec2:EnableFastSnapshotRestores"], Resource = "arn:aws:ec2:${var.aws_region}::snapshot/*", Condition = { StringEquals = { "ec2:Owner" = var.expected_account_id, "ec2:ResourceTag/manaleague.io/cluster" = local.name, "ec2:ResourceTag/ebs.csi.aws.com/cluster" = "true" } } },
+    { Sid = "VolumeTagsAtCreation", Effect = "Allow", Action = "ec2:CreateTags", Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:volume/*", Condition = { StringEquals = { "ec2:CreateAction" = ["CreateVolume", "CopyVolumes"], "aws:RequestTag/manaleague.io/cluster" = local.name, "aws:RequestTag/ebs.csi.aws.com/cluster" = "true" } } },
+    { Sid = "SnapshotTagsAtCreation", Effect = "Allow", Action = "ec2:CreateTags", Resource = "arn:aws:ec2:${var.aws_region}::snapshot/*", Condition = { StringEquals = { "ec2:CreateAction" = "CreateSnapshot", "aws:RequestTag/manaleague.io/cluster" = local.name, "aws:RequestTag/ebs.csi.aws.com/cluster" = "true" } } },
+    # Standalone tags cannot adopt a foreign/root volume, or alter/remove the
+    # ownership markers. Keep V2's protected migration/cluster-name tags too.
+    { Sid = "ReconcileOwnedVolumeTags", Effect = "Allow", Action = ["ec2:CreateTags", "ec2:DeleteTags"], Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:volume/*", Condition = {
+      StringEquals                   = { "ec2:ResourceTag/manaleague.io/cluster" = local.name, "ec2:ResourceTag/ebs.csi.aws.com/cluster" = "true" },
+      "ForAllValues:StringNotEquals" = { "aws:TagKeys" = ["manaleague.io/cluster", "ebs.csi.aws.com/cluster", "ebs.csi.aws.com/cluster-name", "kubernetes.io/created-for/pvc/name"] },
+      Null                           = { "aws:TagKeys" = "false" }
+    } }
+  ] })
+}
 resource "aws_iam_role_policy_attachment" "ebs_csi" {
   role       = aws_iam_role.irsa["ebs_csi"].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEBSCSIDriverPolicyV2"
+}
+# EC2 SAR action/resource conditions are deliberately split: a new ENI has no
+# ec2:Vpc, and instances have no supported ec2:Vpc on these APIs. The immutable
+# VPC-ID tag comes only from this launch template or tag-on-create in lab subnets.
+# https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonec2.html
+# https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/supported-iam-actions-tagging.html
+# https://github.com/aws/amazon-vpc-cni-k8s/blob/v1.22.4/pkg/awsutils/awsutils.go
+resource "aws_iam_policy" "vpc_cni_boundary" {
+  name = "${local.name}-vpc-cni-boundary"
+  policy = jsonencode({ Version = "2012-10-17", Statement = [
+    { Sid = "ReadOnlyDiscovery", Effect = "Allow", Action = "ec2:Describe*", Resource = "*" },
+    { Sid = "CreateTaggedEni", Effect = "Allow", Action = "ec2:CreateNetworkInterface", Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:network-interface/*", Condition = { StringEquals = { "aws:RequestTag/manaleague.io/eks-lab-vpc" = aws_vpc.lab.id } } },
+    { Sid = "LabNetworkInputs", Effect = "Allow", Action = ["ec2:CreateNetworkInterface", "ec2:ModifyNetworkInterfaceAttribute"], Resource = concat([for subnet in aws_subnet.public : subnet.arn], [aws_security_group.nodes.arn]) },
+    { Sid = "MutateLabEni", Effect = "Allow", Action = ["ec2:AssignPrivateIpAddresses", "ec2:UnassignPrivateIpAddresses", "ec2:AttachNetworkInterface", "ec2:DetachNetworkInterface", "ec2:DeleteNetworkInterface", "ec2:ModifyNetworkInterfaceAttribute"], Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:network-interface/*", Condition = { StringEquals = { "ec2:Vpc" = aws_vpc.lab.arn, "ec2:ResourceTag/manaleague.io/eks-lab-vpc" = aws_vpc.lab.id } } },
+    { Sid = "LabNodeTargets", Effect = "Allow", Action = ["ec2:AttachNetworkInterface", "ec2:DetachNetworkInterface", "ec2:ModifyNetworkInterfaceAttribute"], Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:instance/*", Condition = { StringEquals = { "ec2:ResourceTag/eks:eks-cluster-name" = local.name, "ec2:ResourceTag/manaleague.io/eks-lab-vpc" = aws_vpc.lab.id } } },
+    { Sid = "EniTagsAtCreation", Effect = "Allow", Action = "ec2:CreateTags", Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:network-interface/*", Condition = { StringEquals = { "ec2:CreateAction" = "CreateNetworkInterface", "aws:RequestTag/manaleague.io/eks-lab-vpc" = aws_vpc.lab.id } } },
+    # TagENI sends only changes; its timestamp/instance/cluster tags must work on
+    # both primary (launch-template tagged) and secondary (CNI-created) ENIs.
+    # CreateTags cannot use ec2:Vpc; never let it introduce/change the guard tag.
+    { Sid = "ReconcileOwnedEniTags", Effect = "Allow", Action = "ec2:CreateTags", Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:network-interface/*", Condition = {
+      StringEquals                   = { "ec2:ResourceTag/manaleague.io/eks-lab-vpc" = aws_vpc.lab.id },
+      "ForAllValues:StringNotEquals" = { "aws:TagKeys" = ["manaleague.io/eks-lab-vpc"] },
+      Null                           = { "aws:TagKeys" = "false" }
+    } }
+  ] })
 }
 resource "aws_iam_role_policy_attachment" "vpc_cni" {
   role       = aws_iam_role.irsa["vpc_cni"].name

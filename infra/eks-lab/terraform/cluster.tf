@@ -84,7 +84,13 @@ resource "aws_launch_template" "nodes" {
   }
   tag_specifications {
     resource_type = "instance"
-    tags          = merge(local.tags, { Name = "${local.name}-node", "eks:eks-cluster-name" = local.name })
+    tags          = merge(local.tags, { Name = "${local.name}-node", "eks:eks-cluster-name" = local.name, "manaleague.io/eks-lab-vpc" = aws_vpc.lab.id })
+  }
+  # The CNI may reconcile primary ENI tags before creating secondary ENIs. Only
+  # Terraform/EC2 launch tags may introduce this immutable network guard.
+  tag_specifications {
+    resource_type = "network-interface"
+    tags          = merge(local.tags, { "manaleague.io/eks-lab-vpc" = aws_vpc.lab.id })
   }
   tag_specifications {
     resource_type = "volume"

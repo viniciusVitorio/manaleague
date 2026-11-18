@@ -13,6 +13,13 @@ variables {
 }
 run "network_policy_enabled" {
   command = plan
+  # CNI guard configuration now carries the exact VPC ID. Render it at plan
+  # time without replacing the addon configuration/assertion with a mock.
+  override_resource {
+    target          = aws_vpc.lab
+    override_during = plan
+    values          = { id = "vpc-0123456789abcdef0" }
+  }
   assert {
     condition     = try(jsondecode(aws_eks_addon.cni.configuration_values).enableNetworkPolicy == "true", false)
     error_message = "VPC CNI must explicitly enable enforcement of the supplied NetworkPolicies using the string true."
