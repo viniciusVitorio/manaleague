@@ -513,6 +513,8 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 .deck-add .card-results{grid-template-columns:repeat(auto-fill,minmax(250px,1fr));max-height:none;overflow:visible}
 .deck-add .card-results:empty{display:none}
 /* Comandante em destaque: arte ao fundo (mesmo véu do topo do deck), carta à esquerda e os dados ao lado. Dois comandantes dividem a linha. */
+/* Descrição curta no topo do deck: nunca passa de 2 linhas. */
+.deck-hero-about{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;margin:10px 0 0;color:var(--ui-fg-muted);font-size:.9rem;line-height:1.45;overflow-wrap:anywhere}
 .cmdr-zone{display:grid;gap:var(--s4);margin-bottom:20px}
 .cmdr-zone.is-pair{grid-template-columns:repeat(2,minmax(0,1fr))}
 .cmdr-card{position:relative;display:flex;align-items:center;gap:var(--s5);padding:var(--s5);margin:0;overflow:hidden}

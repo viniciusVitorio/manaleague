@@ -10,7 +10,10 @@ class Deck extends Model
 {
     public const FORMATS = ['Pauper', 'Commander', 'Standard', 'Modern', 'Pioneer', 'Legacy', 'Draft', 'Outro'];
 
-    protected $fillable = ['name', 'colors', 'format', 'is_primary', 'is_visible_to_friends'];
+    /** Descrição curta do deck: com este limite o texto cabe em 2 linhas mesmo num celular de 360px. */
+    public const DESCRIPTION_MAX = 80;
+
+    protected $fillable = ['name', 'colors', 'format', 'description', 'is_primary', 'is_visible_to_friends'];
 
     // Link público: só muda por enableShareLink/disableShareLink e nunca vai para JSON.
     protected $hidden = ['share_token', 'share_token_hash'];

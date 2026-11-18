@@ -42,6 +42,7 @@
             @unless($isOwner)<span class="deck-owner">por <x-avatar :of="$deck->profile" class="ui-avatar deck-owner-avatar" aria-hidden="true" /><b><x-profile-link :of="$deck->profile">{{ $deck->profile->nickname }}</x-profile-link></b></span>@endunless
             @if($deck->cards_updated_at)<span title="{{ $deck->cards_updated_at->format('d/m/Y H:i') }}">Lista atualizada <time datetime="{{ $deck->cards_updated_at->toIso8601String() }}">{{ $deck->cards_updated_at->diffForHumans() }}</time></span>@endif
         </div>
+        @if(filled($deck->description))<p class="deck-hero-about">{{ $deck->description }}</p>@endif
     </div>
     {{-- Ações do deck no canto: o menu "..." com compartilhar, exportar, editar e capa. Quem só vê tem o Exportar. --}}
     @if($isOwner)
@@ -52,6 +53,7 @@
                 <button type="button" class="ui-menu-item" data-dialog-open="deck-share"><x-icon name="link" />Compartilhar @if($deck->share_token)<span class="deck-share-on" title="Link ativo"></span><span class="sr-only">(link ativo)</span>@endif</button>
                 @if($exportText !== '')<button type="button" class="ui-menu-item" data-dialog-open="deck-export"><x-icon name="download" />Exportar lista</button>@endif
                 <a class="ui-menu-item" href="{{ route('decks.edit', $deck) }}"><x-icon name="pencil" />Editar deck</a>
+                <button type="button" class="ui-menu-item" data-dialog-open="deck-description"><x-icon name="info" />{{ filled($deck->description) ? 'Editar descrição' : 'Adicionar descrição' }}</button>
                 @if($summary['cover_options']->isNotEmpty())<button type="button" class="ui-menu-item" data-toggle="cover-picker" aria-controls="cover-picker" aria-expanded="false"><x-icon name="image" />Trocar capa</button>@endif
             </div>
         </div>
@@ -275,6 +277,24 @@
         </div>
         <footer class="ui-dialog-foot">
             <button class="ui-btn ui-btn-primary ui-btn-sm"><x-icon name="upload" />Importar lista</button>
+            <button type="button" class="ui-btn ui-btn-ghost ui-btn-sm" data-dialog-close>Cancelar</button>
+        </footer>
+    </form>
+</dialog>
+
+<dialog class="ui-dialog deck-dialog" id="deck-description" aria-labelledby="deck-description-title">
+    <header class="ui-dialog-head">
+        <h2 id="deck-description-title">Descrição do deck</h2>
+        <button type="button" class="ui-icon-btn" data-dialog-close aria-label="Fechar" title="Fechar"><x-icon name="x" /></button>
+    </header>
+    <form method="POST" action="{{ route('decks.description', $deck) }}">@csrf @method('PATCH')
+        <div class="ui-dialog-body">
+            <label for="deck-description-text" class="sr-only">Descrição do deck</label>
+            <textarea id="deck-description-text" name="description" rows="2" maxlength="{{ \App\Models\Deck::DESCRIPTION_MAX }}" placeholder="Em uma frase, como este deck joga?">{{ $deck->description }}</textarea>
+            <p class="muted small-note">Aparece no topo do deck para todos que podem vê-lo. Até {{ \App\Models\Deck::DESCRIPTION_MAX }} caracteres; deixe em branco para remover.</p>
+        </div>
+        <footer class="ui-dialog-foot">
+            <button class="ui-btn ui-btn-primary ui-btn-sm">Salvar descrição</button>
             <button type="button" class="ui-btn ui-btn-ghost ui-btn-sm" data-dialog-close>Cancelar</button>
         </footer>
     </form>
