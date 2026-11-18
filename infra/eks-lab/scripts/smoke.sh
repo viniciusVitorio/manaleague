@@ -27,4 +27,5 @@ curl --fail --silent http://127.0.0.1:18080/readyz >/dev/null
 # Real HTTP/WAF, cross-replica DB sessions, WebSocket, repeatable demo seeding,
 # and PostgreSQL-outage readiness assertions from the image/runtime smoke suite.
 bash ./smoke.sh
+sh "$root/infra/eks-lab/local/test-readiness-outage.sh"
 printf '%s\n' 'PASS: exact app/web images passed the integration smoke suite.'

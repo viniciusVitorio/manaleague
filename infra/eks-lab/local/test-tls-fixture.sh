@@ -5,9 +5,10 @@ cd "$(dirname "$0")"
 # Run from the Linux build context; mount paths must be native to the Docker daemon.
 fixture=$(mktemp -d "$PWD/.tls-fixture.XXXXXX")
 name="manaleague-eks-lab-tls-$$"
+network= db=
 cleanup() {
-    docker rm -f "$name" >/dev/null 2>&1 || true
-    docker network rm "$name" >/dev/null 2>&1 || true
+    [ -z "$db" ] || docker rm -fv "$db" >/dev/null 2>&1 || true
+    [ -z "$network" ] || docker network rm "$network" >/dev/null 2>&1 || true
     rm -rf "$fixture"
 }
 trap cleanup EXIT INT TERM
@@ -18,8 +19,8 @@ printf 'subjectAltName=DNS:postgres\nextendedKeyUsage=serverAuth\n' > "$fixture/
 openssl x509 -req -in "$fixture/server.csr" -CA "$fixture/ca.pem" -CAkey "$fixture/ca.key" -CAcreateserial -days 1 -sha256 -extfile "$fixture/extensions.cnf" -out "$fixture/server.crt" >/dev/null 2>&1
 chmod 0755 "$fixture"
 chmod 0644 "$fixture/ca.pem"
-docker network create "$name" >/dev/null
-docker run -d --rm --name "$name" --network "$name" --network-alias postgres --network-alias wrong-postgres \
+network=$(docker network create "$name")
+db=$(docker create --name "$name" --network "$network" --network-alias postgres --network-alias wrong-postgres \
     -e POSTGRES_DB=manaleague_eks_lab -e POSTGRES_USER=manaleague_lab -e POSTGRES_PASSWORD="$password" \
     -v "$fixture:/tls:ro" --entrypoint sh postgres:17.6-alpine -c '
         cp /tls/server.key /tmp/lab-server.key
@@ -27,7 +28,9 @@ docker run -d --rm --name "$name" --network "$name" --network-alias postgres --n
         chown postgres:postgres /tmp/lab-server.key /tmp/lab-server.crt
         chmod 0600 /tmp/lab-server.key
         exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/tmp/lab-server.crt -c ssl_key_file=/tmp/lab-server.key
-    ' >/dev/null
+    ')
+docker start "$db" >/dev/null
+echo "TLS FIXTURE network=$network db=$db"
 ready=0
 for attempt in $(seq 1 60); do
     if docker exec "$name" pg_isready -h 127.0.0.1 -U manaleague_lab -d manaleague_eks_lab >/dev/null 2>&1; then ready=1; break; fi
@@ -38,7 +41,7 @@ check() {
     docker run --rm --read-only --network "$name" --entrypoint php \
         -e TEST_DB_PASSWORD="$password" -e PGCONNECT_TIMEOUT=3 -e PGSSLROOTCERT="$2" \
         -v "$fixture/ca.pem:/tmp/lab-ca.pem:ro" -v "$PWD/test-tls-pdo.php:/tmp/test-tls-pdo.php:ro" \
-        lab-app:dev /tmp/test-tls-pdo.php "$1"
+        "${APP_IMAGE:-lab-app:dev}" /tmp/test-tls-pdo.php "$1"
 }
 check trusted /tmp/lab-ca.pem
 check wrong-host /tmp/lab-ca.pem
