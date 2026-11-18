@@ -1,12 +1,24 @@
 # Relatório de validação local e AWS — ManaLeague EKS Lab com RDS
 
-Escopo: branch `eks-lab`, worktree `D:/Projetos/manaleague-eks-lab`, base original `96bcc68`, atualizada na eks-lab até `62c3da6` em17/11. Após autorização, a infraestrutura AWS foi provisionada e verificada. **A aplicação na AWS não foi implantada; a infraestrutura está desmontada. CI e publicação na eks-lab foram autorizadas separadamente, sem mudança de DNS/produção e sem recriar AWS.** Separar os ensaios locais abaixo das sondas reais de infraestrutura.
+Escopo: branch `eks-lab`, worktree `D:/Projetos/manaleague-eks-lab`, base original `96bcc68`, atualizada na eks-lab até `62c3da6` em17/11. **A infraestrutura foi recriada por nova autorização em18/11/2026 e está ativa; a aplicação Laravel e seu ALB ainda não foram implantados.** Main, DNS, produção e checkout original preservados. Separar validação offline, sondas reais da infraestrutura e CD da aplicação.
 
-## Estado atual — encerramento de custos autorizado
+## Estado atual — reativação autorizada em18/11/2026
+
+- Código Terraform com isolamento reforçado em `a23e4e0`: boundaries CNI/CSI, tags de ownership protegidas, ENIs limitadas à VPC/subnets/SG do lab e volumes restritos ao lab/nó correto. **75 testes Python e35 testes Terraform mock passaram**. Offline não é comprovação de todas as APIs IAM, snapshots ou CopyVolumes.
+- Novo plano real: **72 criações,0 alterações,0 exclusões**,11 checks aprovados;32 identificadores de produção sem correspondências no plano. As duas criações adicionais são policies IAM, não novas máquinas.
+- Terraform reportou **72 adicionados,0 alterados,0 destruídos**. O auxiliar pós-apply inicialmente confundiu58 blocos no state com72 instâncias gerenciadas (count/for_each); a contagem foi corrigida e verificada em leitura, **sem repetir o apply**. State serial221, com backup privado do state atual.
+- EKS1.37 ACTIVE, um t3.medium Ready, quatro addons ACTIVE e AWS Load Balancer Controller Running/Ready; namespace, IRSA, RBAC, Secrets reservados e StorageClass criados. Tags de ownership do nó/ENIs e boundaries efetivas lidas pela API.
+- RDS PostgreSQL17.9 db.t4g.micro, Single-AZ,20GiB gp3 privado e criptografado, na VPC exclusiva. Sonda psql com CA oficial/verify-full retornou TLSv1.3 e transação temporária revertida. Ainda não é teste Laravel/PDO implantado.
+- S3/IRSA: put/get criptografado AES256 sob a role lab-app e remoção confirmada do objeto próprio. EBS CSI: PVC1GiB criou volume criptografado, anexou ao nó exato, escreveu/leu e comprovou detach/delete. Jobs, Secrets/ConfigMap das sondas, Pod/PVC e volume temporário foram removidos.
+- Dezesseis variáveis do Environment eks-lab atualizadas e lidas de volta a partir dos outputs novos. Gate continua **false**; metadados do Environment production idênticos. Checkout/state de produção e main preservados; produção respondeu HTTP200.
+- **Aplicação, ALB, runner e CD real continuam pendentes.** O teste específico de indisponibilidade/readiness EKS continua pendente; não foi repetido o Docker local bloqueado. A CI automática continua alinhada à main e não dispara o workflow EKS manual.
+- Evidências locais ignoradas: `.local/restore-20261118/{reviewed-plan.json,apply.log,apply-result.json,bootstrap-verification.json,ebs-csi-proof.json,rds-s3-proofs.json,RESTORE_VERIFIED.json,cost-estimate.json}`. Base estimada sem ALB: US$4,03/dia mais custos variáveis/Secrets Manager/impostos; não é teto.
+
+## Histórico — encerramento autorizado em17/11/2026
 
 Em17/11/2026 o proprietário confirmou explicitamente exclusão da infraestrutura e do banco fictício. O teardown terminou com **0 adicionados,0 alterados,70 destruídos**, exit0. Leitura posterior confirmou state sem recursos gerenciados; EKS/RDS/EC2/EBS/ECR/S3/VPC/ENIs/ASG ausentes ou terminados; sem ALB/target groups/NAT, snapshots EBS/RDS, backups retidos, segredo RDS ativo ou log groups do lab. Provider OIDC compartilhado GitHub preservado; gatefalse; state de produção idêntico e health HTTP200.
 
-Arquivo e código locais permanecem. Custos já incorridos e atrasos da fatura não são apagados; recursos de produção continuam sua cobrança normal. Evidências em `.local/teardown.log`, `.local/teardown-inventory.json` e `.local/teardown-verification.json`. **As seções de infraestrutura e primeira validação são históricas e não indicam ambiente ativo.**
+Evidências históricas em `.local/teardown.log`, `.local/teardown-inventory.json` e `.local/teardown-verification.json`. **Esse encerramento e a primeira implantação abaixo são históricos: o estado atual é a reativação de18/11.** Custos já incorridos e atrasos da fatura não são apagados; produção mantém sua cobrança própria.
 
 ## Validação pré-publicação da CI — 17/11/2026
 

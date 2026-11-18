@@ -1,6 +1,6 @@
 # ManaLeague — EKS Lab acadêmico
 
-**Estado em 17/11/2026: laboratório DESMONTADO após consentimento explícito para encerrar custos e apagar o banco fictício.** O teardown removeu70 recursos, sem criar/alterar recursos. EKS, RDS, nó, discos, ECR, bucket, VPC e segredo gerenciado foram conferidos como removidos; não restaram snapshots/backups/log groups do lab nas consultas. Código/arquivos locais preservados, gate GitHubfalse, produção HTTP200 e state original inalterado. A publicação por commit/push foi autorizada posteriormente apenas na `eks-lab`, sem reativar AWS. Relatório atual em `.local/COST_STOP.md`; o restante deste README descreve como recriar após nova autorização, não um ambiente atualmente ativo.
+**Estado em 18/11/2026: infraestrutura do laboratório ATIVA novamente, após nova autorização explícita.** Terraform criou72 recursos, sem alterar/excluir recursos existentes: EKS1.37, um nó t3.medium Ready, RDS PostgreSQL17.9 privado/criptografado com20GiB, ECR/S3 e roles exclusivas. As boundaries CNI/CSI restringem mutações aos recursos do lab. Bootstrap e sondas reais de RDS/TLS, IRSA/S3 e EBS CSI passaram; objetos de teste e volume temporário foram removidos. **A aplicação Laravel e seu ALB ainda não foram implantados; CD continua desligado (`LAB_DEPLOY_ENABLED=false`).** Produção HTTP200, checkout/state original e main preservados. Base estimada sem ALB: aproximadamente **US$4,03/dia**, mais Secrets Manager, requisições/tráfego, eventual CPU excedente RDS e impostos. O teardown de17/11 é histórico, não significa custo zero agora. Evidência atual: `.local/restore-20261118/RESTORE_VERIFIED.json`; detalhes em `VALIDATION.md`. Não repetir o apply de criação nem restaurar um state antigo sobre o state atual.
 
 O laboratório não substitui a produção. `main`, EC2/Compose, domínio, banco, volumes e credenciais atuais ficam fora de seu alcance. A branch `eks-lab` foi criada da `origin/main` no commit `96bcc68`, em um worktree próprio: `D:/Projetos/manaleague-eks-lab`. O checkout original `D:/Projetos/manaleague` continua na sua branch, com os arquivos locais preservados. A branch acadêmica não acompanha `origin/main` como upstream, para evitar push acidental à produção. Em17/11 foi atualizada por fast-forward até `62c3da6`, incorporando as funcionalidades atuais de decks/perfil sem alterar a branch main ou o checkout original.
 
@@ -32,7 +32,7 @@ Cada uma das duas réplicas HTTP tem Nginx + **ModSecurity/OWASP CRS** e PHP-FPM
 
 Migrations rodam em um Job antes do rollout; entrypoint não migra nem importa banco antigo. Seed usa transação/lock e marcador persistente: só aceita banco vazio ou já marcado como demo e nunca copia dados reais. `demo@manaleague.test` recebe a senha do Secret `DEMO_PASSWORD`, não a senha pública do seeder antigo. Reexecutar seed é no-op; trocar o Secret depois não troca automaticamente a senha já gravada.
 
-**Limitações deliberadas:** RDS Single-AZ não é Multi-AZ/HA; o DB subnet group cobre duas zonas, sem pagar standby nesta configuração. Um nó não protege contra falha de máquina/AZ. HTTP no hostname do ALB é temporário, restrito e sem confidencialidade, apenas dados fictícios. AWS WAF gerenciado, Redis, EFS, autoscaler/HPA e NAT não foram adicionados. RDS é incluído como requisito do professor. Escalar manualmente não é autoscaling automático. S3/IRSA e ALB só poderão ser validados quando houver ambiente real.
+**Limitações deliberadas:** RDS Single-AZ não é Multi-AZ/HA; o DB subnet group cobre duas zonas, sem pagar standby nesta configuração. Um nó não protege contra falha de máquina/AZ. HTTP no hostname do ALB é temporário, restrito e sem confidencialidade, apenas dados fictícios. AWS WAF gerenciado, Redis, EFS, autoscaler/HPA e NAT não foram adicionados. RDS é incluído como requisito do professor. Escalar manualmente não é autoscaling automático. S3/IRSA foi validado por sonda própria no lab; ALB e o fluxo de avatares Laravel entre réplicas permanecem pendentes.
 
 ## 1. Repetir a validação local agora (PowerShell)
 
@@ -79,7 +79,7 @@ O acesso de operador é administrativo **apenas no cluster novo**; o deploy GitH
 
 ## 3. Provisionamento futuro, somente com autorização
 
-Os comandos são exemplos operacionais, **não foram executados** contra AWS. A flag `--allow-cloud` autoriza o comando localmente; ela não substitui a autorização do dono. Cada verbo exige conta/nome exatos. Windows e WSL não compartilham automaticamente as variáveis/perfis AWS.
+Os comandos abaixo são exemplos para futuras operações; as execuções autorizadas e o estado atual estão em `VALIDATION.md`. Não repetir criação com state existente sem reconciliar recursos. A flag `--allow-cloud` autoriza o comando localmente; ela não substitui a autorização do dono. Cada verbo exige conta/nome exatos. Windows e WSL não compartilham automaticamente as variáveis/perfis AWS.
 
 Exemplo PowerShell que passa explicitamente o perfil e as variáveis à WSL, sem colocar chaves no comando:
 

@@ -1,4 +1,4 @@
-# CI/CD do laboratório sem infraestrutura AWS ativa
+# CI/CD do laboratório — CI independente da infraestrutura AWS
 
 ## CI automática: o mesmo fluxo da main
 
@@ -13,7 +13,7 @@ A CI de push/PR da `eks-lab` usa `.github/workflows/pipeline.yml`, com o mesmo n
 
 `.github/workflows/eks-lab.yml` agora tem apenas `workflow_dispatch`; não é disparado por push ou PR. Seu nome é **EKS lab checks and deploy (manual)**. Não foi disparado nesta correção. A disponibilidade do botão de disparo depende do registro do workflow no GitHub/default branch; não inserir esse arquivo na `main` sem autorização só para expor o botão.
 
-**O workflow não provisiona nem destrói infraestrutura.** A AWS continua desmontada; `LAB_DEPLOY_ENABLED=false` é o estado seguro padrão.
+**O workflow não provisiona nem destrói infraestrutura.** O laboratório foi recriado por nova autorização em18/11/2026; `LAB_DEPLOY_ENABLED=false` permanece desligado, sem deploy automático. Infraestrutura ativa não equivale a aplicação/ALB implantados; evidências atuais em `VALIDATION.md`.
 
 O timeout de `/readyz` durante a queda do banco, observado na run `44183828568`, **continua pendente** no smoke específico do EKS. Alterar os gatilhos não corrige esse runtime e uma CI SSDLC verde não equivale a esse teste aprovado nem a deploy EKS validado. O teste Docker local bloqueado por aprovação não foi repetido.
 
