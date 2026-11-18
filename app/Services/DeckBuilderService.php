@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\Deck;
 use App\Models\DeckCard;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class DeckBuilderService
 {
@@ -54,25 +56,84 @@ class DeckBuilderService
 
         return DB::transaction(function () use ($deck, $card, $board, $copies): int {
             $card = DeckCard::query()->lockForUpdate()->findOrFail($card->id);
-            $copies = min($copies, $card->quantity);
-            $target = $deck->cards()->where('scryfall_id', $card->scryfall_id)->where('board', $board)->where('foil', $card->foil)->lockForUpdate()->first();
 
-            if ($target) {
-                $target->update(['quantity' => min(self::MAX_COPIES, $target->quantity + $copies)]);
-            } elseif ($copies < $card->quantity) {
-                $card->replicate()->fill(['board' => $board, 'quantity' => $copies])->save();
-            }
-
-            if ($target && $copies >= $card->quantity) {
-                $card->delete();
-            } elseif (! $target && $copies >= $card->quantity) {
-                $card->update(['board' => $board]); // Moveu tudo: a mesma linha só troca de lado.
-            } else {
-                $card->decrement('quantity', $copies);
-            }
-
-            return $copies;
+            return $this->transfer($deck, $card, $board, $copies);
         });
+    }
+
+    /**
+     * Coloca uma cópia da carta no comando. Com $replaceId, o comandante indicado volta para o deck e o total
+     * de cartas não muda; sem ele, a carta entra ao lado do atual (parceiro), até o limite de dois.
+     */
+    public function makeCommander(Deck $deck, DeckCard $card, ?int $replaceId = null): void
+    {
+        DB::transaction(function () use ($deck, $card, $replaceId): void {
+            $card = $deck->cards()->lockForUpdate()->findOrFail($card->id);
+            $commanders = $deck->cards()->where('board', DeckCard::BOARD_COMMANDER)->lockForUpdate()->get();
+            $replaced = $replaceId === null ? null : $commanders->firstWhere('id', $replaceId);
+
+            $this->ensure($deck->isCommander(), 'Só decks do formato Commander têm comandante.');
+            $this->ensure($card->board !== DeckCard::BOARD_COMMANDER && $commanders->where('name', $card->name)->isEmpty(), "{$card->name} já é comandante.");
+            $this->ensure($card->canCommand(), "{$card->name} não pode ser comandante (precisa ser criatura ou planeswalker lendário, ou Background).");
+            $this->ensure($replaceId === null || $replaced !== null, 'Esse comandante não está mais no deck. Atualize a página e tente de novo.');
+            $this->ensure($replaced !== null || $commanders->count() < DeckCard::MAX_COMMANDERS, 'Este deck já tem '.DeckCard::MAX_COMMANDERS.' comandantes. Escolha qual trocar.');
+
+            if ($replaced) $this->transfer($deck, $replaced, DeckCard::BOARD_MAIN, $replaced->quantity);
+            $this->transfer($deck, $card, DeckCard::BOARD_COMMANDER, 1);
+            $this->syncColors($deck);
+        });
+    }
+
+    /** Devolve o comandante para o deck, sem apagar a carta. */
+    public function removeCommander(Deck $deck, DeckCard $card): void
+    {
+        DB::transaction(function () use ($deck, $card): void {
+            $card = $deck->cards()->lockForUpdate()->findOrFail($card->id);
+            $this->ensure($card->board === DeckCard::BOARD_COMMANDER, "{$card->name} não é comandante deste deck.");
+
+            $this->transfer($deck, $card, DeckCard::BOARD_MAIN, $card->quantity);
+            $this->syncColors($deck);
+        });
+    }
+
+    /** Cartas da lista que podem virar comandante (quem já comanda, mesmo em outra edição, fica de fora). */
+    private function commanderCandidates(Deck $deck, Collection $cards): Collection
+    {
+        if (! $deck->isCommander()) return collect();
+
+        $current = $cards->where('board', DeckCard::BOARD_COMMANDER)->pluck('name');
+
+        return $cards->where('board', '!=', DeckCard::BOARD_COMMANDER)
+            ->filter(fn (DeckCard $card) => $card->canCommand() && ! $current->contains($card->name))
+            ->sortBy([['name', 'asc'], ['board', 'asc']])->values();
+    }
+
+    /** Passa cópias para outro lado, somando se a carta já está lá. Quem chama abre a transação e trava a linha. */
+    private function transfer(Deck $deck, DeckCard $card, string $board, int $copies): int
+    {
+        $copies = min($copies, $card->quantity);
+        $target = $deck->cards()->where('scryfall_id', $card->scryfall_id)->where('board', $board)->where('foil', $card->foil)->lockForUpdate()->first();
+
+        if ($target) {
+            $target->update(['quantity' => min(self::MAX_COPIES, $target->quantity + $copies)]);
+        } elseif ($copies < $card->quantity) {
+            $card->replicate()->fill(['board' => $board, 'quantity' => $copies])->save();
+        }
+
+        if ($target && $copies >= $card->quantity) {
+            $card->delete();
+        } elseif (! $target && $copies >= $card->quantity) {
+            $card->update(['board' => $board]); // Moveu tudo: a mesma linha só troca de lado.
+        } else {
+            $card->decrement('quantity', $copies);
+        }
+
+        return $copies;
+    }
+
+    private function ensure(bool $ok, string $message): void
+    {
+        if (! $ok) throw ValidationException::withMessages(['card' => $message]);
     }
 
     /**
@@ -202,6 +263,7 @@ class DeckBuilderService
             'curve' => $curve,
             'curve_max' => max(1, max($curve)),
             'commanders' => $cards->where('board', DeckCard::BOARD_COMMANDER)->values(),
+            'commander_candidates' => $this->commanderCandidates($deck, $cards),
             'groups' => $groups,
             'sideboard' => $cards->where('board', DeckCard::BOARD_SIDE)->values(),
             'cover' => $this->coverFor($deck, $cards),

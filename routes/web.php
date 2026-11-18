@@ -92,6 +92,8 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/me/decks/{deck}/cards', [DeckCardController::class, 'store'])->middleware('throttle:60,1')->name('decks.cards.store');
     Route::patch('/me/decks/{deck}/cards/{card}', [DeckCardController::class, 'update'])->name('decks.cards.update');
     Route::delete('/me/decks/{deck}/cards/{card}', [DeckCardController::class, 'destroy'])->name('decks.cards.destroy');
+    Route::post('/me/decks/{deck}/cards/{card}/commander', [DeckCardController::class, 'promote'])->middleware('throttle:60,1')->name('decks.cards.commander');
+    Route::delete('/me/decks/{deck}/cards/{card}/commander', [DeckCardController::class, 'demote'])->middleware('throttle:60,1')->name('decks.cards.commander.remove');
     Route::post('/me/decks/{deck}/import', [DeckCardController::class, 'import'])->middleware('throttle:10,1')->name('decks.cards.import');
     Route::patch('/me/decks/{deck}', [DeckController::class, 'update'])->name('decks.update');
     Route::patch('/me/decks/{deck}/cover', [DeckController::class, 'cover'])->name('decks.cover');

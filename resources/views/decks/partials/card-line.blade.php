@@ -34,6 +34,14 @@
             @if($movable)
                 <form method="POST" action="{{ route('decks.cards.update', [$deck, $card]) }}">@csrf @method('PATCH')<input type="hidden" name="move" value="1"><input type="hidden" name="board" value="{{ $otherBoard }}"><button class="qty-btn wide" title="{{ $otherBoard === 'main' ? 'Mover 1 cópia para o deck' : 'Mover 1 cópia para o sideboard' }}">{{ $otherBoard === 'main' ? '↑ deck' : '↓ side' }}</button></form>
             @endif
+            {{-- Coroa: sem comandante a carta entra direto; com comandante, a janela pergunta se troca ou se entra como parceiro. --}}
+            @if($commanderCandidates->contains('id', $card->id))
+                @if($summary['commanders']->isEmpty())
+                    <form method="POST" action="{{ route('decks.cards.commander', [$deck, $card]) }}">@csrf<button class="qty-btn cmdr-pick" data-commander-card="{{ $card->id }}" title="Tornar comandante" aria-label="Tornar {{ $card->name }} comandante"><x-icon name="crown" size="13" /></button></form>
+                @else
+                    <button type="button" class="qty-btn cmdr-pick" data-dialog-open="deck-commander" data-commander-card="{{ $card->id }}" title="Colocar no comando" aria-label="Colocar {{ $card->name }} no comando"><x-icon name="crown" size="13" /></button>
+                @endif
+            @endif
         </span>
     @endif
 </div>

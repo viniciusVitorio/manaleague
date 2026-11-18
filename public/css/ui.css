@@ -526,7 +526,21 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 .cmdr-info .eyebrow{display:inline-flex;align-items:center;gap:6px;margin:0}
 .cmdr-info h2{margin:0;font-size:1.3rem;line-height:1.2;overflow-wrap:anywhere}
 .cmdr-type{margin:0;color:var(--ui-fg-muted);font-size:.86rem}
-.cmdr-info form{margin:var(--s2) 0 0 -8px}
+.cmdr-actions{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s2);margin-top:var(--s2)}
+.cmdr-actions form{margin:0}
+/* Deck Commander ainda sem comandante: o convite para escolher ocupa o lugar do cartão. */
+.cmdr-empty{display:flex;align-items:center;gap:var(--s4);padding:var(--s4) var(--s5);margin:0;border-style:dashed}
+.cmdr-empty>svg{flex:none;color:var(--ui-fg-muted)}
+.cmdr-empty-text{flex:1;min-width:0}
+.cmdr-empty-text h2{margin:0;font-size:1rem}
+.cmdr-empty-text p{margin:2px 0 0;color:var(--ui-fg-muted);font-size:.85rem}
+@media(hover:none){.cmdr-drag-note{display:none}}
+/* Coroa na linha da carta e janela de escolha (reaproveita os cartões da busca). */
+.cmdr-pick{display:inline-flex;align-items:center;justify-content:center;color:var(--ui-fg-muted)}
+.cmdr-pick:hover{color:var(--ui-fg)}
+.cmdr-dialog .card-results{max-height:none;overflow:visible;margin-top:var(--s3)}
+.cmdr-dialog .card-result[hidden]{display:none}
+.cmdr-dialog .card-result-actions form{margin:0}
 .cmdr-zone.is-pair .cmdr-thumb{width:104px}
 .cmdr-zone.is-pair .cmdr-info h2{font-size:1.1rem}
 @media(max-width:700px){
@@ -534,6 +548,9 @@ form.is-submitting [data-async-busy] { opacity: .6; }
   .cmdr-card{gap:var(--s4);padding:var(--s4)}
   .cmdr-thumb,.cmdr-zone.is-pair .cmdr-thumb{width:96px}
   .cmdr-info h2,.cmdr-zone.is-pair .cmdr-info h2{font-size:1.1rem}
+  .cmdr-empty{flex-wrap:wrap;padding:var(--s4)}
+  .cmdr-empty-text{flex-basis:calc(100% - 36px)}
+  .cmdr-empty .ui-btn{width:100%}
 }
 @media(prefers-reduced-motion:reduce){.cmdr-thumb{transition:none}}
 /* Janela da carta (toque no nome): a imagem ocupa a janela e encolhe em telas baixas para nunca precisar rolar. */
