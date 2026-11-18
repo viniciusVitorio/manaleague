@@ -9,6 +9,14 @@ A CI de push/PR da `eks-lab` usa `.github/workflows/pipeline.yml`, com o mesmo n
 - As validações extras de Terraform/Kubernetes, builds do runtime EKS e o smoke específico do laboratório **não são mais uma segunda CI automática**.
 - Esta alteração está somente na branch `eks-lab`; não modifica a `main` nem o ambiente de produção.
 
+## Quality gate Sonar: exceção exclusiva do push `eks-lab`
+
+O scanner original continua obrigatório. A API Sonar da organização retorna `403` para dados de branches não-main, embora publique o check oficial. Sem mudar plano, token ou branch analisada, apenas **push em `refs/heads/eks-lab`** usa `.github/scripts/verify-sonar-lab-check.py` dentro do job `sonar` existente. Outros eventos/refs mantêm `SonarSource/sonarqube-quality-gate-action@v1`; não há job/pipeline novo nem gate desativado.
+
+O verificador consulta somente checks do `GITHUB_SHA` exato no repositório esperado, com `github.token` e permissões somente `contents: read`/`checks: read`. Exige nome `SonarCloud Code Analysis`, App ID oficial `12526`, URL HTTPS do dashboard com projeto configurado e branch `eks-lab`, início após marcador UTC pré-scanner em `GITHUB_ENV`, conclusão temporal válida, `completed`/`success` e título `Quality Gate passed`. Checks antigos/forjados não satisfazem o gate; ausência, ambiguidade, skipped/falha, API inválida/inacessível e timeout falham fechados. Paginação confere totais e IDs (máximo 1.000 checks); polling tem orçamento de 240s e a etapa timeout de 5 minutos. Não consulta a main nem altera o nome da branch para contornar restrições.
+
+Testes offline: `python -m unittest discover -s infra/eks-lab/tests -p test_sonar_lab_check.py -v`. Evidência read-only no SHA `23c61f0fd75672d4bbb73963c1c3fe7f2d9a82a0`: check oficial `135180795606`, `completed/success`, título `Quality Gate passed`, URL da branch correta, início `2026-11-18T22:25:56Z` e conclusão `2026-11-18T22:26:20Z`. Essa evidência histórica não substitui executar/verificar a CI no SHA final da entrega.
+
 ## Workflow adicional EKS: somente manual
 
 `.github/workflows/eks-lab.yml` agora tem apenas `workflow_dispatch`; não é disparado por push ou PR. Seu nome é **EKS lab checks and deploy (manual)**. Não foi disparado nesta correção. A disponibilidade do botão de disparo depende do registro do workflow no GitHub/default branch; não inserir esse arquivo na `main` sem autorização só para expor o botão.

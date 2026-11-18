@@ -83,6 +83,9 @@ jobs:
     name: SonarQube Cloud quality gate
     runs-on: ubuntu-latest
     needs: test
+    permissions:
+      contents: read
+      checks: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -90,6 +93,9 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: coverage
+      - name: Mark lab analysis start
+        if: github.event_name == 'push' && github.ref == 'refs/heads/eks-lab'
+        run: echo "SONAR_LAB_SCAN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
       - name: SonarQube analysis
         uses: SonarSource/sonarqube-scan-action@v6
         env:
@@ -100,11 +106,21 @@ jobs:
             -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
       - name: Enforce quality gate
+        if: github.event_name != 'push' || github.ref != 'refs/heads/eks-lab'
         uses: SonarSource/sonarqube-quality-gate-action@v1
         timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
+
+      # The lab branch API is plan-restricted; enforce Sonar's official check instead.
+      - name: Enforce official Sonar quality gate for lab push
+        if: github.event_name == 'push' && github.ref == 'refs/heads/eks-lab'
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+        run: python3 .github/scripts/verify-sonar-lab-check.py
 
   waf:
     name: WAF (ModSecurity + OWASP CRS)
