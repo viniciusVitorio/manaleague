@@ -21,9 +21,9 @@ Testes offline: `python -m unittest discover -s infra/eks-lab/tests -p test_sona
 
 `.github/workflows/eks-lab.yml` agora tem apenas `workflow_dispatch`; não é disparado por push ou PR. Seu nome é **EKS lab checks and deploy (manual)**. Não foi disparado nesta correção. A disponibilidade do botão de disparo depende do registro do workflow no GitHub/default branch; não inserir esse arquivo na `main` sem autorização só para expor o botão.
 
-**O workflow não provisiona nem destrói infraestrutura.** O laboratório foi recriado por nova autorização em18/11/2026; `LAB_DEPLOY_ENABLED=false` permanece desligado, sem deploy automático. Infraestrutura ativa não equivale a aplicação/ALB implantados; evidências atuais em `VALIDATION.md`.
+**O workflow não provisiona nem destrói infraestrutura.** Infraestrutura e aplicação foram publicadas por operações manuais autorizadas em18/11/2026. `LAB_DEPLOY_ENABLED=false` permanece desligado: o site está online, mas isso não registra runner nem habilita deploy automático. Evidências atuais em `VALIDATION.md`.
 
-O timeout de `/readyz` durante a queda do banco, observado na run `44183828568`, **continua pendente** no smoke específico do EKS. Alterar os gatilhos não corrige esse runtime e uma CI SSDLC verde não equivale a esse teste aprovado nem a deploy EKS validado. O teste Docker local bloqueado por aprovação não foi repetido.
+O timeout de `/readyz` foi corrigido em `c49a2b5`: a sondagem DB é isolada em processo CLI com deadline1,5s, incluindo DNS/TLS/autenticação/SQL, mantendo `/up` independente. Após nova autorização Docker, as imagens da release `48f7dca` passaram pelo smoke real, fixture TLS e Trivy. A CI SSDLC dessa release ficou verde na run `44421131546`, inclusive o quality gate oficial Sonar; deploy EC2 skipped. Imagens testadas foram publicadas por digest e houve deploy manual no EKS, com duas réplicas Ready, migrations/seed fictício e ALB acessível. Testes reais de login/sessão entre Pods, Laravel/PDO verify-full, S3, WAF e WebSocket passaram. Evidências em `.local/app-deploy-20261118/`. Isso **não** registra runner nem habilita CD automático: o gate permanece false.
 
 
 ## Etapas e condições do workflow adicional manual
@@ -47,7 +47,7 @@ As etapas acima pertencem **somente ao workflow adicional manual**. O push/PR no
 - No workflow adicional manual, o `.env` de teste é criado **somente a partir do `.env.example` público**; APP_ENV=testing, banco descartável e chave de fixture do PHPUnit. A CI SSDLC mantém o PostgreSQL de serviço e a configuração PHPUnit da main. Nunca copiar `.env`/credenciais de produção.
 - O WAF mantém o usuário nginx não-root e recebe atualizações dos pacotes OS afetados por alertas corrigíveis. Não foram adicionadas exceções para esconder CVEs.
 - Imagens têm allowlist de código, sem `.git`, state/tfvars privados, storage ou `.env` locais. O publish futuro usa as imagens que passaram pelo smoke, não recompila outro resultado.
-- A boundary do controller impede retagging independente e limita LB por nome/subnets/SG e listeners/rules por ARN exato. TGs continuam usando ownership pela tag do cluster: a AWS não oferece condição VPC em CreateTargetGroup. Outro principal que pré-etiquete um TG estrangeiro como lab pode violar essa premissa. Isso não é uma fronteira absoluta contra comprometimento de conta; manter watch namespace/VPC, tags confiáveis e revisar isolamento antes de reativar. Nenhuma dessas roles está ativa após o teardown.
+- A boundary do controller impede retagging independente e limita LB por nome/subnets/SG e listeners/rules por ARN exato. TGs continuam usando ownership pela tag do cluster: a AWS não oferece condição VPC em CreateTargetGroup. Outro principal que pré-etiquete um TG estrangeiro como lab pode violar essa premissa. Isso não é uma fronteira absoluta contra comprometimento de conta; manter watch namespace/VPC, tags confiáveis e revisar isolamento antes de reativar. Essas roles estão ativas no laboratório recriado; as mutações efetivamente usadas foram verificadas no deploy e nas sondas, sem afirmar isolamento absoluto contra comprometimento da conta.
 - Não abrir PR desta branch inteira para merge automático na main: o laboratório é outro ambiente. As cópias dos workflows de produção têm guards adicionais, mas a main real não é modificada por esta entrega.
 
 ## Runner futuro
@@ -66,4 +66,4 @@ O smoke real constrói/usa Docker local e remove seus próprios recursos descart
 
 ## Para habilitar CD posteriormente
 
-É necessária nova aprovação dos custos, recriação pelo Terraform, outputs reais atualizados no Environment, bootstrap e runner restrito validado. Confirmar novamente conta/região/branch, conectividade API/ALB e origem permitida; só então habilitar o gate. Não presumir que os endpoints/IDs/ARNs do ambiente removido continuam válidos. Backup de state pré-destruição é evidência histórica, não um ambiente ativo.
+Infraestrutura, outputs e bootstrap já estão ativos, e houve deploy manual controlado. Para CD automático ainda é necessário registrar e validar um runner restrito, confirmar origem/allowlist do ALB e conectividade da API, revisar conta/região/branch e obter autorização para ligar o gate. Não recriar infraestrutura existente nem reutilizar backups pré-destruição. O gate permanece false até essas condições serem verificadas.

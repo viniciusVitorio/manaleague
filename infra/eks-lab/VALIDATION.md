@@ -1,8 +1,22 @@
 # Relatório de validação local e AWS — ManaLeague EKS Lab com RDS
 
-Escopo: branch `eks-lab`, worktree `D:/Projetos/manaleague-eks-lab`, base original `96bcc68`, atualizada na eks-lab até `62c3da6` em17/11. **A infraestrutura foi recriada por nova autorização em18/11/2026 e está ativa; a aplicação Laravel e seu ALB ainda não foram implantados.** Main, DNS, produção e checkout original preservados. Separar validação offline, sondas reais da infraestrutura e CD da aplicação.
+Escopo: branch `eks-lab`, worktree `D:/Projetos/manaleague-eks-lab`, base original `96bcc68`, atualizada na eks-lab até `62c3da6` em17/11. **A infraestrutura foi recriada em18/11/2026 e a aplicação foi publicada depois por deploy manual controlado, release `48f7dca`; CD automático permanece false.** Produção e checkout/state original preservados. Separar validação offline, sondas da infraestrutura, CI da release e testes reais da aplicação.
 
-## Estado atual — reativação autorizada em18/11/2026
+## Aplicação publicada —18/11/2026
+
+- ALB exclusivo ativo, HTTP restrito ao IP autorizado: `http://manaleague-eks-lab-1464768584.us-east-1.elb.amazonaws.com`.
+- Duas réplicas HTTP Ready, Reverb Ready, migrations e seed do banco fictício concluídos; imagens app/web publicadas e implantadas por digest da release `48f7dca402acd277f9449258ddadb91040ad5e92`.
+- Imagens: build, smoke real, TLS e Trivy filesystem/app/web aprovados. Readiness passou a usar processo CLI isolado com deadline1,5s; não foi aumentado o timeout de curl para esconder a falha.
+- CI real da release: run `44421131546`, test/security/sonar/waf success e deploy EC2 skipped. Quality gate oficial Sonar passou; nenhum gate foi removido.
+- Pela URL real: homepage/login/up/readyz200, arquivos sensíveis404, SQLi/XSS403 com marcador ModSecurity, WebSocket101/frame correto e IPs forjados ignorados.
+- Login no primeiro Pod e sessão no segundo, Laravel/PDO com RDS verify-full nos dois Pods e armazenamento S3 write/read entre Pods passaram. Objetos S3 de sonda e port-forwards próprios removidos.
+- Windows também recebeu HTTP200 na página de login. A automação de navegador apresentou timeout de daemon; não foi alegada verificação visual por screenshot.
+- Evidências: `.local/app-deploy-20261118/{release-ci.json,image-verification.json,published-images.json,deployment-result.json,live-verification.json}`. Credenciais do demo são exclusivas do lab, não estão no Git nem neste relatório.
+- **Runner e CD automático continuam pendentes/desligados**, sem alteração de DNS/domínio ou ambiente operacional da produção. O custo sem ALB de US$4,03/dia é histórico como base: considerar aproximadamente US$5/dia com ALB/IPv4/uso leve de LCU, mais Secrets Manager/requests/tráfego/eventual CPU RDS/impostos/câmbio, não um teto.
+
+O histórico a seguir distingue a restauração da infraestrutura e as fases anteriores; não deve ser lido como aplicação ainda ausente.
+
+## Histórico — restauração da infraestrutura em18/11/2026
 
 - Código Terraform com isolamento reforçado em `a23e4e0`: boundaries CNI/CSI, tags de ownership protegidas, ENIs limitadas à VPC/subnets/SG do lab e volumes restritos ao lab/nó correto. **75 testes Python e35 testes Terraform mock passaram**. Offline não é comprovação de todas as APIs IAM, snapshots ou CopyVolumes.
 - Novo plano real: **72 criações,0 alterações,0 exclusões**,11 checks aprovados;32 identificadores de produção sem correspondências no plano. As duas criações adicionais são policies IAM, não novas máquinas.
