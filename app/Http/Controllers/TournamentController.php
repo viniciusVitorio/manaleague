@@ -105,7 +105,7 @@ class TournamentController extends Controller
 
         $copy = DB::transaction(function () use ($tournament, $validated, $user, $club): Tournament {
             $copy = new Tournament([
-                ...array_filter($tournament->only(['format', 'system', 'ranked', 'round_limit', 'max_players', 'rules', 'allow_banned', 'house_rules']), fn ($value) => $value !== null),
+                ...array_filter($tournament->only(['format', 'system', 'ranked', 'round_limit', 'max_players', 'rules', 'allow_banned', 'house_rules', 'pod_qualifiers', 'pod_random_draw', 'pod_tiebreak', 'pod_consolation']), fn ($value) => $value !== null),
                 'name' => $validated['name'], 'tournament_date' => $validated['tournament_date'], 'status' => Tournament::STATUS_SETUP,
                 'public_token' => Str::random(40), 'public_slug' => Str::limit(Str::slug($validated['name']), 60, '').'-'.Str::lower(Str::random(16)),
                 'invite_token' => Str::random(40),
@@ -190,11 +190,28 @@ class TournamentController extends Controller
             'ranked' => ['sometimes', 'boolean', function ($attribute, $value, $fail) use ($request) { if ($value && $request->input('system') === 'commander_pods') $fail('Torneios com pods Commander não podem ser ranqueados.'); }],
             'round_limit' => ['nullable','integer','min:1','max:20'],
             'tournament_date' => ['required', 'date'],
-            'max_players' => ['nullable', 'integer', 'min:4', 'max:128'],
+            'max_players' => ['nullable', 'integer', $request->input('system') === 'pod_elimination' ? 'min:3' : 'min:4', 'max:128'],
             'rules' => ['sometimes', 'required', Rule::in([Tournament::RULES_STANDARD, Tournament::RULES_CUSTOM])],
             'allow_banned' => ['sometimes', 'boolean', function ($attribute, $value, $fail) use ($request) { if ($value && $request->input('rules') === Tournament::RULES_CUSTOM && $request->boolean('ranked')) $fail('Torneios ranqueados não aceitam cartas banidas.'); }],
             'house_rules' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        if (($validated['system'] ?? '') === 'pod_elimination') {
+            $request->validate(['format' => ['in:Commander'], 'ranked' => ['sometimes', 'declined'],
+                'pod_qualifiers' => ['sometimes', 'integer', 'min:1', 'max:2'],
+                'pod_random_draw' => ['sometimes', 'boolean'], 'pod_consolation' => ['sometimes', 'boolean'],
+                'pod_tiebreak' => ['sometimes', 'in:manual,playoff']]);
+            $validated += ['pod_qualifiers' => (int) $request->input('pod_qualifiers', 2),
+                'pod_random_draw' => $request->boolean('pod_random_draw', true),
+                'pod_consolation' => $request->boolean('pod_consolation'), 'pod_tiebreak' => $request->input('pod_tiebreak', 'manual')];
+            try {
+                app(\App\Services\PodEliminationService::class)->validateConfiguration((int) ($validated['max_players'] ?? 8), $validated['pod_qualifiers'], $validated['pod_consolation']);
+            } catch (\LogicException $e) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['max_players' => $e->getMessage()]);
+            }
+            $validated['ranked'] = false;
+            $validated['round_limit'] = null;
+        }
 
         // Regras padrão do formato: banidas nunca entram e não há regras da casa.
         $custom = ($validated['rules'] ?? Tournament::RULES_STANDARD) === Tournament::RULES_CUSTOM;

@@ -1,3 +1,6 @@
+@if($tournament->system === 'pod_elimination')
+    @include('tournaments.partials.elimination-pod')
+@else
 @php
     // Card de partida: os dois jogadores em linhas, com o placar ao lado de cada um (como um placar de TV).
     // Quem organiza lança o resultado direto nas linhas; resultado já lançado fica em "Corrigir placar".
@@ -72,3 +75,4 @@
         <a class="tmatch-chart lchart-link" href="{{ route('life.log.show', ['tournament', $match->id]) }}" data-dialog-open="life-chart-dialog" data-dialog-src><x-icon name="activity" size="14" />Gráfico da partida</a>
     @endif
 </article>
+@endif

@@ -6,6 +6,6 @@
 <label>Formato<select name="format" required>@foreach(['Pauper','Commander','Standard','Modern','Draft','Outro'] as $format)<option value="{{ $format }}" @selected(old('format',$tournament->format??'Pauper')===$format)>{{ $format }}</option>@endforeach</select></label>
 @include('tournaments.partials.rules-fields')
 @include('tournaments.partials.competition-fields')
-<label>Limite de participantes <small>Opcional, entre 4 e 128</small><input type="number" name="max_players" min="4" max="128" value="{{ old('max_players',$tournament->max_players??'') }}" placeholder="Sem limite"></label>
+<label>Limite de participantes <small data-player-limit-hint>Opcional, entre {{ old('system',$tournament->system??'') === 'pod_elimination' ? 3 : 4 }} e 128</small><input type="number" name="max_players" min="{{ old('system',$tournament->system??'') === 'pod_elimination' ? 3 : 4 }}" max="128" value="{{ old('max_players',$tournament->max_players??'') }}" placeholder="Sem limite"></label>
 <div class="button-row"><button class="btn btn-primary">Criar torneio</button><a class="btn btn-ghost" href="{{ route('tournaments.index') }}">Cancelar</a></div></form></div>
 @endsection

@@ -63,7 +63,7 @@ class MatchDetailService
         $finished = $match->status === GameMatch::STATUS_FINISHED;
         $submission = $finished ? null : MatchResultSubmission::where('match_id', $match->id)->latest('id')->first();
         if ($pod) {
-            $places = $match->pod_scores ?? [];
+            $places = $match->pod_tiebreak_scores ?: ($match->pod_scores ?? []);
             $players = $seats->map(fn (Player $p) => $this->seat($p->displayName(), $p->profile, $this->deck($p, $user), null,
                 $finished ? (isset($places[$p->id]) ? (int) $places[$p->id] : null) : null, $mine($p)))
                 ->sortBy(fn (array $s) => $s['place'] ?? 99)->values()->all();
@@ -95,7 +95,7 @@ class MatchDetailService
         $ranked = $t->ranked && ! $pod ? RankedMatch::where(['source_type' => 'tournament_match', 'source_id' => $match->id])->first() : null;
 
         return $this->summary('tournament', $t->ranked ? 'Torneio ranqueado' : 'Torneio', (bool) $t->ranked,
-            [$t->name, $pod ? 'Mesa Commander' : $stage, $t->format], $finished ? ($match->played_at ?? $match->updated_at) : null,
+            [$t->name, $t->system === 'pod_elimination' ? $match->podPhaseLabel() : ($pod ? 'Mesa Commander' : $stage), $t->format], $finished ? ($match->played_at ?? $match->updated_at) : null,
             $status, $pod, $players, $finished, $this->logs->chartFor('tournament', $match->id, $user), $link, $this->elo($ranked, $user));
     }
 

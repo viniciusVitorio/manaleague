@@ -13,6 +13,10 @@ class PairingService
 
     public function generateLeague(Tournament $tournament): void
     {
+        if ($tournament->system === 'pod_elimination') {
+            app(PodEliminationService::class)->start($tournament);
+            return;
+        }
         if ($tournament->system !== 'round_robin') {
             app(CompetitionService::class)->start($tournament);
             return;

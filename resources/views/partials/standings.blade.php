@@ -1,3 +1,6 @@
+@if($tournament->system === 'pod_elimination')
+    @include('tournaments.partials.pod-standings')
+@else
 <div class="table-wrap">
 <table class="standings">
     <thead><tr><th>#</th><th>Jogador</th><th>J</th><th>V</th><th>E</th><th>D</th><th>SG</th><th>PTS</th></tr></thead>
@@ -20,3 +23,4 @@
 </table>
 </div>
 <p class="table-note">@if($ranking->contains(fn ($row) => isset($row['podium'])) && $tournament->matches->contains('stage', 'final'))Pódio pela final e pela disputa de 3º lugar; o resto segue a liga. @endif Critérios: pontos, saldo de games, games vencidos e nome. Vitória/bye = 3 pts · empate = 1 pt.</p>
+@endif
