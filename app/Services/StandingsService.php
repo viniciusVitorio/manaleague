@@ -10,6 +10,7 @@ class StandingsService
 {
     public function for(Tournament $tournament): Collection
     {
+        if ($tournament->system === 'pod_elimination') return app(PodEliminationService::class)->standings($tournament);
         $players = $tournament->players()->with(['profile', 'deck'])->get();
         $table = [];
 
@@ -114,6 +115,7 @@ class StandingsService
      */
     public function withPodium(Tournament $tournament, Collection $ranking): Collection
     {
+        if ($tournament->system === 'pod_elimination') return $ranking;
         if ($tournament->status !== Tournament::STATUS_FINISHED || $ranking->isEmpty()) {
             return $ranking;
         }

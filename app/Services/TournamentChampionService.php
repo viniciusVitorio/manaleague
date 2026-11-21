@@ -13,6 +13,9 @@ class TournamentChampionService
         if ($t->status !== Tournament::STATUS_FINISHED) {
             return null;
         }
+        if ($t->system === 'pod_elimination') {
+            return app(StandingsService::class)->for($t)->firstWhere('rank', 1)['player'] ?? null;
+        }
         if (in_array($t->system, ['swiss', 'commander_pods'], true)) {
             return app(StandingsService::class)->for($t)->first()['player'] ?? null;
         }

@@ -14,7 +14,7 @@ class MatchController extends Controller
         abort_unless($match->tournament_id === $tournament->id, 404);
         $correction = $match->status === GameMatch::STATUS_FINISHED;
         try {
-            app(MatchResultService::class)->record($tournament, $match, $request->only(['player_one_games', 'player_two_games', 'placements']));
+            app(MatchResultService::class)->record($tournament, $match, $request->only(['player_one_games', 'player_two_games', 'placements', 'confirm', 'tiebreak', 'resolution_note']));
             app(\App\Services\Community\CommunityEvents::class)->tournamentProgress($tournament);
         } catch (LogicException $exception) {
             abort(409, $exception->getMessage());

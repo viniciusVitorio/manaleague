@@ -19,7 +19,7 @@ class Tournament extends Model
 
     public const STATUS_FINISHED = 'finished';
 
-    public const SYSTEMS = ['round_robin' => 'Todos contra todos', 'swiss' => 'Suíço', 'single_elimination' => 'Eliminação simples', 'double_elimination' => 'Dupla eliminação', 'commander_pods' => 'Pods Commander'];
+    public const SYSTEMS = ['round_robin' => 'Todos contra todos', 'swiss' => 'Suíço', 'single_elimination' => 'Eliminação simples', 'double_elimination' => 'Dupla eliminação', 'commander_pods' => 'Pods Commander', 'pod_elimination' => 'Eliminação por Pods'];
 
     /** Regras do formato: banidas não entram. Personalizadas: o organizador decide (e pode escrever regras da casa). */
     public const RULES_STANDARD = 'standard';
@@ -28,11 +28,11 @@ class Tournament extends Model
 
     protected $attributes = ['system' => 'round_robin', 'rules' => self::RULES_STANDARD, 'allow_banned' => false];
 
-    protected $fillable = ['system', 'ranked', 'round_limit', 'name', 'format', 'tournament_date', 'max_players', 'status', 'public_token', 'public_slug', 'invite_token', 'rules', 'allow_banned', 'house_rules'];
+    protected $fillable = ['system', 'ranked', 'round_limit', 'name', 'format', 'tournament_date', 'max_players', 'status', 'public_token', 'public_slug', 'invite_token', 'rules', 'allow_banned', 'house_rules', 'pod_qualifiers', 'pod_random_draw', 'pod_tiebreak', 'pod_consolation'];
 
     protected function casts(): array
     {
-        return ['tournament_date' => 'date', 'round_limit' => 'integer', 'ranked' => 'boolean', 'allow_banned' => 'boolean', 'round_ends_at' => 'datetime', 'round_minutes' => 'integer'];
+        return ['tournament_date' => 'date', 'round_limit' => 'integer', 'ranked' => 'boolean', 'allow_banned' => 'boolean', 'round_ends_at' => 'datetime', 'round_minutes' => 'integer', 'pod_qualifiers' => 'integer', 'pod_random_draw' => 'boolean', 'pod_consolation' => 'boolean'];
     }
 
     /**

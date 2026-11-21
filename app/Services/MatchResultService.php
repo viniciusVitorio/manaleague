@@ -22,6 +22,15 @@ class MatchResultService
             if ($m->tournament_id !== $t->id) throw new LogicException('Partida de outro torneio.');
             if ($m->status === 'bye') throw new LogicException('BYE não pode ser alterado.');
             if (! $this->editable($t, $m)) throw new LogicException('Resultado travado: uma fase dependente já foi gerada ou o torneio não começou.');
+            if ($t->system === 'pod_elimination') {
+                app(PodEliminationService::class)->record($t, $m, $scores);
+                $t->refresh();
+                app(PrizeService::class)->sync($t);
+                foreach ($t->players()->with('profile')->get() as $player) {
+                    if ($player->profile) app(AchievementService::class)->sync($player->profile);
+                }
+                return;
+            }
             if ($m->pod_player_ids) {
                 $data = Validator::make($scores, ['placements'=>['required','array'], 'placements.*'=>['required','integer','min:1','max:'.count($m->pod_player_ids)]])->validate();
                 $ids=array_map('intval',array_keys($data['placements'])); sort($ids);

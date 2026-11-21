@@ -21,6 +21,9 @@ class CompetitionService
     }
     public function advance(Tournament $tournament, int $expectedRound): void
     {
+        if ($tournament->system === 'pod_elimination') {
+            throw new LogicException('As fases avançam automaticamente após a confirmação de todas as mesas.');
+        }
         DB::transaction(function () use ($tournament,$expectedRound): void {
             $t=Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
             $round=(int)$t->matches()->max('round');

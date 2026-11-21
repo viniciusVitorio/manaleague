@@ -84,6 +84,7 @@ Toda cor nova tem que funcionar nos dois.
 
 ## 3. Estrutura de página
 
+- **Mesas multiplayer não são duelos:** mostre todos os 3/4 assentos, fase, posições compartilhadas e confirmação do organizador. Não use bracket 1v1, placares 0–0, pontos de duelo ou um líder arbitrário para representar eliminação por pods. No público, posições provisórias e justificativas privadas não são expostas.
 - **Contador de vida só dentro da partida:** desafios, torneios e Ranked usam seus contadores vinculados. Não criar contador avulso no menu, mesa rápida ou entrada por código/QR.
 
 ```
