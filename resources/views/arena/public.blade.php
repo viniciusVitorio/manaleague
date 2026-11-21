@@ -8,6 +8,7 @@
     $fire = fn (array $row) => $row['streak'] >= 6 ? ' ⚡' : ($row['streak'] >= 3 ? ' 🔥' : '');
     $highlight = $recap ? 'Campeão: '.$recap['champion']->displayName().' 🏆'
         : ($leader && $leader['played'] > 0 ? 'Líder: '.$leader['player']->displayName().' ('.$leader['points'].' pts)'.$fire($leader) : null);
+    if ($tournament->system === 'pod_elimination' && ! $recap) $highlight = 'Eliminação por Pods · classificação em disputa';
     $title = $tournament->name.' · ManaLeague';
     $og = ['title' => '🏆 '.$tournament->name, 'description' => implode(' · ', array_filter([
         $tournament->format, $tournament->tournament_date?->format('d/m/Y'), $tournament->players->count().' jogadores', $highlight,
@@ -55,7 +56,7 @@
     <div class="tourney-round-head">
         <div>
             <span class="eyebrow">Rodada atual</span>
-            <h2 id="public-round-title">@if($isFinalsRound)Final e 3º lugar @else Rodada {{ $currentRound }}@endif</h2>
+            <h2 id="public-round-title">@if($tournament->system === 'pod_elimination'){{ $currentMatches->first()->podPhaseLabel() }}@elseif($isFinalsRound)Final e 3º lugar @else Rodada {{ $currentRound }}@endif</h2>
         </div>
     </div>
     <div class="match-grid tourney-matches">@foreach($currentMatches as $match)@include('tournaments.partials.competition-match', ['live' => true, 'table' => $loop->iteration])@endforeach</div>

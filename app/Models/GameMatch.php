@@ -27,17 +27,26 @@ class GameMatch extends Model
 
     protected $fillable = [
         'round', 'stage', 'player_one_id', 'player_two_id', 'bracket', 'pod_player_ids', 'pod_scores',
-        'player_one_games', 'player_two_games', 'status', 'played_at',
+        'player_one_games', 'player_two_games', 'status', 'played_at', 'pod_number', 'pod_tiebreak_scores', 'pod_resolution_note', 'pod_confirmed_at', 'pod_confirmed_by',
     ];
 
     protected function casts(): array
     {
-        return ['played_at' => 'datetime', 'pod_player_ids' => 'array', 'pod_scores' => 'array'];
+        return ['played_at' => 'datetime', 'pod_player_ids' => 'array', 'pod_scores' => 'array', 'pod_tiebreak_scores' => 'array', 'pod_confirmed_at' => 'datetime'];
     }
 
     public function tournament(): BelongsTo
     {
         return $this->belongsTo(Tournament::class);
+    }
+
+    public function podPhaseLabel(): string
+    {
+        return match ($this->stage) {
+            'final' => 'Grande final',
+            'consolation' => 'Consolação · 5º ao 8º',
+            default => $this->round === $this->tournament->round_limit - 1 ? 'Semifinais' : 'Fase '.$this->round,
+        };
     }
 
     /**

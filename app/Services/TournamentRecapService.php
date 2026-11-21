@@ -10,6 +10,11 @@ class TournamentRecapService
     public function for(Tournament $tournament): ?array
     {
         if ($tournament->status !== Tournament::STATUS_FINISHED) return null;
+        if ($tournament->system === 'pod_elimination') {
+            $row = app(StandingsService::class)->for($tournament)->firstWhere('rank', 1);
+            return $row ? ['champion' => $row['player'], 'wins' => $row['wins'], 'losses' => $row['losses'],
+                'gamesFor' => 0, 'gamesAgainst' => 0, 'bestStreak' => 0, 'multiplayer' => true] : null;
+        }
         $final = $tournament->matches->firstWhere('stage', GameMatch::STAGE_FINAL);
         if (! $final || $final->status !== GameMatch::STATUS_FINISHED) return null;
 

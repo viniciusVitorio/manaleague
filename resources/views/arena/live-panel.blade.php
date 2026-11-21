@@ -1,6 +1,16 @@
 <section class="live-board" data-live-url="{{ route('arena.live',$slug) }}" @if(config('reverb.client.enabled')) data-live-channel="{{ \App\Services\Realtime\LiveChannels::arena($slug) }}" @endif>
 <p data-live-status role="status">Conectando ao placar ao vivo…</p>
 <x-round-timer :ends-at="$snapshot['round_ends_at'] ? \Illuminate\Support\Carbon::parse($snapshot['round_ends_at']) : null" />
-<div class="live-columns"><section><h2>Classificação ao vivo</h2><ol data-live-standings>@foreach($snapshot['standings'] as $row)<li>{{ $row['name'] }}<x-streak :count="$row['streak']" /> — {{ $row['points'] }} pts</li>@endforeach</ol></section>
-<section><h2>Partidas ao vivo</h2><div data-live-matches>@foreach($snapshot['matches'] as $match)<p>R{{ $match['round'] }} · {{ $match['one'] }} {{ $match['one_score'] ?? '–' }} × {{ $match['two_score'] ?? '–' }} {{ $match['two'] }}</p>@endforeach</div></section></div>
+<div class="live-columns"><section><h2>Classificação ao vivo</h2><ol data-live-standings>
+@foreach($snapshot['standings'] as $row)<li>@if($snapshot['system'] === 'pod_elimination'){{ $row['rank'] }}º · {{ $row['name'] }}@else{{ $row['name'] }}<x-streak :count="$row['streak']" /> — {{ $row['points'] }} pts @endif</li>@endforeach
+</ol></section>
+<section><h2>Partidas ao vivo</h2><div data-live-matches>
+@foreach($snapshot['matches'] as $match)
+@if(isset($match['seats']))
+<article class="pod-live-table"><h3>Mesa {{ $match['pod_number'] }} · {{ $match['phase'] }}</h3><p>{{ $match['confirmed'] ? 'Confirmada' : 'Em andamento' }}</p><ul>@foreach($match['seats'] as $seat)<li>{{ $seat['name'] }} · {{ $seat['place'] ? $seat['place'].'º' : '–' }} @if($seat['advancing']) · Classificado @endif</li>@endforeach</ul></article>
+@else
+<p>R{{ $match['round'] }} · {{ $match['one'] }} {{ $match['one_score'] ?? '–' }} × {{ $match['two_score'] ?? '–' }} {{ $match['two'] }}</p>
+@endif
+@endforeach
+</div></section></div>
 <noscript>Ative JavaScript para atualização automática; recarregue para atualizar manualmente.</noscript></section>
