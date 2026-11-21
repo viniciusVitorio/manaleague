@@ -1,0 +1,22 @@
+/* Contextual tournament setup. Shared tokens support both themes. */
+.tournament-form-shell{max-width:760px;margin-inline:auto}
+.tournament-form-shell [hidden]{display:none!important}
+.tournament-form-shell form[data-tournament-form]{display:grid;gap:var(--s4)}
+.tournament-form-shell fieldset{border:0;padding:0;margin:var(--s4) 0;min-width:0}
+.tournament-form-shell legend{font-size:.85rem;font-weight:600;margin-bottom:var(--s2)}
+.tournament-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4)}
+.tournament-form-shell .tournament-mode-options{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
+.tournament-form-shell .tournament-mode{display:flex;align-items:flex-start;gap:var(--s3);padding:var(--s3);margin:0;border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);cursor:pointer;min-width:0}
+.tournament-form-shell .tournament-mode input{width:16px;height:16px;flex:0 0 16px;margin:3px 0 0;accent-color:var(--ui-primary)}
+.tournament-mode strong{font-size:.88rem;font-weight:600;color:var(--ui-fg)}
+.tournament-mode small{display:block;color:var(--ui-fg-muted);font-size:.78rem;margin-top:var(--s1);line-height:1.5}
+.tournament-mode:has(input:checked){border-color:var(--ui-border-strong);background:var(--ui-muted)}
+.tournament-mode:has(input:focus-visible){outline:2px solid var(--ui-ring);outline-offset:2px}
+.tournament-form-note{font-size:.82rem;color:var(--ui-fg-muted);margin:var(--s2) 0;line-height:1.6}
+.tournament-form-summary{padding:var(--s4) var(--s6);cursor:pointer;font-weight:600;font-size:.9rem}
+.tournament-form-summary span{display:block;font-weight:400;font-size:.8rem;color:var(--ui-fg-muted);margin-top:var(--s1)}
+.tournament-form-shell details[open]>.tournament-form-summary{border-bottom:1px solid var(--ui-border)}
+.tournament-form-shell .rules-fieldset{margin:0}
+.tournament-form-actions{display:flex;justify-content:flex-end;gap:var(--s2)}
+.tournament-form-invite{margin-top:var(--s6)}
+@media(max-width:480px){.tournament-form-grid,.tournament-form-shell .tournament-mode-options{grid-template-columns:1fr;gap:var(--s2)}.tournament-form-summary{padding:var(--s4)}.tournament-form-actions{flex-direction:column-reverse}.tournament-form-actions>.ui-btn{width:100%}}

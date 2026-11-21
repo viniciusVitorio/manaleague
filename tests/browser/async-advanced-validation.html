@@ -1,0 +1,52 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Async advanced validation regression</title>
+<!-- Open directly in Chromium; inspect window.regression (passed must be true).
+     Uses actual shipped assets; no packages, server, credentials or DB writes. -->
+<body>
+<form method="post" action="http://localhost/validation"><button>Submit invalid rules</button></form>
+<details id="advanced" data-advanced-settings><summary>Advanced</summary><input name="allow_banned"></details>
+<details id="user-closed"><summary>User closed</summary></details>
+<details id="user-open" open><summary>User open</summary></details>
+<script src="../../public/js/vendor/idiomorph.min.js"></script>
+<script>
+// No server/database needed: simulate only the validation redirect transport.
+// The real submit interceptor, FormData, DOMParser and Idiomorph still execute.
+window.requests = [];
+window.fetch = async (url, options) => {
+    requests.push({url: String(url), method: options.method || 'GET', async: options.headers['X-ManaLeague-Async']});
+    if (options.method === 'POST') return new Response(JSON.stringify({redirect: location.href}), {headers: {'Content-Type': 'application/json'}});
+    return new Response(`<!doctype html><title>Validation errors</title><body>
+        <form method="post" action="http://localhost/validation"><button>Submit invalid rules</button></form>
+        <details id="advanced" data-advanced-settings data-async-open-errors open><summary>Advanced</summary><p data-validation-error>Ranked cannot allow banned cards</p></details>
+        <details id="user-closed" open><summary>User closed</summary></details>
+        <details id="user-open"><summary>User open</summary></details>
+        <details id="custom-only"><summary>Custom rules without errors</summary></details>
+        </body>`, {headers: {'Content-Type': 'text/html'}});
+};
+</script>
+<script src="../../public/js/async-forms.js"></script>
+<script>
+window.regression = {complete: false};
+(async () => {
+    const assert = (value, message) => { if (!value) throw new Error(message); };
+    // Set a same-origin action, including when this fixture is served over HTTP.
+    document.querySelector('form').action = location.href;
+    const sentinel = {};
+    window.noNavigationSentinel = sentinel;
+    const updated = new Promise(resolve => document.addEventListener('manaleague:updated', resolve, {once: true}));
+    const submitted = new SubmitEvent('submit', {bubbles: true, cancelable: true, submitter: document.querySelector('button')});
+    document.querySelector('form').dispatchEvent(submitted);
+    assert(submitted.defaultPrevented, 'Must exercise intercepted async submit, not native navigation');
+    await updated;
+    assert(window.noNavigationSentinel === sentinel, 'Unexpected navigation');
+    assert(requests.length === 2 && requests[0].method === 'POST' && requests[1].method === 'GET', 'Expected POST → validation redirect GET');
+    assert(requests.every(request => request.async === '1'), 'Missing async request headers');
+    assert(document.querySelector('[data-validation-error]'), 'Server validation HTML was not morphed');
+    assert(document.querySelector('#advanced').open, 'Validation errors must reopen the collapsed advanced group');
+    assert(!document.querySelector('#user-closed').open, 'Unmarked closed details must stay closed');
+    assert(document.querySelector('#user-open').open, 'Unmarked open details must stay open');
+    window.regression = {complete: true, passed: true, requests};
+})().catch(error => { window.regression = {complete: true, passed: false, error: error.message, requests}; });
+</script>
+</body>
