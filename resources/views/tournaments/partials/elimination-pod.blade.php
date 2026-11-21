@@ -48,4 +48,7 @@
         <p class="tmatch-note">{{ $confirmed ? 'Resultado confirmado pelo organizador.' : 'O organizador registra e confirma as posições.' }}</p>
         @if($match->pod_tiebreak_scores)<p class="tmatch-note">Desempate registrado; posições originais compartilhadas preservadas no histórico.</p>@endif
     @endif
+    @if(isset($lifeLogs[$match->id]))
+        <a class="tmatch-chart lchart-link" href="{{ route('life.log.show', ['tournament', $match->id]) }}" data-dialog-open="life-chart-dialog" data-dialog-src><x-icon name="activity" size="14" />Gráfico da partida</a>
+    @endif
 </article>
