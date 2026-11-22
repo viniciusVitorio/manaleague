@@ -28,10 +28,19 @@ class NotificationService {
  public function muted(string $type,array $muted):bool {
   return in_array($type,$muted,true) || in_array(strtok($type,'.'),$muted,true);
  }
+ /** A pessoa aceita avisos deste tipo no app (sino)? */
+ public function accepts(User $user,string $type):bool {
+  $preference=NotificationPreference::where('user_id',$user->id)->first();
+  return !$preference || ($preference->enabled && !$this->muted($type,$preference->muted_types ?? []));
+ }
+ /** A pessoa aceita este tipo por e-mail? Chaves próprias, independentes do sino. Sem preferência gravada, recebe. */
+ public function wantsEmail(User $user,string $type):bool {
+  $preference=NotificationPreference::where('user_id',$user->id)->first();
+  return !$preference || ($preference->email_enabled && !$this->muted($type,$preference->email_muted_types ?? []));
+ }
  /** Database-only delivery; key is unique per recipient. No mail is queued. */
  public function send(User $user,string $type,string $title,string $url,string $key,array $data=[]):void {
-  $preference=NotificationPreference::where('user_id',$user->id)->first();
-  if($preference && (!$preference->enabled || $this->muted($type,$preference->muted_types ?? [])))return;
+  if(!$this->accepts($user,$type))return;
   // Never render an externally supplied URL as an actionable notification.
   if(!str_starts_with($url,'/') || str_starts_with($url,'//') || str_contains($url,'\\') || preg_match('/[\x00-\x20]/',$url))$url='/notifications';
   CommunityNotification::firstOrCreate(['user_id'=>$user->id,'event_key'=>$key],['type'=>$type,'title'=>$title,'url'=>$url,'data'=>$data]);

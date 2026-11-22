@@ -5,17 +5,15 @@
 @include('community.nav')
 @php
     $unreadCount = $notifications->getCollection()->whereNull('read_at')->count();
-    $categories = ['tournament' => ['Torneios', 'Rodadas prontas e resultados finais', 'trophy'], 'match' => ['Partidas', 'Placares enviados, confirmados e contestados', 'target'],
-        'challenge' => ['Desafios', 'Convites, aceites e placares de desafios', 'swords'], 'ranked' => ['Ranked', 'Partidas ranqueadas e variação de pontos', 'chart'],
-        'club' => ['Clubes', 'Convites e mudanças nos seus clubes', 'shield'], 'achievement' => ['Conquistas', 'Conquistas desbloqueadas', 'crown'],
-        'patch_note' => ['Patch notes', 'Novas versões do ManaLeague', 'megaphone']];
 @endphp
 <header class="page-head">
     <div><h1>Notificações</h1><p>Avisos do ManaLeague sobre suas partidas, torneios e desafios.</p></div>
-    @if($unreadCount)<form method="POST" action="{{ route('notifications.read-all') }}">@csrf @method('PATCH')<button class="ui-btn ui-btn-outline"><x-icon name="check-check" />Marcar todas como lidas</button></form>@endif
+    <div class="page-head-actions">
+        <a class="ui-btn ui-btn-ghost" href="{{ route('profiles.edit') }}#notificacoes"><x-icon name="settings" />Configurar notificações</a>
+        @if($unreadCount)<form method="POST" action="{{ route('notifications.read-all') }}">@csrf @method('PATCH')<button class="ui-btn ui-btn-outline"><x-icon name="check-check" />Marcar todas como lidas</button></form>@endif
+    </div>
 </header>
 
-<div class="notif-layout">
     <x-ui.card title="Caixa de entrada" icon="inbox" :meta="$notifications->total() ? $notifications->total().' no total' : null">
         @if($notifications->isEmpty())
             <x-ui.empty icon="bell" title="Tudo em dia por aqui." text="Quando houver rodada pronta, placar para confirmar ou desafio, aparece aqui." />
@@ -37,25 +35,4 @@
             {{ $notifications->links() }}
         @endif
     </x-ui.card>
-
-    <x-ui.card title="Preferências" icon="settings">
-        <form method="POST" action="{{ route('notifications.preferences') }}">@csrf @method('PATCH')
-            <input type="hidden" name="enabled" value="0">
-            <label class="ui-option ui-option-box">
-                <span class="ui-option-text"><span class="ui-option-title">Receber notificações</span><span class="ui-option-desc">Somente dentro do app. E-mail não está ativado.</span></span>
-                <input type="checkbox" class="ui-switch" role="switch" name="enabled" value="1" @checked($preference->enabled)>
-            </label>
-            <p class="ui-card-meta" style="margin:16px 0 4px">Categorias</p>
-            @foreach($categories as $type => [$label, $desc, $icon])
-                <label class="ui-option">
-                    <span class="ui-option-text"><span class="ui-option-title">{{ $label }}</span><span class="ui-option-desc">{{ $desc }}</span></span>
-                    {{-- Ligado = recebe. O formulario envia as categorias DESLIGADAS como silenciadas. --}}
-                    <input type="checkbox" class="ui-switch" role="switch" data-mute="{{ $type }}" @checked(! in_array($type, $preference->muted_types ?? []))>
-                    <input type="hidden" name="muted_types[]" value="{{ $type }}" @disabled(! in_array($type, $preference->muted_types ?? [])) data-mute-field="{{ $type }}">
-                </label>
-            @endforeach
-            <button class="ui-btn ui-btn-primary" style="margin-top:16px;width:100%">Salvar preferências</button>
-        </form>
-    </x-ui.card>
-</div>
 @endsection

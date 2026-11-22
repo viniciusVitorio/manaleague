@@ -182,8 +182,9 @@ class PlayerProfileController extends Controller
     public function edit(Request $request): View
     {
         $profile = $this->ownProfile($request);
+        $notificationPreference = \App\Models\NotificationPreference::for($request->user());
 
-        return view('players.edit', compact('profile'));
+        return view('players.edit', compact('profile', 'notificationPreference'));
     }
 
     public function update(Request $request): RedirectResponse
