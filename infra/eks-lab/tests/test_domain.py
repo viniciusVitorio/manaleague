@@ -216,6 +216,8 @@ class FakePrepare(FakeDNS):
         self.sa = {'apiVersion': 'v1', 'kind': 'ServiceAccount', 'metadata': {'name': 'lab-app', 'namespace': NAME,
                    'uid': 'FAKE-sa-uid', 'annotations': {'eks.amazonaws.com/role-arn': v['APP_ROLE_ARN']}}}
         self.uid_race = False
+        # The real controller/API server also publishes the listener ports.
+        self.lb_status_extra = {'ports': [{'port': 80, 'protocol': ''}, {'port': 443, 'protocol': ''}]}
 
     def aws(self, service, operation, *args, payload=None):
         if service in ('route53', 'sts'):
@@ -250,7 +252,9 @@ class FakePrepare(FakeDNS):
             key = (args[1], args[2])
             obj = copy.deepcopy(self.objects[key])
             if key[0] == 'Ingress':
-                obj['status'] = {'loadBalancer': {'ingress': [{'hostname': self.lb['DNSName']}]}}
+                entry = {'hostname': self.lb['DNSName']}
+                entry.update(copy.deepcopy(self.lb_status_extra))
+                obj['status'] = {'loadBalancer': {'ingress': [entry]}}
                 if self.uid_race: obj['metadata']['uid'] = 'FAKE-other-uid'
             return obj
         if args[0] == 'create':
@@ -277,6 +281,20 @@ class PrepareTests(DomainCase):
         result = d.prepare(cli.config, cli, sleep=lambda _: None)
         self.assertEqual(result['dns_result'], 'unchanged')
         self.assertEqual(len([c for c in cli.calls if c[:2] == ('kube', 'create')]), 3)
+
+    def test_published_listener_ports_are_accepted_but_other_status_keys_are_not(self):
+        d = self.module()
+        cli = FakePrepare(d)
+        self.assertTrue(d.prepare(cli.config, cli, sleep=lambda _: None)['ready_for_cd'])
+        for extra in ({'ip': '203.0.113.10'}, {'unknown': 'x'},
+                      {'ports': [{'port': 8080, 'protocol': ''}]},
+                      {'ports': [{'port': 443, 'protocol': '', 'extra': 1}]},
+                      {'ports': 'all'}, {'ports': []}):
+            cli = FakePrepare(d)
+            cli.lb_status_extra = extra
+            with self.subTest(extra=extra), self.assertRaises(ValueError):
+                d.prepare(cli.config, cli, sleep=lambda _: None)
+            self.assertFalse(any(c[1] == 'change-resource-record-sets' for c in cli.calls))
 
     def test_foreign_cloud_and_kubernetes_objects_refuse_before_writes(self):
         d = self.module()

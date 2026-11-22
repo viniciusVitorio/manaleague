@@ -62,6 +62,11 @@ variables {
 }
 run "http_compatible_defaults" {
   command = plan
+  # The disabled-mode proof must never inherit an operator tfvars that enables HTTPS.
+  variables {
+    enable_lab_https = false
+    lab_dns_zone_id  = ""
+  }
   assert {
     condition     = output.lab_https_enabled == false && output.lab_hostname == "eks.manaleague.com.br" && output.lab_url == "" && output.lab_certificate_arn == "" && output.lab_dns_zone_id == "" && length(output.lab_dns_name_servers) == 0
     error_message = "HTTPS must be opt-in and its disabled outputs must remain empty."
@@ -259,6 +264,11 @@ run "https_frontend_rules" {
 }
 run "disabled_has_no_tls_frontend" {
   command = plan
+  # The disabled-mode proof must never inherit an operator tfvars that enables HTTPS.
+  variables {
+    enable_lab_https = false
+    lab_dns_zone_id  = ""
+  }
   assert {
     condition     = length(aws_vpc_security_group_ingress_rule.alb_https) == 0 && length(aws_vpc_security_group_ingress_rule.alb_nat_https) == 0
     error_message = "HTTP default must not expose port 443 on the ALB frontend."
@@ -290,6 +300,11 @@ run "https_exact_certificate_read_permissions" {
 }
 run "http_has_no_certificate_iam_grants" {
   command = plan
+  # The disabled-mode proof must never inherit an operator tfvars that enables HTTPS.
+  variables {
+    enable_lab_https = false
+    lab_dns_zone_id  = ""
+  }
   assert {
     condition     = length(aws_iam_role_policy.github_https) == 0 && alltrue([for action in flatten([for statement in jsondecode(aws_iam_policy.controller_boundary.policy).Statement : statement.Action]) : !startswith(lower(action), "acm:") && !startswith(lower(action), "route53:")])
     error_message = "Default HTTP mode must not add ACM or Route53 grants."
@@ -325,6 +340,11 @@ run "no_parent_zone_or_alias_ownership" {
 }
 run "disabled_owns_no_certificate_or_dns" {
   command = plan
+  # The disabled-mode proof must never inherit an operator tfvars that enables HTTPS.
+  variables {
+    enable_lab_https = false
+    lab_dns_zone_id  = ""
+  }
   assert {
     condition     = length(data.aws_route53_zone.lab) == 0 && length(aws_acm_certificate.lab) == 0 && length(aws_route53_record.lab_certificate_validation) == 0 && length(aws_acm_certificate_validation.lab) == 0
     error_message = "Default HTTP mode must not read or manage DNS/certificates."

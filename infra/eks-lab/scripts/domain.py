@@ -390,6 +390,31 @@ def verified_alb(cli, config, hostname):
     return records
 
 
+def valid_lb_status(entry):
+    """Accept the documented hostname plus the published 80/443 listener ports only.
+
+    The API server and the controller publish `ports` alongside `hostname`; any
+    other key, an IP-based status or an unexpected port is still ambiguous and
+    must refuse before the hostname is trusted for DNS.
+    """
+    if not isinstance(entry, dict) or set(entry) - {'hostname', 'ports'}:
+        return False
+    if not isinstance(entry.get('hostname'), str) or not entry['hostname']:
+        return False
+    if 'ports' not in entry:
+        return True
+    ports = entry['ports']
+    if not isinstance(ports, list) or not ports:
+        return False
+    for port in ports:
+        if (not isinstance(port, dict) or set(port) - {'port', 'protocol'}
+                or port.get('port') not in (80, 443)
+                or not isinstance(port.get('protocol', ''), str)
+                or port.get('protocol', '') not in ('', 'TCP')):
+            return False
+    return sorted(port['port'] for port in ports) == sorted({port['port'] for port in ports})
+
+
 def prepare(config, cli, *, sleep):
     config['phase'] = 'cloud-identity-preflight'
     cluster = cloud_preflight(cli, config)
@@ -422,7 +447,7 @@ def prepare(config, cli, *, sleep):
         validate_runtime(ingress, ingress_template, uids[('Ingress', 'manaleague')])
         hosts = ingress.get('status', {}).get('loadBalancer', {}).get('ingress', [])
         if hosts:
-            if len(hosts) != 1 or set(hosts[0]) != {'hostname'}:
+            if len(hosts) != 1 or not valid_lb_status(hosts[0]):
                 raise ValueError('Ambiguous Ingress load balancer status')
             hostname = hosts[0]['hostname']
             break
@@ -441,7 +466,8 @@ def prepare(config, cli, *, sleep):
     # Recheck UID immediately before DNS; no stale Ingress observation is trusted.
     ingress = cli.kube('get', 'Ingress', 'manaleague')
     validate_runtime(ingress, ingress_template, uids[('Ingress', 'manaleague')])
-    if ingress.get('status', {}).get('loadBalancer', {}).get('ingress') != [{'hostname': hostname}]:
+    final = ingress.get('status', {}).get('loadBalancer', {}).get('ingress', [])
+    if len(final) != 1 or not valid_lb_status(final[0]) or final[0]['hostname'] != hostname:
         raise ValueError('Ingress hostname changed after ALB verification')
     config['phase'] = 'dns-cas-write-insync-readback'
     dns_result = reconcile_dns(cli, config, records, sleep=sleep)

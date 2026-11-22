@@ -5,6 +5,8 @@ COPY composer.json composer.lock ./
 RUN composer install --no-dev --prefer-dist --no-interaction --no-scripts --optimize-autoloader
 
 FROM php:8.4-fpm-alpine AS app
+# Patch the base image's known-vulnerable OS packages before adding anything.
+RUN apk upgrade --no-cache libxml2
 RUN apk add --no-cache libzip-dev sqlite-dev libpq-dev icu-dev oniguruma-dev libpng-dev libjpeg-turbo-dev libwebp-dev \
     && docker-php-ext-configure gd --with-jpeg --with-webp \
     && docker-php-ext-install pdo_pgsql pdo_sqlite intl mbstring opcache gd exif pcntl

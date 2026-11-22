@@ -10,6 +10,9 @@ variables {
   github_oidc_provider_arn  = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
   api_public_access_cidrs   = ["203.0.113.10/32"]
   allowed_client_cidrs      = ["198.51.100.10/32", "198.51.100.0/24"]
+  # Pinned here so an operator tfvars with HTTPS enabled cannot change this fixture.
+  enable_lab_https = false
+  lab_dns_zone_id  = ""
 }
 run "safe_defaults" {
   command = plan
