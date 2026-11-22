@@ -105,8 +105,11 @@ class EmailVerificationTest extends TestCase
         $this->actingAs($user)->get($url.'&tampered=1')->assertForbidden();
         $wrongHash = URL::temporarySignedRoute('verification.verify', now()->addHour(), ['id' => $user->id, 'hash' => sha1('wrong')]);
         $this->get($wrongHash)->assertForbidden();
+        // Vencido: não confirma, e a pessoa vai para a tela de pedir outro. Adulterado continua barrado.
         $this->travel(61)->minutes();
-        $this->get($url)->assertForbidden();
+        $this->get($url)->assertRedirect('/email/verify')->assertSessionHasErrors('email');
+        $this->get('/email/verify')->assertOk()->assertSee('Esse link de confirmação venceu');
+        $this->get($url.'&tampered=1')->assertForbidden();
         $this->assertNull($user->fresh()->email_verified_at);
         $url = (new VerifyEmailNotification)->toMail($user)->actionUrl;
         $this->get($url)->assertRedirect('/dashboard');
@@ -115,6 +118,17 @@ class EmailVerificationTest extends TestCase
         $this->assertEquals($timestamp, $user->fresh()->email_verified_at);
         Event::assertDispatchedTimes(Verified::class, 1);
         $this->get('/dashboard')->assertOk();
+    }
+
+    public function test_expired_link_of_an_already_confirmed_account_goes_on_without_an_error(): void
+    {
+        $user = $this->pending();
+        $url = (new VerifyEmailNotification)->toMail($user)->actionUrl;
+        $user->markEmailAsVerified();
+        $this->travel(61)->minutes();
+
+        $this->actingAs($user)->get($url)->assertRedirect('/email/verify')->assertSessionHasNoErrors();
+        $this->get('/email/verify')->assertRedirect('/dashboard');
     }
 
     public function test_pending_user_can_logout_and_request_password_reset(): void

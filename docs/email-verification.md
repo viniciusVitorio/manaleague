@@ -5,6 +5,7 @@
 - Contas novas recebem um e-mail com link assinado, com prazo de 60 minutos.
 - Até confirmar, a pessoa pode abrir a tela de confirmação, pedir reenvio e sair da conta, mas não usar recursos privados nem autorizar canais privados do Reverb.
 - O link é vinculado ao ID e ao e-mail da conta conectada. Outra conta, hash alterado, assinatura adulterada ou prazo vencido não confirmam nada.
+- Link autêntico mas vencido leva à tela de confirmação com o aviso "Esse link de confirmação venceu" e o botão de reenvio, em vez de um erro 403. Link adulterado continua recebendo 403.
 - A confirmação é idempotente: abrir o mesmo link novamente não duplica o evento de confirmação.
 - Reenvio é autenticado, limitado por conta e protegido contra CSRF. O cadastro já inicia o cooldown para evitar envio imediato duplicado.
 - Falha do provedor não desfaz a conta nem libera o acesso: a tela informa o problema e permite tentar novamente.
