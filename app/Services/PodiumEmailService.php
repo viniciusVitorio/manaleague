@@ -172,8 +172,8 @@ class PodiumEmailService
             'losses' => $record['losses'],
             'draws' => $record['draws'],
             'winrate' => $record['winrate'],
-            // Mesa de Commander tem colocação, não placar em games.
-            'games' => $tournament->system === 'commander_pods' ? null : $record['games_for'].'–'.$record['games_against'],
+            // Mesa de Commander (pods ou eliminação por pods) tem colocação, não placar em games.
+            'games' => in_array($tournament->system, ['commander_pods', 'pod_elimination'], true) ? null : $record['games_for'].'–'.$record['games_against'],
             'prizes' => $prizes,
             'url' => route('arena.public', $tournament->public_slug),
             'prizes_url' => route('prizes.index'),

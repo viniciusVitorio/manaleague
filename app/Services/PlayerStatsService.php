@@ -138,7 +138,8 @@ class PlayerStatsService
 
         foreach ($matches as $match) {
             if ($match->pod_player_ids) {
-                foreach ($match->pod_scores ?? [] as $id => $rank) {
+                // Empate decidido pelo organizador (eliminação por pods) vale a decisão, como na classificação.
+                foreach (($match->pod_tiebreak_scores ?: $match->pod_scores) ?? [] as $id => $rank) {
                     $won = (int) $rank === 1;
                     $results[(int) $id][] = $this->result('tournament', $match->played_at, $won ? 1 : 0, $won ? 0 : 1);
                 }

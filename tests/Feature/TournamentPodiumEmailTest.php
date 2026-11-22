@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Deck;
 use App\Models\GameMatch;
 use App\Models\NotificationPreference;
 use App\Models\Player;
@@ -9,6 +10,7 @@ use App\Models\Tournament;
 use App\Models\TournamentPodiumEmail;
 use App\Models\User;
 use App\Notifications\TournamentPodiumNotification;
+use App\Services\PairingService;
 use App\Services\PlayerStatsService;
 use App\Services\PodiumEmailService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -243,6 +245,36 @@ class TournamentPodiumEmailTest extends TestCase
         $winner = Player::with('profile.account')->findOrFail($pod->pod_player_ids[0]);
         $podium = Notification::sent($winner->profile->account, TournamentPodiumNotification::class)->first()->podium;
         $this->assertSame([1, 1, 0, 100, null], [$podium['played'], $podium['wins'], $podium['losses'], $podium['winrate'], $podium['games']]);
+    }
+
+    public function test_pod_elimination_emails_the_podium_and_counts_the_organizer_tiebreak(): void
+    {
+        Notification::fake();
+        [$t, $owner] = $this->arena(['system' => 'pod_elimination', 'format' => 'Commander', 'max_players' => 8, 'pod_random_draw' => false]);
+        foreach (range(5, 8) as $i) {
+            $profile = User::factory()->create()->ensurePlayerProfile();
+            $deck = $profile->decks()->create(['name' => "Deck {$i}", 'format' => 'Commander']);
+            $t->players()->create(['name' => "Jogador {$i}", 'player_profile_id' => $profile->id, 'deck_id' => $deck->id]);
+        }
+        $t->players()->update(['checked_in_at' => now()]);
+        Deck::whereIn('id', $t->players()->pluck('deck_id'))->update(['format' => 'Commander']);
+        $this->actingAs($owner);
+        app(PairingService::class)->generateLeague($t);
+        $semis = $t->matches()->get();
+        foreach ($semis as $pod) {
+            $this->put(route('matches.update', [$t, $pod]), ['placements' => array_combine($pod->pod_player_ids, [1, 2, 3, 4]), 'confirm' => 1])->assertSessionHasNoErrors();
+        }
+        // Empate no título, decidido pelo organizador: quem ficou em 2º no desempate não ganhou a final.
+        $final = $t->matches()->where('stage', 'final')->sole();
+        $this->put(route('matches.update', [$t, $final]), ['placements' => array_combine($final->pod_player_ids, [1, 1, 3, 4]),
+            'tiebreak' => array_combine($final->pod_player_ids, [1, 2, 3, 4]), 'resolution_note' => 'Desempate jogado na mesa.', 'confirm' => 1])->assertSessionHasNoErrors();
+
+        $this->assertSame(Tournament::STATUS_FINISHED, $t->fresh()->status);
+        Notification::assertSentTimes(TournamentPodiumNotification::class, 3);
+        $second = Player::with('profile.account')->findOrFail($final->pod_player_ids[1]);
+        $semiWin = (int) ($t->matches()->where('stage', 'league')->get()->first(fn ($pod) => in_array($second->id, $pod->pod_player_ids, true))->pod_scores[$second->id] === 1);
+        $podium = Notification::sent($second->profile->account, TournamentPodiumNotification::class)->first()->podium;
+        $this->assertSame([2, 2, $semiWin, 2 - $semiWin, null], [$podium['placement'], $podium['played'], $podium['wins'], $podium['losses'], $podium['games']]);
     }
 
     public function test_tournament_records_count_a_bye_as_a_win_like_the_profile(): void
