@@ -10,8 +10,8 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 
 | Area | What you can do |
 |---|---|
-| **Account** | e-mail confirmation for new accounts, signed expiring links and resend with cooldown; existing accounts keep access |
-| **Tournaments** | round-robin leagues, Swiss, single or double elimination and Commander pods; finals and third-place match; standard format rules or custom house rules; repeat a tournament with the same settings; prizes per placement (boosters and a trophy or medal, with an optional image stored as a 512×512 square), handed out automatically when the tournament ends |
+| **Account** | e-mail confirmation for new accounts, signed expiring links and resend with cooldown; existing accounts keep access; e-mail consent at sign-up; "Notificações" in Edit profile chooses, per category, what arrives in the app and by e-mail (today tournaments are the only category with e-mail) |
+| **Tournaments** | round-robin leagues, Swiss, single or double elimination and Commander pods; finals and third-place match; standard format rules or custom house rules; repeat a tournament with the same settings; prizes per placement (boosters and a trophy or medal, with an optional image stored as a 512×512 square), handed out automatically when the tournament ends; e-mail to the top three with their placement, record, win rate and prizes |
 | **Event day** | sign-up by invite link or QR code, player check-in on the event day, round timer and removal of no-shows |
 | **Live** | players submit scores from their phones, with confirmation or dispute; public tournament page (no account needed) and TV mode; pairings, scores, the round timer and notifications show up in real time (WebSocket) |
 | **Challenges** | 1v1 matches between friends, casual or ranked: the Challenges page has the ones in progress, answered right on their cards (accept, send the score, confirm or dispute), and your rivalries; finished series live in My matches. A score the opponent does not confirm or dispute within 7 days is confirmed automatically |
@@ -97,7 +97,7 @@ The pipeline in `.github/workflows/pipeline.yml` runs on every pull request to `
    - starts Compose with `--no-build`: no PHP extension or Composer compilation runs on EC2, and no new registry or secret is needed;
    - patch notes are synced.
 
-A second workflow, `.github/workflows/daily-tasks.yml`, runs the production routines every day at 06:00 (Brasília) and on demand (**Actions → Daily tasks → Run workflow**): it refreshes the ban list of each format and the Pauper legality of every deck card from Scryfall, and confirms challenge scores left unanswered for 7 days. The deploy also runs the card checks. The run fails, and GitHub notifies the team, when a task fails (for example, Scryfall does not answer).
+A second workflow, `.github/workflows/daily-tasks.yml`, runs the production routines every day at 06:00 (Brasília) and on demand (**Actions → Daily tasks → Run workflow**): it refreshes the ban list of each format and the Pauper legality of every deck card from Scryfall, confirms challenge scores left unanswered for 7 days, and retries podium e-mails that failed to send. The deploy also runs the card checks. The run fails, and GitHub notifies the team, when a task fails (for example, Scryfall does not answer).
 
 Publishing, editing or deleting a GitHub Release only syncs the patch notes. It does not test or redeploy code. Each published release becomes a card in the Patch notes tab and a notification for every account ([docs/patch-notes.md](docs/patch-notes.md)).
 

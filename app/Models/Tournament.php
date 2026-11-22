@@ -32,7 +32,17 @@ class Tournament extends Model
 
     protected function casts(): array
     {
-        return ['tournament_date' => 'date', 'round_limit' => 'integer', 'ranked' => 'boolean', 'allow_banned' => 'boolean', 'round_ends_at' => 'datetime', 'round_minutes' => 'integer'];
+        return ['tournament_date' => 'date', 'round_limit' => 'integer', 'ranked' => 'boolean', 'allow_banned' => 'boolean', 'round_ends_at' => 'datetime', 'round_minutes' => 'integer', 'finished_at' => 'datetime'];
+    }
+
+    /** O torneio encerra por caminhos diferentes (final, última rodada, chave); a data é marcada num lugar só. */
+    protected static function booted(): void
+    {
+        static::saving(function (Tournament $tournament): void {
+            if ($tournament->isDirty('status') && $tournament->status === self::STATUS_FINISHED && ! $tournament->finished_at) {
+                $tournament->finished_at = now();
+            }
+        });
     }
 
     /**
