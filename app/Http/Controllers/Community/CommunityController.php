@@ -33,9 +33,7 @@ class CommunityController extends Controller
         $visible = app(NotificationService::class)->visible($request->user());
         $page = max(1, $request->integer('page', 1));
         $notifications = new LengthAwarePaginator($visible->forPage($page, 20)->values(), $visible->count(), 20, $page, ['path' => $request->url()]);
-        $preference = NotificationPreference::firstOrNew(['user_id' => $request->user()->id], ['enabled' => true, 'muted_types' => []]);
-
-        return view('community.notifications', compact('notifications', 'preference'));
+        return view('community.notifications', compact('notifications'));
     }
 
     public function read(Request $request, int $notification)
@@ -58,8 +56,11 @@ return back()->with('status', 'Notificação marcada como lida.');
 
     public function preferences(Request $request)
     {
-        $data = $request->validate(['enabled' => ['required', 'boolean'], 'muted_types' => ['sometimes', 'array', 'max:30'], 'muted_types.*' => ['string', 'max:80', 'regex:/^[a-zA-Z0-9_.-]+$/']]);
-        NotificationPreference::updateOrCreate(['user_id' => $request->user()->id], ['enabled' => $data['enabled'], 'muted_types' => $data['muted_types'] ?? []]);
+        $data = $request->validate(['enabled' => ['required', 'boolean'], 'muted_types' => ['sometimes', 'array', 'max:30'], 'muted_types.*' => ['string', 'max:80', 'regex:/^[a-zA-Z0-9_.-]+$/'], 'email_enabled' => ['sometimes', 'boolean'],
+            'email_muted_types' => ['sometimes', 'array', 'max:30'], 'email_muted_types.*' => ['string', 'max:80', 'regex:/^[a-zA-Z0-9_.-]+$/']]);
+        // Sem os campos de e-mail (página antiga aberta noutra aba), a escolha de e-mail fica como estava.
+        $email = array_key_exists('email_enabled', $data) ? ['email_enabled' => $data['email_enabled'], 'email_muted_types' => $data['email_muted_types'] ?? []] : [];
+        NotificationPreference::updateOrCreate(['user_id' => $request->user()->id], ['enabled' => $data['enabled'], 'muted_types' => $data['muted_types'] ?? []] + $email);
 
         return back()->with('status','Preferências salvas.');
     }

@@ -125,6 +125,36 @@ class PlayerStatsService
         return compact('wins', 'losses', 'gamesFor', 'gamesAgainst', 'bestStreak') + ['entry' => $entry];
     }
 
+    /**
+     * Recorde de cada inscrito numa edição, com final e disputa de 3º (a classificação da liga não conta essas partidas).
+     * BYE vale como vitória, como no perfil. Em mesa de Commander, vence quem ficou em 1º.
+     *
+     * @return Collection<int, array<string, mixed>> por id do inscrito, no formato de aggregate()
+     */
+    public function tournamentRecords(Tournament $tournament): Collection
+    {
+        $results = $tournament->players()->pluck('id')->mapWithKeys(fn (int $id) => [$id => []])->all();
+        $matches = $tournament->matches()->whereIn('status', [GameMatch::STATUS_FINISHED, GameMatch::STATUS_BYE])->orderBy('round')->orderBy('id')->get();
+
+        foreach ($matches as $match) {
+            if ($match->pod_player_ids) {
+                // Empate decidido pelo organizador (eliminação por pods) vale a decisão, como na classificação.
+                foreach (($match->pod_tiebreak_scores ?: $match->pod_scores) ?? [] as $id => $rank) {
+                    $won = (int) $rank === 1;
+                    $results[(int) $id][] = $this->result('tournament', $match->played_at, $won ? 1 : 0, $won ? 0 : 1);
+                }
+
+                continue;
+            }
+            foreach (array_filter([$match->player_one_id, $match->player_two_id]) as $id) {
+                [$for, $against] = $this->score($match, $id);
+                $results[$id][] = $this->result('tournament', $match->played_at, $for, $against, $match->status === GameMatch::STATUS_BYE);
+            }
+        }
+
+        return collect($results)->map(fn (array $playerResults) => $this->aggregate(collect($playerResults)));
+    }
+
     /** Desafios casuais com placar confirmado pelos dois. */
     private function casualResults(PlayerProfile $profile): Collection
     {

@@ -20,6 +20,7 @@ Requisitos levantados antes da implementacao (fase de Requisitos do SSDLC). Cada
 | RF12 | Recuperacao de senha por e-mail e troca de senha autenticada, com aviso por e-mail. |
 | RF13 | Decks com cartas reais (Scryfall): busca, importacao de lista, comandante, sideboard, curva de mana e avisos por formato. |
 | RF14 | Conquistas com progresso, data de desbloqueio e raridade. |
+| RF15 | E-mail automatico para 1o, 2o e 3o lugar ao encerrar o torneio, sem duplicar, com colocacao, vitorias e derrotas, partidas, taxa de vitoria, premios e link do resultado. |
 
 ## Seguranca
 

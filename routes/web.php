@@ -57,7 +57,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
     Route::post('/email/verification-notification', [EmailVerificationController::class, 'send'])->middleware('throttle:6,1')->name('verification.send');
     Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
-        ->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
+        ->middleware([\App\Http\Middleware\RedirectExpiredVerificationLink::class, 'signed', 'throttle:6,1'])->name('verification.verify');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/join/{token}', [TournamentInviteController::class, 'show'])->name('tournaments.invite.show');
     Route::post('/join/{token}', [TournamentInviteController::class, 'store'])->middleware('throttle:10,1')->name('tournaments.invite.store');

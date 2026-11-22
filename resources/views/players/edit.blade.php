@@ -11,6 +11,7 @@
     <a href="#dados"><x-icon name="pencil" />Dados pessoais</a>
     <a href="#endereco"><x-icon name="link" />Nome de usuário</a>
     <a href="#preferencias"><x-icon name="settings" />Preferências</a>
+    <a href="#notificacoes"><x-icon name="bell" />Notificações</a>
     <a href="#senha"><x-icon name="lock" />Senha</a>
 </nav>
 
@@ -119,6 +120,46 @@
             <div class="settings-card-foot">
                 <p class="muted small-note">O tema também troca pelo botão de sol e lua no topo.</p>
                 <button class="ui-btn ui-btn-outline">Salvar preferências</button>
+            </div>
+        </form>
+    </section>
+
+    {{-- Cada categoria tem uma chave por canal. Ligado = recebe; desligar habilita o hidden que envia a categoria como silenciada (nav.js). --}}
+    <section class="card settings-card" id="notificacoes">
+        <form method="POST" action="{{ route('notifications.preferences') }}">@csrf @method('PATCH')
+            @php($notify = $notificationPreference)
+            <div class="settings-card-body">
+                <h2>Notificações</h2>
+                <p class="settings-card-desc">Escolha o que chega no app e o que chega por e-mail.</p>
+                <div class="notify-prefs" role="group" aria-label="Notificações por categoria e canal">
+                    <div class="notify-prefs-head" aria-hidden="true"><span></span><span>App</span><span>E-mail</span></div>
+                    <div class="notify-prefs-row is-master">
+                        <span class="ui-option-text"><span class="ui-option-title">Todas as notificações</span><span class="ui-option-desc">Desligar pausa o canal inteiro.</span></span>
+                        <span class="notify-prefs-cell"><input type="hidden" name="enabled" value="0"><input type="checkbox" class="ui-switch" role="switch" name="enabled" value="1" aria-label="Todas as notificações no app" @checked($notify->enabled)></span>
+                        <span class="notify-prefs-cell"><input type="hidden" name="email_enabled" value="0"><input type="checkbox" class="ui-switch" role="switch" name="email_enabled" value="1" aria-label="Todas as notificações por e-mail" @checked($notify->email_enabled ?? true)></span>
+                    </div>
+                    @foreach(\App\Models\NotificationPreference::CATEGORIES as $type => [$label, $desc])
+                        <div class="notify-prefs-row">
+                            <span class="ui-option-text"><span class="ui-option-title">{{ $label }}</span><span class="ui-option-desc">{{ $desc }}</span></span>
+                            <span class="notify-prefs-cell">
+                                <input type="checkbox" class="ui-switch" role="switch" aria-label="{{ $label }} no app" data-mute="{{ $type }}" @checked(! in_array($type, $notify->muted_types ?? []))>
+                                <input type="hidden" name="muted_types[]" value="{{ $type }}" @disabled(! in_array($type, $notify->muted_types ?? [])) data-mute-field="{{ $type }}">
+                            </span>
+                            <span class="notify-prefs-cell">
+                                @if(in_array($type, \App\Models\NotificationPreference::EMAIL_CATEGORIES, true))
+                                    <input type="checkbox" class="ui-switch" role="switch" aria-label="{{ $label }} por e-mail" data-mute="email.{{ $type }}" @checked(! in_array($type, $notify->email_muted_types ?? []))>
+                                    <input type="hidden" name="email_muted_types[]" value="{{ $type }}" @disabled(! in_array($type, $notify->email_muted_types ?? [])) data-mute-field="email.{{ $type }}">
+                                @else
+                                    <span class="notify-prefs-none">Só no app</span>
+                                @endif
+                            </span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+            <div class="settings-card-foot">
+                <p class="muted small-note">Confirmação de conta e troca de senha são sempre enviadas por e-mail.</p>
+                <button class="ui-btn ui-btn-outline">Salvar notificações</button>
             </div>
         </form>
     </section>

@@ -63,7 +63,9 @@ class PatchNotesTest extends TestCase
         $this->assertSame('/patch-notes#v1.1.0', $notification->url);
 
         $this->actingAs($ana)->get('/patch-notes')->assertSee('Notificações, 1 não lidas');
-        $this->get('/notifications')->assertSee('Nova versão v1.1.0: Decks na navegação')->assertSee('Novas versões do ManaLeague');
+        $this->get('/notifications')->assertSee('Nova versão v1.1.0: Decks na navegação');
+        // A categoria pode ser silenciada nas configurações de notificação.
+        $this->get('/me/profile/edit')->assertSee('Novas versões do ManaLeague');
 
         // edição da release e nova sincronização não repetem o aviso
         $this->artisan('patch-notes:sync', ['file' => $this->syncFile([

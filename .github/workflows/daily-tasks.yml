@@ -4,7 +4,8 @@ name: Daily tasks
 # "Run workflow" (Actions > Daily tasks):
 # - bans: lista de banidas por formato, do Scryfall (tag "Banido");
 # - legality: legalidade no Pauper das cartas dos decks, do Scryfall (tag "Inválida");
-# - challenges: confirma placares de desafio sem resposta há 7 dias (também roda ao abrir as páginas de desafios).
+# - challenges: confirma placares de desafio sem resposta há 7 dias (também roda ao abrir as páginas de desafios);
+# - emails: tenta de novo os e-mails de pódio que falharam ao encerrar o torneio.
 # O deploy também roda as duas conferências de cartas.
 on:
   schedule:
@@ -21,6 +22,7 @@ on:
           - bans
           - legality
           - challenges
+          - emails
 
 permissions:
   contents: read
@@ -79,10 +81,11 @@ jobs:
         # Cada tarefa roda mesmo se a anterior falhar; o job fica vermelho se alguma falhou.
         run: |
           case "$TASK" in
-            all) commands="cards:sync-bans cards:sync-legality challenges:auto-confirm" ;;
+            all) commands="cards:sync-bans cards:sync-legality challenges:auto-confirm tournaments:podium-emails" ;;
             bans) commands="cards:sync-bans" ;;
             legality) commands="cards:sync-legality" ;;
             challenges) commands="challenges:auto-confirm" ;;
+            emails) commands="tournaments:podium-emails" ;;
             *) echo "Tarefa desconhecida: $TASK" >&2; exit 1 ;;
           esac
           failed=0

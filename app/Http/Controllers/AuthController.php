@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\NotificationPreference;
 use App\Models\User;
 use App\Services\EmailVerificationSender;
 use Illuminate\Http\RedirectResponse;
@@ -26,13 +27,17 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email:rfc', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
+            'email_updates' => ['sometimes', 'boolean'],
         ]);
+        $emailUpdates = $request->boolean('email_updates');
+        unset($validated['email_updates']);
 
-        $user = DB::transaction(function () use ($validated): User {
+        $user = DB::transaction(function () use ($validated, $emailUpdates): User {
             $user = User::create($validated);
             $user->playerProfile()->create([
                 'user_id' => $user->id, 'nickname' => $validated['name'],
             ]);
+            NotificationPreference::create(['user_id' => $user->id, 'enabled' => true, 'muted_types' => [], 'email_enabled' => $emailUpdates, 'email_muted_types' => []]);
             return $user;
         });
 

@@ -90,13 +90,14 @@ class DashboardLayoutTest extends TestCase
         $page->assertSee('aria-controls="menu-mobile"', false)->assertSee('aria-controls="menu-account"', false);
     }
 
-    public function test_notifications_page_uses_switches_and_mutes_only_switched_off_categories(): void
+    public function test_notification_settings_use_switches_and_mute_only_switched_off_categories(): void
     {
         $user = User::factory()->create();
         $user->ensurePlayerProfile();
         NotificationPreference::create(['user_id' => $user->id, 'enabled' => true, 'muted_types' => ['club']]);
-        $html = $this->actingAs($user)->get('/notifications')->assertOk()->assertSee('Caixa de entrada')->assertSee('Tudo em dia por aqui.')
-            ->assertSee('Preferências')->assertDontSee('Silenciar categorias')->assertDontSee('Marcar todas como lidas')->getContent();
+        $this->actingAs($user)->get('/notifications')->assertOk()->assertSee('Caixa de entrada')->assertSee('Tudo em dia por aqui.')
+            ->assertDontSee('Silenciar categorias')->assertDontSee('Marcar todas como lidas');
+        $html = $this->get('/me/profile/edit')->assertOk()->assertSee('Notificações')->getContent();
         // clube silenciado: switch desligado e hidden habilitado; desafio: switch ligado e hidden desabilitado
         $this->assertMatchesRegularExpression('/data-mute="club"\s*>/', $html);
         $this->assertMatchesRegularExpression('/value="club"\s+data-mute-field/', $html);

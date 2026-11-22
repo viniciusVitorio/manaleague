@@ -9,6 +9,7 @@ use App\Models\Player;
 use App\Models\PlayerProfile;
 use App\Models\Tournament;
 use App\Models\User;
+use App\Services\PodiumEmailService;
 use App\Services\TournamentChampionService;
 use Illuminate\Support\Collection;
 
@@ -67,6 +68,7 @@ class CommunityEvents
             $this->notifications->send($user, 'tournament.finished', $title, '/me/matches', "tournament:{$t->id}:finished:user:{$user->id}", ['tournament_id' => $t->id]);
         }
         $this->prizesAwarded($t);
+        app(PodiumEmailService::class)->schedule($t);
     }
 
     /** Quem ganhou prêmio recebe um aviso só, com a lista (troféu primeiro). Uma correção da final avisa o novo dono. */
