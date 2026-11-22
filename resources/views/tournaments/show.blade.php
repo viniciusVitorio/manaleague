@@ -102,15 +102,15 @@
     <div class="tourney-round-head">
         <div>
             <span class="eyebrow">Rodada atual</span>
-            <h2 id="tourney-round-title">@if($isFinalsRound)Final e 3º lugar @else Rodada {{ $currentRound }}@if($roundLimit) de {{ $roundLimit }}@endif @endif</h2>
+            <h2 id="tourney-round-title">@if($tournament->system === 'pod_elimination'){{ $currentMatches->first()->podPhaseLabel() }}@elseif($isFinalsRound)Final e 3º lugar @else Rodada {{ $currentRound }}@if($roundLimit) de {{ $roundLimit }}@endif @endif</h2>
             <p class="muted">{{ $currentPending ? $currentPending.' '.($currentPending === 1 ? 'partida pendente' : 'partidas pendentes') : 'Todas as partidas com resultado' }} · {{ $currentMatches->count() }} {{ $currentMatches->count() === 1 ? 'mesa' : 'mesas' }}@if($systemHelp) · {{ $systemHelp }}@endif</p>
         </div>
-        @if($canManage)
+        @if($canManage && $tournament->system !== 'pod_elimination')
         <div class="tourney-round-actions">
             <a class="ui-btn ui-btn-outline ui-btn-sm" href="{{ route('matches.submissions.queue', $tournament) }}">Resultados enviados @if($pendingSubmissions)<span class="nav-badge" aria-label="{{ $pendingSubmissions }} aguardando">{{ $pendingSubmissions }}</span>@endif</a>
             @if($tournament->status === 'league' && $tournament->system === 'round_robin')
                 <form method="POST" action="{{ route('tournaments.finals', $tournament) }}">@csrf<button class="ui-btn ui-btn-primary ui-btn-sm" @disabled($leaguePending > 0) @if($leaguePending > 0) title="Falta resultado em {{ $leaguePending }} {{ $leaguePending === 1 ? 'partida' : 'partidas' }} da liga" @endif>Gerar final + 3º lugar</button></form>
-            @elseif($tournament->status === 'league')
+            @elseif($tournament->status === 'league' && $tournament->system !== 'pod_elimination')
                 <form method="POST" action="{{ route('tournaments.advance', $tournament) }}">@csrf<input type="hidden" name="round" value="{{ $tournament->matches->max('round') }}"><button class="ui-btn ui-btn-primary ui-btn-sm" @disabled($tournament->matches->contains('status', 'pending'))>Concluir rodada / avançar</button></form>
             @endif
         </div>
@@ -181,9 +181,10 @@
     @if($canManage)
     <aside class="card start-card">
         <span class="eyebrow">Próximo passo</span><h2>Começar torneio</h2>
-        <p>Com 4 ou mais jogadores, os confrontos seguem o sistema escolhido ({{ $systemLabel }}). Os decks são congelados no início.</p>
-        <form method="POST" action="{{ route('tournaments.start', $tournament) }}">@csrf<button class="btn btn-primary btn-block" @disabled($playersCount < 4)>Começar torneio</button></form>
-        <small>{{ $playersCount < 4 ? 'Faltam '.(4 - $playersCount).' '.(4 - $playersCount === 1 ? 'jogador' : 'jogadores').'.' : 'Tudo pronto para começar.' }}</small>
+        @php($minimumPlayers = $tournament->system === 'pod_elimination' ? 3 : 4)
+        <p>Com {{ $minimumPlayers }} ou mais jogadores, os confrontos seguem o sistema escolhido ({{ $systemLabel }}). Os decks são congelados no início.</p>
+        <form method="POST" action="{{ route('tournaments.start', $tournament) }}">@csrf<button class="btn btn-primary btn-block" @disabled($playersCount < $minimumPlayers)>Começar torneio</button></form>
+        <small>{{ $playersCount < $minimumPlayers ? 'Faltam '.($minimumPlayers - $playersCount).' '.($minimumPlayers - $playersCount === 1 ? 'jogador' : 'jogadores').'.' : 'Tudo pronto para começar.' }}</small>
     </aside>
     @endif
 </div>

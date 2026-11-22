@@ -32,7 +32,7 @@
             @endforeach
         </ol>
     </div>
-    @if($recap)
+    @if($recap && empty($recap['multiplayer']))
         <dl class="champion-stats">
             <div><dt>Recorde</dt><dd>{{ $recap['wins'] }}–{{ $recap['losses'] }}</dd></div>
             <div><dt>Deck</dt><dd>{{ $recap['champion']->deckLabel() ?: 'Deck surpresa' }}</dd></div>

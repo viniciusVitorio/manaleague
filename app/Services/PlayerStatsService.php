@@ -36,6 +36,13 @@ class PlayerStatsService
         $results = [];
 
         foreach ($entries as $entry) {
+            if ($entry->tournament?->system === 'pod_elimination' && $entry->tournament->status === Tournament::STATUS_FINISHED) {
+                $row = app(StandingsService::class)->for($entry->tournament)->first(fn ($r) => $r['player']->id === $entry->id);
+                // Titles/participation are real; duel sweeps, draws and streaks are not.
+                if (($row['rank'] ?? null) === 1) $titles++;
+                if (($row['rank'] ?? null) === 2) $runnerUps++;
+                if (($row['rank'] ?? null) === 3) $thirdPlaces++;
+            }
             $matches = $this->matchesFor($entry);
             $entryLosses = 0;
             $deckName = $entry->deck_name ?: 'Deck não informado';
@@ -227,6 +234,7 @@ class PlayerStatsService
     private function matchesFor($entry): Collection
     {
         return $entry->matchesAsPlayerOne->concat($entry->matchesAsPlayerTwo)
+            ->reject(fn (GameMatch $match) => (bool) $match->pod_player_ids)
             ->whereIn('status', [GameMatch::STATUS_FINISHED, GameMatch::STATUS_BYE])
             ->sortBy(fn (GameMatch $match) => $match->played_at?->timestamp ?? $match->id)->values();
     }

@@ -12,9 +12,19 @@
         const streakMark = n => n >= 6 ? ' ⚡' : (n >= 3 ? ' 🔥' : '');
         const render = (data, serverNow) => {
             board.querySelectorAll('[data-round-timer]').forEach(timer => timer.dispatchEvent(new CustomEvent('round-timer:update', {detail: {endsAt: data.round_ends_at, serverNow}})));
-            const rows = data.standings.map(row => { const li = document.createElement('li'); li.textContent = `${row.name}${streakMark(row.streak)} — ${row.points} pts · ${row.wins}V ${row.draws}E ${row.losses}D`; return li; });
+            const rows = data.standings.map(row => { const li = document.createElement('li'); li.textContent = data.system === 'pod_elimination' ? `${row.rank}º · ${row.name}` : `${row.name}${streakMark(row.streak)} — ${row.points} pts · ${row.wins}V ${row.draws}E ${row.losses}D`; return li; });
             board.querySelector('[data-live-standings]').replaceChildren(...rows);
-            const matches = data.matches.map(match => { const p = document.createElement('p'); p.textContent = `R${match.round} · ${match.one} ${match.one_score ?? '–'} × ${match.two_score ?? '–'} ${match.two} · ${statusLabel[match.status] ?? match.status}`; return p; });
+            const matches = data.matches.map(match => {
+                if (match.seats) {
+                    const article = document.createElement('article'); article.className = 'pod-live-table';
+                    const title = document.createElement('h3'); title.textContent = `Mesa ${match.pod_number} · ${match.phase}`;
+                    const status = document.createElement('p'); status.textContent = match.confirmed ? 'Confirmada' : 'Em andamento';
+                    const list = document.createElement('ul');
+                    match.seats.forEach(seat => { const li = document.createElement('li'); li.textContent = `${seat.name} · ${seat.place ? seat.place + 'º' : '–'}${seat.advancing ? ' · Classificado' : ''}`; list.append(li); });
+                    article.append(title, status, list); return article;
+                }
+                const p = document.createElement('p'); p.textContent = `R${match.round} · ${match.one} ${match.one_score ?? '–'} × ${match.two_score ?? '–'} ${match.two} · ${statusLabel[match.status] ?? match.status}`; return p;
+            });
             board.querySelector('[data-live-matches]').replaceChildren(...matches);
         };
         // Tempo real: o canal publico da arena avisa quando um placar, a rodada ou o cronometro muda e o painel

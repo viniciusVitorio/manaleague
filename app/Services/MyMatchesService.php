@@ -198,7 +198,8 @@ class MyMatchesService
             $row['podPlayers'] = $m->tournament->players->whereIn('id', $m->pod_player_ids)->values();
             $mySeat = $row['podPlayers']->first(fn ($p) => in_array((int) $p->id, $playerIds, true));
             $row['me'] = $mySeat;
-            $row['myPlace'] = $mySeat ? (($m->pod_scores ?? [])[$mySeat->id] ?? null) : null;
+            $row['myPlace'] = $mySeat && $m->status === GameMatch::STATUS_FINISHED ? (($m->pod_tiebreak_scores ?: ($m->pod_scores ?? []))[$mySeat->id] ?? null) : null;
+            if ($m->tournament->system === 'pod_elimination') $row['stage'] = $m->podPhaseLabel();
             if ($m->status === GameMatch::STATUS_PENDING) {
                 [$row['label'], $row['tone']] = ['Em jogo', 'info'];
                 $row['note'] = 'Mesa Commander · o organizador lança as posições ao fim da mesa';
