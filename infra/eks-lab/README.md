@@ -1,5 +1,21 @@
 # ManaLeague — EKS Lab acadêmico
 
+## Estado atual — laboratório removido em18/11/2026
+
+Após autorização explícita para excluir somente o laboratório e seus dados de teste, Terraform concluiu **72 destruídos,0 adicionados,0 alterados**. Leitura posterior confirmou state vazio e ausência de EKS/RDS/nó/discos/ASG/VPC/ENIs/ALB/target groups/ECR/S3, snapshots/backups/recovery points, logs e segredo gerenciado ativo do lab. **O endereço de teste não está mais disponível.** Código, configurações e backup privado do state foram preservados; dados fictícios e imagens foram apagados conforme consentimento.
+
+Produção continua HTTP200, instâncias running e checkout/state original preservados; main não foi alterada. Provider GitHub OIDC e recursos compartilhados foram preservados. Gate do lab false, nenhuma execução CI lab ativa, nenhum artefato/cache lab restante; workflows/artefatos/caches da main preservados. Evidência: `.local/stop-20261118/STOP_VERIFIED.json` e `aws-verification.json`.
+
+**Valores já consumidos e atrasos da fatura ainda podem aparecer; produção mantém sua cobrança normal.** Não confundir isso com recursos do laboratório ainda ativos. Nova restauração exige nova autorização e plano usando o state vazio atual, nunca restaurar um backup pré-destruição. Esta atualização ficou local, sem novo push para não disparar CI durante a pausa.
+
+## Preparação para quarta-feira, 25/11/2026
+
+A SSDLC ganhou somente uma chamada reutilizável de entrega EKS após os gates existentes. Gate false mantém os jobs extras EKS skipped, sem publish nem fila self-hosted. O runner agora tem sessão futura por run com autorização explícita; nenhum foi registrado. Publicação autorizada pelo proprietário somente na eks-lab, mantendo gate false e AWS removida. A CI do commit publicado deve ser lida de volta; isso não autoriza recriar infraestrutura ou alterar main. Ver `CI.md`, `APRESENTACAO.md` e `apresentacao/QUARTA_FEIRA.md`.
+
+Material offline: `apresentacao/arquitetura.html` e `apresentacao/ROTEIRO.md`. São configuração/roteiro, não evidência de CD remoto já concluído. Os resultados da integração local ficam em `VALIDATION.md`.
+
+## Histórico — reativação e publicação anteriores (já removidas)
+
 **Estado em 18/11/2026: infraestrutura do laboratório ATIVA novamente, após nova autorização explícita.** Terraform criou72 recursos, sem alterar/excluir recursos existentes: EKS1.37, um nó t3.medium Ready, RDS PostgreSQL17.9 privado/criptografado com20GiB, ECR/S3 e roles exclusivas. As boundaries CNI/CSI restringem mutações aos recursos do lab. Bootstrap e sondas reais de RDS/TLS, IRSA/S3 e EBS CSI passaram; objetos de teste e volume temporário foram removidos. **A aplicação Laravel foi publicada no EKS em18/11/2026, release `48f7dca`, com duas réplicas HTTP Ready, Reverb, migrations e seed fictício concluídos.** URL temporária: `http://manaleague-eks-lab-1464768584.us-east-1.elb.amazonaws.com`. Login entre réplicas, Laravel/PDO→RDS com verify-full, Laravel→S3, WAF e WebSocket passaram em testes reais. Acesso HTTP restrito ao IP autorizado; nunca usar dados/credenciais reais. **CD automático continua desligado (`LAB_DEPLOY_ENABLED=false`); este deploy foi manual e controlado.** Produção respondeu HTTP200 e seu checkout/state foram preservados. A base sem ALB de US$4,03/dia não é mais o total: o ALB adiciona horas, IPv4 e LCUs; considerar aproximadamente US$5/dia mais variáveis/impostos, não um teto. Evidências atuais em `.local/app-deploy-20261118/{deployment-result.json,live-verification.json,release-ci.json,image-verification.json}`. O teardown de17/11 é histórico. Não repetir criação nem restaurar state antigo sobre o atual.
 
 O laboratório não substitui a produção. `main`, EC2/Compose, domínio, banco, volumes e credenciais atuais ficam fora de seu alcance. A branch `eks-lab` foi criada da `origin/main` no commit `96bcc68`, em um worktree próprio: `D:/Projetos/manaleague-eks-lab`. O checkout original `D:/Projetos/manaleague` continua na sua branch, com os arquivos locais preservados. A branch acadêmica não acompanha `origin/main` como upstream, para evitar push acidental à produção. Em17/11 foi atualizada por fast-forward até `62c3da6`, incorporando as funcionalidades atuais de decks/perfil sem alterar a branch main ou o checkout original.
@@ -18,10 +34,10 @@ O laboratório não substitui a produção. `main`, EC2/Compose, domínio, banco
 | `scripts/` | Validação, provisionamento/deploy/limpeza com travas, probe HTTP/WebSocket |
 | `local/` | Ensaio Docker descartável com duas instâncias HTTP, banco próprio e Reverb |
 | `tests/` | Regressões dos scripts e isolamento dos workflows |
-| `runner/` | Gerador offline e testes do runner efêmero restrito; não registra nem cria recursos |
+| `runner/` | Renderer offline e sessão futura start/cleanup explicitamente autorizada; nenhum registro executado agora |
 | `CI.md` | Etapas da CI sem AWS, gate de CD, Actions pinadas e limites da validação |
 | `../../.github/workflows/pipeline.yml` | CI automática igual à main: testes, segurança, SonarCloud e WAF; deploy EC2 bloqueado na eks-lab |
-| `../../.github/workflows/eks-lab.yml` | Workflow adicional **somente manual**: imagens testadas → ECR por SHA → EKS por digest; gate false |
+| `../../.github/workflows/eks-lab.yml` | Entrega reutilizável após SSDLC: gate → checks/imagens → ECR → EKS; gate false pula etapas extras |
 | `ARCHITECTURE.md` | Diagrama Mermaid, decisões, custos e roteiro da apresentação |
 
 ## Arquitetura implementada
@@ -107,13 +123,13 @@ wsl.exe -d manaleague-docker -- env @AlvoLab bash $ScriptLab bootstrap @Confirma
 
 ## 4. GitHub Actions → ECR → EKS
 
-O workflow **não cria o cluster a cada push**. Testes/scans/build/smoke acontecem em runners hospedados. Publicação usa OIDC e a mesma imagem testada, SHA imutável, digest conferido e artifact com checksum. Com o gate desligado, testes/build/smoke/TLS/scans continuam, mas exportação/upload de imagens são pulados para não armazenar artifacts sem uso. PRs continuam executando a validação de imagens mesmo com o gate skipped. Deploy usa um runner Linux dedicado `[self-hosted, linux, eks-lab]`, fora da produção, com saída estável autorizada na API **e no ALB**. Não executar PR não confiável nesse runner.
+O workflow **não cria o cluster a cada push**. A SSDLC normal mantém testes/scans/WAF e chama a entrega reutilizável somente depois dos gates. Com LAB_DEPLOY_ENABLED=false, apenas seu gate roda: checks/builds/smoke/artifacts extras EKS, publish e deploy são skipped; os artifacts da CI normal permanecem previstos. Com autorização/gate true, imagens app/web passam por smoke/TLS/Trivy, são transferidas com checksum e publicadas com OIDC por SHA imutável/digest. Deploy exige runner Linux isolado com label exclusiva `[self-hosted, linux, "eks-lab-${{ github.run_id }}"]`, acesso à API privada e origem autorizada no ALB. Não executar PR não confiável nesse runner. O controle fica na WSL do operador, mas o executor fica no Pod isolado, nunca na estação com credenciais administrativas.
 
 Em **Settings → Environments → New environment**, criar `eks-lab`, permitir só a branch `eks-lab` e configurar, depois do provisionamento:
 
 | Variable | Valor/output |
 |---|---|
-| `LAB_DEPLOY_ENABLED` | `false` inicialmente; `true` só quando cluster/bootstrap/runner/secrets estiverem prontos |
+| `LAB_DEPLOY_ENABLED` | false até infra/bootstrap/rede/secrets aprovados; true só por autorização para a release. Abrir sessão do runner após o job deploy aguardar |
 | `AWS_ACCOUNT_ID` | `account_id` |
 | `AWS_REGION` | `aws_region` |
 | `AWS_ROLE_ARN` | `github_deploy_role_arn` |
@@ -165,6 +181,6 @@ Estimativa base **com RDS**: um nó US$1,67/8h, US$5,02/24h, US$150,73/720h; doi
 
 ## Validação executada e o que falta
 
-Resultados reais desta implementação estão em `VALIDATION.md` e `local/VERIFICATION.md`. Testes locais não comprovam permissões IAM em execução, addon compatível/região, criação do ALB, CNI/NetworkPolicies reais, RDS real/endpoint/TLS/credenciais/backups, IRSA/S3, runner, pipeline GitHub executada nem isolamento efetivo de duas contas AWS. Essas verificações precisam do futuro ambiente autorizado. Nenhum comando de provisionamento/deploy/destruição acima foi executado contra AWS.
+Resultados reais desta implementação estão em `VALIDATION.md` e `local/VERIFICATION.md`. Testes locais não comprovam permissões IAM em execução, addon compatível/região, criação do ALB, CNI/NetworkPolicies reais, RDS real/endpoint/TLS/credenciais/backups, IRSA/S3, runner, pipeline GitHub executada nem isolamento efetivo de duas contas AWS. Essas verificações precisam do futuro ambiente autorizado. Nesta preparação de21/11 não houve provisionamento/deploy/destruição AWS; execuções reais de18/11 são históricas e estão descritas em VALIDATION.md.
 
 Roteiro de apresentação, escala manual, autorreparo e evidências: `ARCHITECTURE.md`.

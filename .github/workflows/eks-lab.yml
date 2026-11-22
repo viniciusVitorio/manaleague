@@ -1,6 +1,7 @@
-name: EKS lab checks and deploy (manual)
+name: EKS lab checks and deploy
 
 on:
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -12,6 +13,10 @@ concurrency:
 
 jobs:
   checks:
+    needs: gate
+    # A disabled SSDLC call must not launch a second build pipeline.
+    # Direct manual dispatch still supports local-only validation.
+    if: ${{ !cancelled() && needs.gate.result == 'success' && (github.event_name == 'workflow_dispatch' || needs.gate.outputs.enabled == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
@@ -76,8 +81,8 @@ jobs:
           exit-code: '1'
 
   images:
-    # Gate is intentionally skipped on PRs; still run build/smoke/scans there.
-    if: ${{ !cancelled() && needs.checks.result == 'success' }}
+    # Never build on a disabled SSDLC call; manual offline checks remain available.
+    if: ${{ !cancelled() && needs.checks.result == 'success' && (github.event_name == 'workflow_dispatch' || needs.gate.outputs.enabled == 'true') }}
     runs-on: ubuntu-latest
     needs: [checks, gate]
     timeout-minutes: 45
@@ -124,7 +129,7 @@ jobs:
 
   gate:
     timeout-minutes: 5
-    if: github.ref == 'refs/heads/eks-lab' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: github.repository == 'viniciusVitorio/manaleague' && github.ref == 'refs/heads/eks-lab' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     environment: eks-lab
     outputs:
@@ -142,7 +147,7 @@ jobs:
           fi
 
   publish:
-    if: needs.gate.outputs.enabled == 'true' && github.ref == 'refs/heads/eks-lab' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: needs.gate.outputs.enabled == 'true' && github.repository == 'viniciusVitorio/manaleague' && github.ref == 'refs/heads/eks-lab' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [checks, images, gate]
     runs-on: ubuntu-latest
     environment: eks-lab
@@ -189,11 +194,12 @@ jobs:
         run: bash infra/eks-lab/scripts/lab.sh publish --allow-cloud --confirm-lab manaleague-eks-lab --expected-account "$AWS_ACCOUNT_ID"
 
   deploy:
-    if: github.ref == 'refs/heads/eks-lab' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    needs: publish
+    if: needs.gate.outputs.enabled == 'true' && github.repository == 'viniciusVitorio/manaleague' && github.ref == 'refs/heads/eks-lab' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [publish, gate]
     # Dedicated NON-production runner, stable egress in the cluster API allow-list.
+    # Per-run routing is not authorization; provision only after explicit approval.
     # Never open the cluster endpoint to hosted-runner IPs dynamically.
-    runs-on: [self-hosted, linux, eks-lab]
+    runs-on: [self-hosted, linux, "eks-lab-${{ github.run_id }}"]
     environment: eks-lab
     timeout-minutes: 30
     permissions:

@@ -52,7 +52,7 @@ exec ./run.sh
 '''
 
 
-def render(account, region, vpc_cidr, *, api_cidrs=()):
+def render(account, region, vpc_cidr, *, api_cidrs=(), run_id=None):
     """Return namespace-owned objects only; no Secret value is generated."""
     import ipaddress
     import re
@@ -107,7 +107,11 @@ def render(account, region, vpc_cidr, *, api_cidrs=()):
     tools_write = {'name': 'tools', 'mountPath': '/tools'}
     tools_read = dict(tools_write, readOnly=True)
     tmp = {'name': 'tmp', 'mountPath': '/tmp'}
-    registration = container('register', RUNNER_IMAGE, REGISTER, [
+    if run_id is not None and (not isinstance(run_id, str) or not re.fullmatch(r'[1-9][0-9]{0,19}', run_id)):
+        raise ValueError('run_id must be an unmodified positive decimal ID, at most 20 digits')
+    register_script = REGISTER if run_id is None else REGISTER.replace(
+        '--labels eks-lab ', f'--labels eks-lab,eks-lab-{run_id} ')
+    registration = container('register', RUNNER_IMAGE, register_script, [
         state, tmp, {'name': 'registration', 'mountPath': '/registration', 'readOnly': True},
     ])
     registration['env'] = [
@@ -194,9 +198,10 @@ def main(argv=None):
     command.add_argument('--vpc-cidr', required=True)
     command.add_argument('--api-cidr', action='append', default=[],
                          help='explicit current private EKS API IPv4 /32 inside lab VPC; repeatable')
+    command.add_argument('--run-id', help='optional exact positive GitHub run ID for unique routing label')
     args = parser.parse_args(argv)
     try:
-        objects = render(args.account, args.region, args.vpc_cidr, api_cidrs=args.api_cidr)
+        objects = render(args.account, args.region, args.vpc_cidr, api_cidrs=args.api_cidr, run_id=args.run_id)
     except ValueError as error:
         parser.error(str(error))
     print(json.dumps({'apiVersion': 'v1', 'kind': 'List', 'items': objects}, indent=2))

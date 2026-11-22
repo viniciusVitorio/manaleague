@@ -361,3 +361,12 @@ jobs:
           SECURITY_GROUP_ID: ${{ secrets.EC2_SECURITY_GROUP_ID }}
           RUNNER_CIDR: ${{ steps.runner-ip.outputs.cidr }}
         run: aws ec2 revoke-security-group-ingress --group-id "$SECURITY_GROUP_ID" --protocol tcp --port 22 --cidr "$RUNNER_CIDR"
+
+  deploy-lab:
+    name: Deploy isolated EKS lab after SSDLC
+    needs: [test, security, sonar, waf]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/eks-lab' && github.repository == 'viniciusVitorio/manaleague'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/eks-lab.yml

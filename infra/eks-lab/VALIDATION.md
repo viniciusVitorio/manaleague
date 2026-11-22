@@ -1,5 +1,27 @@
 # Relatório de validação local e AWS — ManaLeague EKS Lab com RDS
 
+## Preparação local de21/11/2026 para25/11 — sem recriar AWS
+
+A SSDLC preserva seus cinco jobs e chama uma entrega reutilizável após os gates. Gate false pula checks/imagens/artifacts extras EKS, publish e fila self-hosted. A sessão de runner por run foi implementada, mas não registrada. Não houve commit/push, alteração de main/produção ou criação de recursos.
+
+Candidato não commitado exportado em cópia limpa (tree a649d0c62fe313780032e3479252db047fca8ccc), sem arquivos privados, index real preservado. verify.sh terminou exit0 com credenciais/config AWS desabilitadas:91 testes de scripts/contratos,5 contratos RDS,38 runner,35 Terraform mock,20 schemas aplicação e4 runner, Helm, actionlint e sintaxe. Após esse teste foram acrescentadas apenas notas de validação/limites. Revisão independente aprovada, sem bloqueadores de segurança/lógica; resultado final/revisão ficam em .local/presentation-20261125/. Git tree não é commit/release imutável.
+
+Ponte WSL→Windows Git foi testada com GET real somente leitura do gate false; nenhuma identidade de runner criada. Protocolo kubectl DELETE foi exercitado contra fixture HTTP localhost, observando UID em DeleteOptions de Secret e Job: não comprova RBAC/API cloud. Checagem AWS read-only confirmou EKS/RDS/ALB ausentes e nenhum EC2 não-terminado com Project do lab; state local gerenciado0. Produção /up respondeu200; branch/head/diff/state/refs do checkout original iguais ao início. Nenhuma mutation AWS/GitHub.
+
+Não reconstruí Docker/aplicação nem fiz deploy: arquivos PHP/runtime não mudaram nesta rodada e seus testes antigos permanecem históricos. CD novo só será validado após criar infraestrutura autorizada, comprovar CNI/startup/rede/ALB, registrar runner e concluir a SSDLC/rollout do SHA final. Helper mantém namespace/SA/policy após cleanup, sem pool/ARC; outras sessões precisam revisão/reset. Evidências e procedimentos: APRESENTACAO.md, CI.md, runner/README.md e apresentacao/.
+
+
+## Estado final — encerramento autorizado em18/11/2026
+
+- Consentimento explícito: “Sim, excluir o laboratório e seus dados de teste”. Plano novo:0create/0update/72delete, sem alvo correspondente aos32 identificadores protegidos de produção. Backup privado e inventário atual de IDs/ARNs capturados antes das exclusões.
+- CronJobs suspensos por UID, Ingress/ALB removidos com controller ativo, workloads parados e Jobs removidos. Storage dedicado esvaziado com owner/conta/ARN conferidos; três digests por repositório ECR removidos, nenhum objeto ou multipart S3 restante.
+- Terraform destroy: **exit0,72 destruídos**, state atual sem instâncias gerenciadas. Verificação por APIs confirmou EKS/RDS/EC2/EBS/ASG/VPC/ENIs/NAT/ALB/TGs/ECR/S3 ausentes ou terminados; sem snapshots, backups retidos, recovery points, logs ou segredo RDS ativo.
+- GitHub: gate false, nenhuma CI eks-lab ativa, dez artefatos e quatro caches da branch excluídos e ausência confirmada. Nenhum workflow global desabilitado; main, Environment production e seus artefatos/caches preservados.
+- Produção HTTP200, instâncias running e checkout/state original iguais ao início; main SHA igual à observação anterior da operação. Código/configurações mantidos; o site de laboratório e os dados fictícios foram removidos conforme autorizado.
+- Evidências: `.local/stop-20261118/{authorization.json,inventory.json,destroy-review.json,terraform-destroy.log,terraform-exit.json,destroy-result.json,aws-verification.json,github-stop.json,STOP_VERIFIED.json}`. Custos acumulados/atrasos de faturamento e os custos normais da produção não são apagados. Não houve novo push destas notas locais, para não reiniciar CI durante a pausa.
+
+## Histórico das fases anteriores — ambiente não está mais ativo
+
 Escopo: branch `eks-lab`, worktree `D:/Projetos/manaleague-eks-lab`, base original `96bcc68`, atualizada na eks-lab até `62c3da6` em17/11. **A infraestrutura foi recriada em18/11/2026 e a aplicação foi publicada depois por deploy manual controlado, release `48f7dca`; CD automático permanece false.** Produção e checkout/state original preservados. Separar validação offline, sondas da infraestrutura, CI da release e testes reais da aplicação.
 
 ## Aplicação publicada —18/11/2026
