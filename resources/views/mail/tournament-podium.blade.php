@@ -70,7 +70,7 @@
         </table>
     </td></tr>
     <tr><td style="padding:16px 4px 0;font-size:12px;line-height:18px;color:#71717a;">
-        Você recebeu este e-mail porque subiu ao pódio de um torneio no ManaLeague. Para não receber mais, desligue <strong>Receber e-mails de atualizações</strong> nas <a href="{{ $podium['preferences_url'] }}" style="color:#52525b;">preferências de notificações</a>.
+        Você recebeu este e-mail porque subiu ao pódio de um torneio no ManaLeague. Para não receber mais, desligue o e-mail de <strong>Torneios</strong> em <a href="{{ $podium['preferences_url'] }}" style="color:#52525b;">Editar perfil › Notificações</a>.
     </td></tr>
     </table>
 </td></tr>

@@ -53,7 +53,7 @@ class TournamentPodiumEmailTest extends TestCase
         $mail = (new TournamentPodiumNotification($podium))->toMail($account);
         $this->assertSame('🥇 1º lugar em Copa da Loja — ManaLeague', $mail->subject);
         $html = $mail->render();
-        foreach (['Você ficou em 1º lugar!', 'Copa da Loja', "{$wins}–{$losses}", 'Taxa de vitória', 'Taça da Loja', route('arena.public', $t->public_slug), route('prizes.index'), route('profiles.edit').'#notificacoes'] as $text) {
+        foreach (['Você ficou em 1º lugar!', 'Copa da Loja', "{$wins}–{$losses}", 'Taxa de vitória', 'Taça da Loja', route('arena.public', $t->public_slug), route('prizes.index'), route('profiles.edit').'#notificacoes', 'Editar perfil › Notificações'] as $text) {
             $this->assertStringContainsString($text, (string) $html);
         }
 

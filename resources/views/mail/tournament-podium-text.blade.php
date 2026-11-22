@@ -27,4 +27,4 @@ Ver meus prêmios: {!! $podium['prizes_url'] !!}
 Ver resultado do torneio: {!! $podium['url'] !!}
 
 Você recebeu este e-mail porque subiu ao pódio de um torneio no ManaLeague.
-Para não receber mais, desligue Receber e-mails de atualizações nas preferências de notificações: {!! $podium['preferences_url'] !!}
+Para não receber mais, desligue o e-mail de Torneios em Editar perfil > Notificações: {!! $podium['preferences_url'] !!}
