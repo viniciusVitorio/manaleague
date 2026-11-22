@@ -24,8 +24,16 @@ def fixture():
         'rds_master_secret_arn': f'arn:aws:secretsmanager:{REGION}:{ACCOUNT}:secret:rds!db-12345678-1234-1234-1234-123456789012-AbCdEf',
         'rds_identifier': NAME, 'rds_database': 'manaleague_eks_lab',
         'subnet_ids': ['subnet-0123456789abcdef0', 'subnet-1123456789abcdef0'],
-        'allowed_client_cidrs': ['1.1.1.1/32'],
+        'private_subnet_ids': ['subnet-2123456789abcdef0', 'subnet-3123456789abcdef0'],
+        'node_subnet_ids': ['subnet-2123456789abcdef0'],
+        'nat_gateway_id': 'nat-0123456789abcdef0',
+        'nat_public_ip': '8.8.8.8', 'nat_egress_cidr': '8.8.8.8/32',
+        'allowed_client_cidrs': ['1.1.1.1/32', '8.8.8.8/32'],
         'alb_security_group_id': 'sg-0123456789abcdef0',
+        'lab_https_enabled': False,
+        'lab_hostname': 'eks.manaleague.com.br',
+        'lab_url': '', 'lab_certificate_arn': '', 'lab_dns_zone_id': '',
+        'lab_dns_name_servers': [],
     }
     return {k: {'value': v, 'sensitive': False} for k, v in values.items()}
 
@@ -97,6 +105,109 @@ class GithubBindings(unittest.TestCase):
             with self.subTest(account=account), self.assertRaises(ValueError):
                 module.render(fixture(), account, REGION)
 
+
+    def test_private_nat_contract_is_required_without_adding_environment_variables(self):
+        module = self.load()
+        data = fixture()
+        result = module.render(data, ACCOUNT, REGION)
+        self.assertEqual(len(result['variables']), 18)
+        for key in ('private_subnet_ids', 'node_subnet_ids', 'nat_gateway_id', 'nat_public_ip', 'nat_egress_cidr'):
+            missing = dict(data)
+            del missing[key]
+            with self.subTest(missing=key), self.assertRaises(ValueError):
+                module.render(missing, ACCOUNT, REGION)
+
+    def test_rejects_public_nodes_foreign_nat_or_mismatched_egress(self):
+        module = self.load()
+        bad = [
+            ('private_subnet_ids', fixture()['subnet_ids']['value']),
+            ('private_subnet_ids', ['subnet-2123456789abcdef0'] * 2),
+            ('private_subnet_ids', ['subnet-2123456789abcdef0', 'bad']),
+            ('node_subnet_ids', fixture()['subnet_ids']['value']),
+            ('node_subnet_ids', ['subnet-4123456789abcdef0']),
+            ('node_subnet_ids', []), ('node_subnet_ids', ['subnet-2123456789abcdef0'] * 2),
+            ('nat_gateway_id', 'nat-foreign'), ('nat_gateway_id', None),
+            ('nat_public_ip', '10.73.1.2'), ('nat_public_ip', '192.0.2.1'),
+            ('nat_public_ip', '224.0.0.1'),
+            ('nat_public_ip', '2606:4700:4700::1111'), ('nat_public_ip', '8.8.8.8\n'),
+            ('nat_egress_cidr', '1.1.1.1/32'), ('nat_egress_cidr', '8.8.8.0/24'),
+            ('allowed_client_cidrs', ['1.1.1.1/32']),
+        ]
+        for key, value in bad:
+            data = fixture()
+            data[key]['value'] = value
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                module.render(data, ACCOUNT, REGION)
+        from unittest import mock
+        with mock.patch('subprocess.run', side_effect=AssertionError('process')), \
+             mock.patch('socket.socket', side_effect=AssertionError('network')), \
+             mock.patch.object(pathlib.Path, 'read_text', side_effect=AssertionError('credentials')):
+            module.render(fixture(), ACCOUNT, REGION)
+        data = fixture()
+        data['node_subnet_ids']['value'] = data['private_subnet_ids']['value']
+        self.assertEqual(len(module.render(data, ACCOUNT, REGION)['variables']), 18)
+
+    def test_multicast_is_not_a_public_nat_eip_even_if_ipaddress_marks_it_global(self):
+        data = fixture()
+        data['nat_public_ip']['value'] = '224.0.0.1'
+        data['nat_egress_cidr']['value'] = '224.0.0.1/32'
+        data['allowed_client_cidrs']['value'].append('224.0.0.1/32')
+        with self.assertRaises(ValueError):
+            self.load().render(data, ACCOUNT, REGION)
+
+    def test_https_outputs_render_only_exact_lab_url_and_certificate_with_gate_closed(self):
+        data = fixture()
+        cert = f'arn:aws:acm:{REGION}:{ACCOUNT}:certificate/12345678-1234-1234-1234-123456789abc'
+        tls = {'lab_https_enabled': True, 'lab_hostname': 'eks.manaleague.com.br',
+               'lab_url': 'https://eks.manaleague.com.br', 'lab_certificate_arn': cert,
+               'lab_dns_zone_id': 'ZABCDEFGHIJKL',
+               'lab_dns_name_servers': ['ns-605.awsdns-11.net', 'ns-16.awsdns-02.com',
+                   'ns-1514.awsdns-61.org', 'ns-1580.awsdns-05.co.uk']}
+        data.update({k: {'value': v, 'sensitive': False} for k, v in tls.items()})
+        result = self.load().render(data, ACCOUNT, REGION)
+        values = {row['name']: row['value'] for row in result['variables']}
+        self.assertEqual(values['APP_URL'], tls['lab_url'])
+        self.assertEqual(values['ACM_CERTIFICATE_ARN'], cert)
+        self.assertEqual(values['LAB_DEPLOY_ENABLED'], 'false')
+        self.assertEqual(len(values), 18)
+        self.assertNotIn('ROUTE53_ZONE_ID', values)
+        self.assertNotIn('lab_dns_name_servers', values)
+
+    def test_https_metadata_rejects_foreign_and_inconsistent_domains_without_echoing_values(self):
+        import copy
+        valid = fixture()
+        values = {'lab_https_enabled': True, 'lab_hostname': 'eks.manaleague.com.br',
+            'lab_url': 'https://eks.manaleague.com.br',
+            'lab_certificate_arn': f'arn:aws:acm:{REGION}:{ACCOUNT}:certificate/12345678-1234-1234-1234-123456789abc',
+            'lab_dns_zone_id': 'ZABCDEFGHIJKL',
+            'lab_dns_name_servers': ['ns-605.awsdns-11.net', 'ns-16.awsdns-02.com',
+                'ns-1514.awsdns-61.org', 'ns-1580.awsdns-05.co.uk']}
+        valid.update({k: {'value': v, 'sensitive': False} for k, v in values.items()})
+        for key, value in [('lab_https_enabled', 'true'), ('lab_https_enabled', 1),
+                ('lab_hostname', 'manaleague.com.br'), ('lab_hostname', '*.manaleague.com.br'),
+                ('lab_url', 'http://eks.manaleague.com.br'), ('lab_url', 'https://www.manaleague.com.br'),
+                ('lab_url', 'https://eks.manaleague.com.br/'), ('lab_url', 'https://eks.manaleague.com.br.evil.test'),
+                ('lab_certificate_arn', values['lab_certificate_arn'].replace(ACCOUNT, '999999999999')),
+                ('lab_certificate_arn', values['lab_certificate_arn'].replace(REGION, 'us-west-2')),
+                ('lab_certificate_arn', 'arn:aws:acm:us-east-1:123456789012:certificate/*'),
+                ('lab_certificate_arn', values['lab_certificate_arn'] + ',another'),
+                ('lab_dns_zone_id', ''), ('lab_dns_zone_id', '/hostedzone/ZABCDEFGHIJKL'),
+                ('lab_dns_zone_id', 'zabcdefghijk'), ('lab_dns_name_servers', []),
+                ('lab_dns_name_servers', ['foreign.invalid'] * 4),
+                ('lab_dns_name_servers', values['lab_dns_name_servers'] + [values['lab_dns_name_servers'][0]]),
+                ('lab_dns_name_servers', [None] * 4)]:
+            data = copy.deepcopy(valid)
+            data[key]['value'] = value
+            with self.subTest(field=key, value=value), self.assertRaises(ValueError):
+                self.load().render(data, ACCOUNT, REGION)
+        for key, value in [('lab_url', values['lab_url']),
+                           ('lab_certificate_arn', values['lab_certificate_arn']),
+                           ('lab_dns_zone_id', values['lab_dns_zone_id']),
+                           ('lab_dns_name_servers', values['lab_dns_name_servers'])]:
+            data = fixture()
+            data[key]['value'] = value
+            with self.subTest(disabled_with=key), self.assertRaises(ValueError):
+                self.load().render(data, ACCOUNT, REGION)
 
     def test_cli_refuses_duplicate_json_without_echoing_input(self):
         import json

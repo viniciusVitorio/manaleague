@@ -78,8 +78,8 @@ resource "aws_iam_policy" "vpc_cni_boundary" {
   policy = jsonencode({ Version = "2012-10-17", Statement = [
     { Sid = "ReadOnlyDiscovery", Effect = "Allow", Action = "ec2:Describe*", Resource = "*" },
     { Sid = "CreateTaggedEni", Effect = "Allow", Action = "ec2:CreateNetworkInterface", Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:network-interface/*", Condition = { StringEquals = { "aws:RequestTag/manaleague.io/eks-lab-vpc" = aws_vpc.lab.id } } },
-    { Sid = "LabNetworkInputs", Effect = "Allow", Action = ["ec2:CreateNetworkInterface", "ec2:ModifyNetworkInterfaceAttribute"], Resource = concat([for subnet in aws_subnet.public : subnet.arn], [aws_security_group.nodes.arn]) },
-    { Sid = "MutateLabEni", Effect = "Allow", Action = ["ec2:AssignPrivateIpAddresses", "ec2:UnassignPrivateIpAddresses", "ec2:AttachNetworkInterface", "ec2:DetachNetworkInterface", "ec2:DeleteNetworkInterface", "ec2:ModifyNetworkInterfaceAttribute"], Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:network-interface/*", Condition = { StringEquals = { "ec2:Vpc" = aws_vpc.lab.arn, "ec2:ResourceTag/manaleague.io/eks-lab-vpc" = aws_vpc.lab.id } } },
+    { Sid = "LabNetworkInputs", Effect = "Allow", Action = ["ec2:CreateNetworkInterface", "ec2:ModifyNetworkInterfaceAttribute"], Resource = concat([for subnet in aws_subnet.database : subnet.arn], [aws_security_group.nodes.arn]) },
+    { Sid = "MutateLabEni", Effect = "Allow", Action = ["ec2:AssignPrivateIpAddresses", "ec2:UnassignPrivateIpAddresses", "ec2:AttachNetworkInterface", "ec2:DetachNetworkInterface", "ec2:DeleteNetworkInterface", "ec2:ModifyNetworkInterfaceAttribute"], Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:network-interface/*", Condition = { StringEquals = { "ec2:Vpc" = aws_vpc.lab.arn, "ec2:Subnet" = [for subnet in aws_subnet.database : subnet.arn], "ec2:ResourceTag/manaleague.io/eks-lab-vpc" = aws_vpc.lab.id } } },
     { Sid = "LabNodeTargets", Effect = "Allow", Action = ["ec2:AttachNetworkInterface", "ec2:DetachNetworkInterface", "ec2:ModifyNetworkInterfaceAttribute"], Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:instance/*", Condition = { StringEquals = { "ec2:ResourceTag/eks:eks-cluster-name" = local.name, "ec2:ResourceTag/manaleague.io/eks-lab-vpc" = aws_vpc.lab.id } } },
     { Sid = "EniTagsAtCreation", Effect = "Allow", Action = "ec2:CreateTags", Resource = "arn:aws:ec2:${var.aws_region}:${var.expected_account_id}:network-interface/*", Condition = { StringEquals = { "ec2:CreateAction" = "CreateNetworkInterface", "aws:RequestTag/manaleague.io/eks-lab-vpc" = aws_vpc.lab.id } } },
     # TagENI sends only changes; its timestamp/instance/cluster tags must work on
@@ -110,7 +110,7 @@ resource "aws_iam_role_policy_attachment" "load_balancer_controller" {
 # TG reconciliation trusts its lab cluster tag; Describe remains global.
 resource "aws_iam_policy" "controller_boundary" {
   name = "${local.name}-controller-boundary"
-  policy = jsonencode({ Version = "2012-10-17", Statement = [
+  policy = jsonencode({ Version = "2012-10-17", Statement = concat([
     { Effect = "Allow", Action = ["ec2:Describe*", "ec2:GetCoipPoolUsage", "ec2:GetSecurityGroupsForVpc", "elasticloadbalancing:Describe*"], Resource = "*" },
     { Effect = "Allow", Action = "iam:CreateServiceLinkedRole", Resource = "arn:aws:iam::${var.expected_account_id}:role/aws-service-role/elasticloadbalancing.amazonaws.com/*", Condition = { StringEquals = { "iam:AWSServiceName" = "elasticloadbalancing.amazonaws.com" } } },
 
@@ -157,7 +157,7 @@ resource "aws_iam_policy" "controller_boundary" {
     # Creation authorizes the parent; tagging authorizes the new child ARN.
     { Effect = "Allow", Action = "elasticloadbalancing:CreateListener", Resource = "arn:aws:elasticloadbalancing:${var.aws_region}:${var.expected_account_id}:loadbalancer/app/${local.name}/*" },
     { Effect = "Allow", Action = ["elasticloadbalancing:CreateRule", "elasticloadbalancing:DeleteListener", "elasticloadbalancing:DeleteRule", "elasticloadbalancing:ModifyListener", "elasticloadbalancing:ModifyRule", "elasticloadbalancing:SetRulePriorities", "elasticloadbalancing:AddTags", "elasticloadbalancing:RemoveTags"], Resource = ["arn:aws:elasticloadbalancing:${var.aws_region}:${var.expected_account_id}:listener/app/${local.name}/*/*", "arn:aws:elasticloadbalancing:${var.aws_region}:${var.expected_account_id}:listener-rule/app/${local.name}/*/*/*"] }
-  ] })
+  ], local.lab_controller_certificate_read) })
 }
 # Role boundary is declared here rather than on a separate identity resource.
 resource "aws_iam_role" "github_deploy" {

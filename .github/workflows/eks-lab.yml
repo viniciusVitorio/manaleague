@@ -220,6 +220,7 @@ jobs:
       WEB_IMAGE: ${{ needs.publish.outputs.web_image }}
       RELEASE: ${{ github.sha }}
       APP_URL: ${{ vars.APP_URL }}
+      ACM_CERTIFICATE_ARN: ${{ vars.ACM_CERTIFICATE_ARN }}
       AVATAR_BUCKET: ${{ vars.AVATAR_BUCKET }}
       APP_ROLE_ARN: ${{ vars.APP_ROLE_ARN }}
       VPC_CIDR: ${{ vars.VPC_CIDR }}

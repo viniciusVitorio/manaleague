@@ -23,7 +23,8 @@ OWNER = 'manaleague.io/cluster'
 EBS = 'ebs.csi.aws.com/cluster'
 NODE = {'ec2:ResourceTag/' + GUARD: VPC_ID,
         'ec2:ResourceTag/eks:eks-cluster-name': LAB}
-ENI = {'ec2:Vpc': VPC, 'ec2:ResourceTag/' + GUARD: VPC_ID}
+ENI = {'ec2:Vpc': VPC, 'ec2:ResourceTag/' + GUARD: VPC_ID,
+       'ec2:Subnet': PREFIX + 'subnet/subnet-1123456789abcdef0'}
 OWNED = {'ec2:ResourceTag/' + OWNER: LAB, 'ec2:ResourceTag/' + EBS: 'true', 'ec2:Owner': '123456789012'}
 REQUEST = {'aws:RequestTag/' + OWNER: LAB, 'aws:RequestTag/' + EBS: 'true'}
 
@@ -75,7 +76,7 @@ def allowed(policy, action, resource, context):
 
 def render():
     # A short Linux TMPDIR avoids the provider mock's Unix socket path limit.
-    linux = '/root/.cache/hermes-scratch/eks-restore'
+    linux = '/root/.cache/hermes-scratch/eks-private'
     path = str(ROOT / 'terraform').replace('\\', '/')
     if os.name == 'nt':
         path = '/mnt/' + path[0].lower() + path[2:]
@@ -83,10 +84,14 @@ def render():
         subprocess.run(prefix + ['mkdir', '-p', linux], check=True, capture_output=True)
         data = subprocess.check_output(prefix + ['mktemp', '-d', linux + '/ab.XXXXXX'], text=True).strip()
         base = prefix + ['env', 'TF_DATA_DIR=' + data, 'TMPDIR=' + linux,
+                         'AWS_CONFIG_FILE=/dev/null', 'AWS_SHARED_CREDENTIALS_FILE=/dev/null',
                          'AWS_EC2_METADATA_DISABLED=true', 'TF_IN_AUTOMATION=true', 'terraform']
     else:
-        data = tempfile.mkdtemp(prefix='addon-boundary-')
-        base = ['env', 'TF_DATA_DIR=' + data, 'AWS_EC2_METADATA_DISABLED=true', 'terraform']
+        linux = tempfile.gettempdir()
+        data = tempfile.mkdtemp(prefix='ab-', dir=linux)
+        base = ['env', 'TF_DATA_DIR=' + data, 'TMPDIR=' + linux,
+                'AWS_CONFIG_FILE=/dev/null', 'AWS_SHARED_CREDENTIALS_FILE=/dev/null',
+                'AWS_EC2_METADATA_DISABLED=true', 'terraform']
     logs = Path(os.environ.get('ADDON_BOUNDARY_LOG_DIR', tempfile.gettempdir()))
     logs.mkdir(parents=True, exist_ok=True)
     for name, args in [('init', ['init', '-backend=false', '-lockfile=readonly', '-input=false', '-no-color']),
@@ -122,6 +127,30 @@ class AddonBoundaries(unittest.TestCase):
         cls.resources = render()
         cls.reference = json.loads((ROOT / 'tests/fixtures/addon-aws-authorization.json').read_text())
 
+    def test_private_default_route_uses_single_public_nat_and_dedicated_eip(self):
+        r = self.resources
+        self.assertEqual([a for a in r if a.startswith('aws_nat_gateway.')], ['aws_nat_gateway.lab'])
+        self.assertEqual([a for a in r if a.startswith('aws_eip.')], ['aws_eip.nat'])
+        nat, eip = r['aws_nat_gateway.lab'], r['aws_eip.nat']
+        self.assertEqual(nat['connectivity_type'], 'public')
+        self.assertEqual(nat['subnet_id'], r['aws_subnet.public[0]']['id'])
+        self.assertEqual(eip['domain'], 'vpc')
+        public = r['aws_route.internet']
+        private = r['aws_route.private_nat']
+        self.assertEqual(public['destination_cidr_block'], '0.0.0.0/0')
+        self.assertEqual(private['destination_cidr_block'], '0.0.0.0/0')
+        self.assertIsNone(private.get('gateway_id'))
+        self.assertEqual(len([a for a in r if a.startswith('aws_subnet.')]), 4)
+        # Source checks cover dependency edges and absence of inline route
+        # management, which a provider mock cannot establish from API state.
+        network = (ROOT / 'terraform/network.tf').read_text()
+        database = (ROOT / 'terraform/rds.tf').read_text()
+        self.assertIn('allocation_id     = aws_eip.nat.id', network)
+        self.assertIn('nat_gateway_id         = aws_nat_gateway.lab.id', network)
+        self.assertRegex(network, r'depends_on\s*=\s*\[aws_internet_gateway.lab, aws_route.internet, aws_route_table_association.public\]')
+        route_table = database.split('resource "aws_route_table" "database" {', 1)[1].split('}', 1)[0]
+        self.assertNotRegex(route_table, r'\broute\s*=')
+
     def policy(self, name):
         resource = self.resources.get('aws_iam_policy.' + name + '_boundary')
         self.assertIsNotNone(resource, name + ' must have a permissions boundary')
@@ -138,6 +167,26 @@ class AddonBoundaries(unittest.TestCase):
         effective = boundary and allowed(self.upstream, 'ec2:' + action, arn, context)
         self.assertEqual(boundary, expected, ('boundary', action, arn, context))
         self.assertEqual(effective, expected, ('managed-policy intersection', action, arn, context))
+
+    def test_cni_authorizes_both_private_subnets_never_public_or_production(self):
+        p = self.policy('vpc_cni')
+        for action in ('CreateNetworkInterface', 'ModifyNetworkInterfaceAttribute'):
+            for suffix in ('subnet-1123456789abcdef0', 'subnet-1123456789abcdef1'):
+                self.check(p, True, action, 'subnet', {}, suffix)
+            for suffix in ('subnet-0123456789abcdef0', 'subnet-0123456789abcdef1', 'subnet-production'):
+                self.check(p, False, action, 'subnet', {}, suffix)
+            self.check(p, True, action, 'security-group', {}, 'sg-0123456789abcdef0')
+            self.check(p, False, action, 'security-group', {}, 'sg-production')
+
+    def test_cni_existing_enis_require_private_subnet_context(self):
+        p = self.policy('vpc_cni')
+        for action in ('AssignPrivateIpAddresses', 'UnassignPrivateIpAddresses', 'DeleteNetworkInterface',
+                       'AttachNetworkInterface', 'DetachNetworkInterface', 'ModifyNetworkInterfaceAttribute'):
+            for subnet in ('subnet-1123456789abcdef0', 'subnet-1123456789abcdef1'):
+                self.check(p, True, action, 'network-interface', {**ENI, 'ec2:Subnet': arn_for('subnet', subnet)})
+            for subnet in ('subnet-0123456789abcdef0', 'subnet-0123456789abcdef1', 'subnet-production'):
+                self.check(p, False, action, 'network-interface', {**ENI, 'ec2:Subnet': arn_for('subnet', subnet)})
+            self.check(p, False, action, 'network-interface', {k: v for k, v in ENI.items() if k != 'ec2:Subnet'})
 
     def test_cni_vpc_and_node_isolation_preserves_lifecycle(self):
         p = self.policy('vpc_cni')
@@ -158,7 +207,7 @@ class AddonBoundaries(unittest.TestCase):
         self.check(p, True, 'CreateNetworkInterface', 'network-interface', request)
         self.check(p, False, 'CreateNetworkInterface', 'network-interface', {})
         for action in ('CreateNetworkInterface', 'ModifyNetworkInterfaceAttribute'):
-            self.check(p, True, action, 'subnet', {}, 'subnet-0123456789abcdef0')
+            self.check(p, True, action, 'subnet', {}, 'subnet-1123456789abcdef0')
             self.check(p, True, action, 'security-group', {}, 'sg-0123456789abcdef0')
             self.check(p, False, action, 'subnet', request, 'subnet-production')
             self.check(p, False, action, 'security-group', request, 'sg-production')
@@ -262,7 +311,7 @@ class AddonBoundaries(unittest.TestCase):
         cases = [
             ('vpc_cni', 'AttachNetworkInterface', [('network-interface', ENI), ('instance', NODE)]),
             ('vpc_cni', 'CreateNetworkInterface', [('network-interface', {'aws:RequestTag/' + GUARD: VPC_ID}),
-                                                ('subnet/subnet-0123456789abcdef0', {}),
+                                                ('subnet/subnet-1123456789abcdef0', {}),
                                                 ('security-group/sg-0123456789abcdef0', {})]),
             ('ebs_csi', 'CreateSnapshot', [('snapshot', REQUEST), ('volume', OWNED)]),
             ('ebs_csi', 'CreateVolume', [('volume', REQUEST), ('snapshot', OWNED)]),

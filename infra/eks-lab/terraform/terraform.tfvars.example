@@ -12,6 +12,10 @@ github_oidc_subject = "repo:viniciusVitorio/manaleague:environment:eks-lab"
 api_public_access_cidrs = ["203.0.113.10/32", "198.51.100.20/32"]
 # Authoritative ALB client allowlist (custom SG ignores the Ingress inbound-cidrs annotation).
 allowed_client_cidrs = ["203.0.113.10/32"]
+# Optional lab-only HTTPS remains OFF by default. Supply a verified literal
+# existing public parent zone ID (Z...) only when explicitly enabling HTTPS.
+enable_lab_https = false
+lab_dns_zone_id  = ""
 aws_region = "us-east-1"
 kubernetes_version = "1.37"
 node_count = 1

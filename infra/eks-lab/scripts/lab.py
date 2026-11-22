@@ -12,6 +12,12 @@ import time
 from pathlib import Path
 import subprocess
 import sys
+import importlib.util
+
+# File-based loading also supports offline callers importing this operator by path.
+_contract_spec = importlib.util.spec_from_file_location('lab_https_contract', Path(__file__).with_name('https_contract.py'))
+https_contract = importlib.util.module_from_spec(_contract_spec)
+_contract_spec.loader.exec_module(https_contract)
 
 ROOT = Path(__file__).resolve().parents[3]
 LAB = ROOT / 'infra/eks-lab'
@@ -252,9 +258,35 @@ def rds_password(account, region):
         raise ValueError('Invalid or unavailable current RDS-managed lab credential') from None
 
 
-def manifest_guard(directory, db_host=None, region=None):
+def configure_ingress(base, values):
+    """Configure only the rendered, existing lab Ingress; never create an ALB/DNS."""
+    https_contract.validate_app_url(values['APP_URL'])
+    if values['APP_URL'] != https_contract.ORIGIN:
+        if values.get('ACM_CERTIFICATE_ARN'):
+            raise ValueError('ACM certificate requires the exact lab HTTPS origin')
+        return
+    role = re.fullmatch(r'arn:aws:iam::([0-9]{12}):role/manaleague-eks-lab-app', values.get('APP_ROLE_ARN', ''))
+    if not role:
+        raise ValueError('Exact lab app role required for HTTPS certificate binding')
+    arn = values.get('ACM_CERTIFICATE_ARN', '')
+    https_contract.validate_certificate_arn(arn, account=role[1], region=values['AWS_REGION'])
+    path = Path(base) / 'ingress.yaml'
+    ingress = json.loads(path.read_text())
+    annotations = ingress['metadata']['annotations']
+    prefix = 'alb.ingress.kubernetes.io/'
+    annotations.update({prefix + 'listen-ports': '[{"HTTP":80},{"HTTPS":443}]',
+                        prefix + 'certificate-arn': arn,
+                        prefix + 'ssl-policy': https_contract.SSL_POLICY,
+                        prefix + 'ssl-redirect': '443'})
+    for rule in ingress['spec']['rules']:
+        rule['host'] = https_contract.HOSTNAME
+    path.write_text(json.dumps(ingress, indent=2))
+
+
+def manifest_guard(directory, db_host=None, region=None, *, values=None):
     """The checked-in manifests intentionally use JSON-compatible YAML for stdlib validation."""
     found_config = False
+    ingresses = []
     allowed = {'ConfigMap', 'Deployment', 'Service', 'Ingress', 'NetworkPolicy', 'CronJob', 'PodDisruptionBudget'}
     for path in directory.rglob('*.yaml'):
         if path.name == 'kustomization.yaml':
@@ -267,6 +299,8 @@ def manifest_guard(directory, db_host=None, region=None):
                 raise ValueError('Only approved namespaced lab resources may be deployed')
             if resource.get('kind') == 'Service' and (resource.get('metadata', {}).get('name') == 'postgres' or resource.get('spec', {}).get('selector', {}).get('app') == 'postgres'):
                 raise ValueError('In-cluster PostgreSQL service forbidden in RDS database mode')
+            if resource.get('kind') == 'Ingress':
+                ingresses.append(resource)
             if resource.get('kind') == 'ConfigMap' and resource['metadata']['name'] == 'manaleague-config':
                 found_config = True
                 data = resource['data']
@@ -275,8 +309,26 @@ def manifest_guard(directory, db_host=None, region=None):
                 host_pattern = re.escape(NAME) + r'\.[a-z0-9]+\.' + re.escape(expected_region) + r'\.rds\.amazonaws\.com'
                 if not expected_region or not re.fullmatch(host_pattern, expected_host) or data.get('DB_HOST') != expected_host or any(data.get(key) != value for key, value in {'APP_ENV': 'eks-lab', 'DB_DATABASE': 'manaleague_eks_lab', 'DB_USERNAME': 'manaleague_lab', 'DB_PORT': '5432', 'LAB_DATABASE_MODE': 'rds', 'DB_SSLMODE': 'verify-full'}.items()) or data.get('PGSSLROOTCERT') != '/var/www/html/infra/eks-lab/runtime/certs/global-bundle.pem' or data.get('DB_URL', ''):
                     raise ValueError('Lab environment/database/TLS guard failed')
+                if values is None and data.get('APP_URL', '').startswith('https:'):
+                    raise ValueError('HTTPS manifest validation requires explicit deployment bindings')
+                if values is not None and any(data.get(key) != value for key, value in _runtime_config(values['APP_URL']).items()):
+                    raise ValueError('Lab runtime origin/cookie/WebSocket TLS guard failed')
     if not found_config:
         raise ValueError('Missing guarded manaleague-config')
+    if values is not None:
+        https_contract.validate_app_url(values['APP_URL'])
+        secure = values['APP_URL'] == https_contract.ORIGIN
+        expected = json.loads(replace_tokens((LAB / 'kubernetes/base/ingress.yaml').read_text(), values))
+        prefix = 'alb.ingress.kubernetes.io/'
+        if secure:
+            expected['spec']['rules'][0]['host'] = https_contract.HOSTNAME
+            expected['metadata']['annotations'].update({
+                prefix + 'listen-ports': '[{"HTTP":80},{"HTTPS":443}]',
+                prefix + 'certificate-arn': values.get('ACM_CERTIFICATE_ARN', ''),
+                prefix + 'ssl-policy': https_contract.SSL_POLICY, prefix + 'ssl-redirect': '443'})
+        if len(ingresses) != 1 or ingresses[0].get('spec') != expected['spec'] or ingresses[0].get('metadata') != expected['metadata']:
+            raise ValueError('Lab Ingress host/certificate/TLS/private publisher guard failed')
+
 
 def deployment_values(account):
     import ipaddress
@@ -284,12 +336,12 @@ def deployment_values(account):
     values = {key: require(key) for key in ('AVATAR_BUCKET', 'AWS_REGION', 'VPC_CIDR', 'APP_ROLE_ARN', 'ALLOWED_CIDRS', 'SUBNET_IDS', 'ALB_SECURITY_GROUP_ID', 'DB_HOST', 'VPC_ID', 'RDS_MASTER_SECRET_ARN')}
     rds_bindings(account, values['AWS_REGION'], values)
     values['APP_URL'] = require('APP_URL') if os.environ.get('APP_URL') else 'http://eks-lab.invalid'
-    url = urlparse(values['APP_URL'])
-    # Parse the port now, before any cluster write, rather than in the final probe.
-    if url.port is not None and not 1 <= url.port <= 65535:
-        raise ValueError('APP_URL has an invalid port')
-    if re.search(r'\s', values['APP_URL']) or url.scheme not in ('http', 'https') or not url.hostname or url.hostname == 'manaleague.com.br' or url.hostname.endswith('.manaleague.com.br') or url.username or url.password or url.query or url.fragment or url.path not in ('', '/'):
-        raise ValueError('APP_URL must be an isolated lab origin, never a production domain or URL with credentials/path/query')
+    https_contract.validate_app_url(values['APP_URL'])
+    values['ACM_CERTIFICATE_ARN'] = os.environ.get('ACM_CERTIFICATE_ARN', '')
+    if values['APP_URL'] == https_contract.ORIGIN:
+        https_contract.validate_certificate_arn(values['ACM_CERTIFICATE_ARN'], account=account, region=values['AWS_REGION'])
+    elif values['ACM_CERTIFICATE_ARN']:
+        raise ValueError('ACM certificate requires the exact lab HTTPS origin')
     if not values['AVATAR_BUCKET'].startswith(NAME + '-') or values['APP_ROLE_ARN'] != f'arn:aws:iam::{account}:role/{NAME}-app':
         raise ValueError('Exact lab avatar bucket/IRSA role required')
     ipaddress.ip_network(values['VPC_CIDR'])
@@ -305,13 +357,26 @@ def deployment_values(account):
             raise ValueError('ALB_SECURITY_GROUP_ID must be the exact Terraform lab ALB SG ID')
     return values
 
+def _runtime_config(app_url):
+    from urllib.parse import urlparse
+    https_contract.validate_app_url(app_url)
+    secure = app_url == https_contract.ORIGIN
+    return {'APP_URL': app_url.rstrip('/'),
+            'SESSION_COOKIE': https_contract.COOKIE if secure else 'manaleague_eks_lab_session',
+            'SESSION_SECURE_COOKIE': 'true' if secure else 'false',
+            'SESSION_DOMAIN': '', 'SESSION_PATH': '/',
+            'SESSION_HTTP_ONLY': 'true', 'SESSION_SAME_SITE': 'lax',
+            'REVERB_ALLOWED_ORIGINS': urlparse(app_url).hostname,
+            'REVERB_CLIENT_URL': 'wss://' + https_contract.HOSTNAME if secure else '',
+            'REVERB_HOST': 'reverb', 'REVERB_PORT': '8080', 'REVERB_SCHEME': 'http'}
+
+
 def configure_runtime(base, app_url, secrets):
     """Roll envFrom consumers on config/secret changes, including future CronJob Pods."""
-    from urllib.parse import urlparse
+    runtime = _runtime_config(app_url)
     path = base / 'app-config.yaml'
     config = json.loads(path.read_text())
-    config['data']['APP_URL'] = app_url.rstrip('/')
-    config['data']['REVERB_ALLOWED_ORIGINS'] = urlparse(app_url).hostname
+    config['data'].update(runtime)
     path.write_text(json.dumps(config, indent=2))
     checksum = hashlib.sha256(json.dumps({'config': config['data'], 'secrets': {key: secrets[key] for key in ('APP_KEY', 'DB_PASSWORD')}}, sort_keys=True).encode()).hexdigest()
     for path in base.rglob('*.yaml'):
@@ -372,6 +437,12 @@ def finalize_endpoint(kube, base, values, secrets):
     expected = json.loads((base / 'app-config.yaml').read_text())['data']
     if actual.get('data') != expected:
         raise ValueError('Final application URL/origin ConfigMap read-back mismatch')
+    if values['APP_URL'] == https_contract.ORIGIN:
+        ingress = json.loads(run(kube + ['get', 'ingress', 'manaleague', '-o', 'json']))
+        expected_ingress = json.loads((base / 'ingress.yaml').read_text())
+        annotations = ingress.get('metadata', {}).get('annotations', {})
+        if ingress.get('spec') != expected_ingress['spec'] or any(annotations.get(key) != value for key, value in expected_ingress['metadata']['annotations'].items()):
+            raise ValueError('HTTPS Ingress host/certificate/TLS read-back mismatch')
     for deployment in ('manaleague', 'reverb'):
         run(kube + ['rollout', 'status', f'deployment/{deployment}', '--timeout=300s'])
     postdeploy_smoke(url, secrets['APP_KEY'])
@@ -379,6 +450,18 @@ def finalize_endpoint(kube, base, values, secrets):
 
 
 def deploy(account, region):
+    values = deployment_values(account)
+    if values['AWS_REGION'] != region:
+        raise ValueError('Deployment region must match validated bindings')
+    if values['APP_URL'] == https_contract.ORIGIN:
+        arn = values.get('ACM_CERTIFICATE_ARN', '')
+        https_contract.validate_certificate_arn(arn, account=account, region=region)
+        try:
+            certificate = json.loads(run(['aws', 'acm', 'describe-certificate', '--certificate-arn', arn, '--region', region]))['Certificate']
+            tags = json.loads(run(['aws', 'acm', 'list-tags-for-certificate', '--certificate-arn', arn, '--region', region]))['Tags']
+            https_contract.validate_certificate(certificate, tags, account=account, region=region, arn=arn)
+        except (KeyError, TypeError, ValueError, OSError, subprocess.CalledProcessError):
+            raise ValueError('HTTPS certificate preflight failed: exact issued lab-owned host certificate required') from None
     secrets = {key: require(key) for key in ('APP_KEY', 'DEMO_PASSWORD')}
     try:
         if not secrets['APP_KEY'].startswith('base64:') or len(base64.b64decode(secrets['APP_KEY'][7:], validate=True)) != 32:
@@ -387,7 +470,6 @@ def deploy(account, region):
         raise ValueError('Invalid lab APP_KEY') from error
     if len(secrets['DEMO_PASSWORD']) < 24:
         raise ValueError('Lab demo password must be at least 24 characters')
-    values = deployment_values(account)
     images = {t: image_guard(require(f'{t.upper()}_IMAGE'), account, region, t) for t in ('app', 'web')}
     release = require('RELEASE')
     if not re.fullmatch(r'[a-f0-9]{40}', release):
@@ -401,8 +483,9 @@ def deploy(account, region):
             file.write_text(text)
         # Credential stays in process memory and stdin only, never environment/argv/logs.
         secrets['DB_PASSWORD'] = rds_password(account, region)
+        configure_ingress(base, values)
         configure_runtime(base, values['APP_URL'], secrets)
-        manifest_guard(base, values['DB_HOST'], region)
+        manifest_guard(base, values['DB_HOST'], region, values=values)
         rendered = run(['kubectl', 'kustomize', base])
         kube = kube_config(account, region, temp / 'kubeconfig') + ['-n', NAME]
         if json.loads(run(kube + ['get', 'statefulset', '-o', 'json']))['items']:

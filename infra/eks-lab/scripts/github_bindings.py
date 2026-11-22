@@ -23,12 +23,45 @@ MAPPING = {
 }
 
 
+DNS_NAME_SERVERS = frozenset(('ns-605.awsdns-11.net', 'ns-16.awsdns-02.com',
+                             'ns-1514.awsdns-61.org', 'ns-1580.awsdns-05.co.uk'))
+HTTPS_HOSTNAME = 'eks.manaleague.com.br'
+HTTPS_ORIGIN = 'https://' + HTTPS_HOSTNAME
+
+
+def https_bindings(source, account, region):
+    """Validate output consistency only; never infer live ACM/DNS ownership."""
+    enabled = source['lab_https_enabled']
+    if type(enabled) is not bool or source['lab_hostname'] != HTTPS_HOSTNAME:
+        raise ValueError('Invalid explicit HTTPS mode or lab hostname')
+    if not enabled:
+        if any(source[key] != '' for key in ('lab_url', 'lab_certificate_arn', 'lab_dns_zone_id')) or source['lab_dns_name_servers'] != []:
+            raise ValueError('Disabled HTTPS must not carry active domain bindings')
+        return {'ACM_CERTIFICATE_ARN': '', 'APP_URL': ''}
+    cert = source['lab_certificate_arn']
+    pattern = (re.escape(f'arn:aws:acm:{region}:{account}:certificate/')
+               + r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}')
+    if source['lab_url'] != HTTPS_ORIGIN or not isinstance(cert, str) or not re.fullmatch(pattern, cert):
+        raise ValueError('Only exact lab HTTPS origin and account/region certificate allowed')
+    zone = source['lab_dns_zone_id']
+    servers = source['lab_dns_name_servers']
+    if (not isinstance(zone, str) or not re.fullmatch(r'Z[A-Z0-9]{7,31}', zone)
+            or not isinstance(servers, list) or len(servers) != 4
+            or any(not isinstance(server, str) for server in servers)
+            or set(servers) != DNS_NAME_SERVERS):
+        raise ValueError('Explicit public-zone identity and authoritative name servers required')
+    return {'ACM_CERTIFICATE_ARN': cert, 'APP_URL': HTTPS_ORIGIN}
+
+
 def render(outputs, account, region):
     if not isinstance(account, str) or not re.fullmatch(r'[0-9]{12}', account):
         raise ValueError('Expected account must be exactly twelve digits')
     if not isinstance(region, str) or not re.fullmatch(r'[a-z]{2}-[a-z]+-[1-9]', region):
         raise ValueError('Invalid selected region')
-    required = set(MAPPING.values()) | {'lab_identity', 'rds_identifier', 'rds_database'}
+    required = set(MAPPING.values()) | {'lab_identity', 'rds_identifier', 'rds_database',
+        'private_subnet_ids', 'node_subnet_ids', 'nat_gateway_id', 'nat_public_ip', 'nat_egress_cidr',
+        'lab_https_enabled', 'lab_hostname', 'lab_url', 'lab_certificate_arn',
+        'lab_dns_zone_id', 'lab_dns_name_servers'}
     if not isinstance(outputs, dict):
         raise ValueError('Terraform outputs object required')
     source = {}
@@ -71,6 +104,21 @@ def render(outputs, account, region):
             raise ValueError('Two distinct public subnet IDs required')
         if any(not isinstance(s, str) or not re.fullmatch(r'subnet-(?:[a-f0-9]{8}|[a-f0-9]{17})', s) for s in subnets):
             raise ValueError('Invalid subnet IDs')
+        private_ids, node_ids = source['private_subnet_ids'], source['node_subnet_ids']
+        for ids, sizes in ((private_ids, (2,)), (node_ids, (1, 2))):
+            if (not isinstance(ids, list) or len(ids) not in sizes
+                    or any(not isinstance(s, str) or not re.fullmatch(r'subnet-(?:[a-f0-9]{8}|[a-f0-9]{17})', s) for s in ids)
+                    or len(set(ids)) != len(ids)):
+                raise ValueError('Distinct private/node subnet IDs required')
+        if set(private_ids) & set(subnets) or not set(node_ids).issubset(private_ids):
+            raise ValueError('Nodes must use private subnets disjoint from public ALB subnets')
+        if not isinstance(source['nat_gateway_id'], str) or not re.fullmatch(r'nat-[a-f0-9]{17}', source['nat_gateway_id']):
+            raise ValueError('Invalid NAT gateway ID')
+        ip = source['nat_public_ip']
+        if not isinstance(ip, str) or str(ipaddress.IPv4Address(ip)) != ip or not ipaddress.IPv4Address(ip).is_global or ipaddress.IPv4Address(ip).is_multicast:
+            raise ValueError('Canonical global IPv4 NAT EIP required')
+        if source['nat_egress_cidr'] != ip + '/32' or source['nat_egress_cidr'] not in source['allowed_client_cidrs']:
+            raise ValueError('Exact NAT EIP /32 must be in ALB allowlist')
         cidrs = source['allowed_client_cidrs']
         if not isinstance(cidrs, list) or not cidrs or len(set(cidrs)) != len(cidrs):
             raise ValueError('Unique client host CIDRs required')
@@ -78,14 +126,15 @@ def render(outputs, account, region):
             if not isinstance(value, str):
                 raise ValueError('String host CIDRs required')
             cidr = ipaddress.ip_network(value, strict=True)
-            if cidr.version != 4 or cidr.prefixlen != 32 or str(cidr) != value or not cidr.network_address.is_global:
+            if cidr.version != 4 or cidr.prefixlen != 32 or str(cidr) != value or not cidr.network_address.is_global or cidr.network_address.is_multicast:
                 raise ValueError('Only canonical public IPv4 /32 clients accepted')
     except (TypeError, AttributeError) as error:
         raise ValueError('Invalid network output types') from error
     values = {name: source[key] for name, key in MAPPING.items()}
     for key in ('SUBNET_IDS', 'ALLOWED_CIDRS'):
         values[key] = ','.join(values[key])
-    values.update(LAB_DEPLOY_ENABLED='false', APP_URL='')
+    values.update(https_bindings(source, account, region))
+    values['LAB_DEPLOY_ENABLED'] = 'false'
     return {'repository': 'viniciusVitorio/manaleague', 'environment': 'eks-lab',
             'variables': [{'name': k, 'value': v} for k, v in values.items()]}
 

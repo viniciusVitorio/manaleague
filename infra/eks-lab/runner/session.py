@@ -109,21 +109,243 @@ def target(args, remote):
     return cluster
 
 
+def topology_subnets(cluster, args, remote):
+    import ipaddress
+    vpc_id = cluster['resourcesVpcConfig']['vpcId']
+    subnets = remote.aws('ec2', 'describe-subnets', '--filters', f'Name=vpc-id,Values={vpc_id}')['Subnets']
+    expected = {CLUSTER + '-' + role + '-' + str(i): public
+                for role, public in (('public', True), ('private', False)) for i in (1, 2)}
+    found = {}
+    for subnet in subnets:
+        names = [t['Value'] for t in subnet.get('Tags', []) if t.get('Key') == 'Name']
+        if (len(names) != 1 or names[0] not in expected or names[0] in found
+                or subnet.get('VpcId') != vpc_id
+                or subnet.get('MapPublicIpOnLaunch') is not expected[names[0]]
+                or not subnet.get('SubnetId')
+                or not ipaddress.IPv4Network(subnet['CidrBlock']).subnet_of(ipaddress.IPv4Network(args.vpc_cidr))):
+            raise ValueError('exact public/private lab subnet identity and mapping required')
+        found[names[0]] = subnet
+    if set(found) != set(expected) or len({s['SubnetId'] for s in found.values()}) != 4:
+        raise ValueError('two public and two shared EKS/RDS private subnets required')
+    private_ids = {s['SubnetId'] for name, s in found.items() if not expected[name]}
+    configured = cluster['resourcesVpcConfig'].get('subnetIds', [])
+    if len(configured) != 2 or set(configured) != private_ids:
+        raise ValueError('cluster ENI subnets must be exactly both private subnets')
+    return found, private_ids
+
+
+def topology_nat(cluster, subnets, private_ids, remote):
+    import ipaddress
+    vpc_id = cluster['resourcesVpcConfig']['vpcId']
+    tables = remote.aws('ec2', 'describe-route-tables', '--filters', f'Name=vpc-id,Values={vpc_id}')['RouteTables']
+    nats = remote.aws('ec2', 'describe-nat-gateways', '--filter', f'Name=vpc-id,Values={vpc_id}')['NatGateways']
+    if len(nats) != 1:
+        raise ValueError('exactly one lab NAT gateway required')
+    nat = nats[0]
+    if (nat.get('VpcId') != vpc_id or nat.get('State') != 'available'
+            or nat.get('ConnectivityType') != 'public'
+            or nat.get('SubnetId') != subnets[CLUSTER + '-public-1']['SubnetId']
+            or not re.fullmatch(r'nat-[a-f0-9]{17}', nat.get('NatGatewayId', ''))):
+        raise ValueError('exact available public NAT in first public subnet required')
+    addresses = nat.get('NatGatewayAddresses', [])
+    if len(addresses) != 1 or not addresses[0].get('AllocationId'):
+        raise ValueError('one NAT Elastic IP allocation required')
+    address = addresses[0]
+    ip = address.get('PublicIp', '')
+    if str(ipaddress.IPv4Address(ip)) != ip or not ipaddress.IPv4Address(ip).is_global or ipaddress.IPv4Address(ip).is_multicast:
+        raise ValueError('global IPv4 NAT Elastic IP required')
+    eips = remote.aws('ec2', 'describe-addresses', '--allocation-ids', address['AllocationId'])['Addresses']
+    if (len(eips) != 1 or eips[0].get('AllocationId') != address['AllocationId']
+            or eips[0].get('PublicIp') != ip or eips[0].get('Domain') != 'vpc'):
+        raise ValueError('exact NAT Elastic IP allocation mismatch')
+    igws = remote.aws('ec2', 'describe-internet-gateways', '--filters',
+                      f'Name=attachment.vpc-id,Values={vpc_id}')['InternetGateways']
+    if (len(igws) != 1 or not igws[0].get('InternetGatewayId', '').startswith('igw-')
+            or igws[0].get('Attachments') != [{'VpcId': vpc_id, 'State': 'available'}]):
+        raise ValueError('exact VPC attached IGW required')
+    for subnet in subnets.values():
+        sid = subnet['SubnetId']
+        matches = [table for table in tables if any(a.get('SubnetId') == sid
+                   and a.get('AssociationState', {}).get('State') == 'associated'
+                   for a in table.get('Associations', []))]
+        if len(matches) != 1 or matches[0].get('VpcId') != vpc_id:
+            raise ValueError('exact associated subnet route table required')
+        defaults = [r for r in matches[0].get('Routes', []) if r.get('DestinationCidrBlock') == '0.0.0.0/0']
+        key, value = ('NatGatewayId', nat['NatGatewayId']) if sid in private_ids else ('GatewayId', igws[0]['InternetGatewayId'])
+        if (len(defaults) != 1 or defaults[0].get('State') != 'active' or defaults[0].get(key) != value
+                or (sid in private_ids and defaults[0].get('GatewayId'))):
+            raise ValueError('private default must use exact NAT; public default must use attached IGW')
+    return ip + '/32'
+
+
+def topology_nodes(cluster, subnets, private_ids, remote):
+    vpc_id = cluster['resourcesVpcConfig']['vpcId']
+    names = remote.aws('eks', 'list-nodegroups', '--cluster-name', CLUSTER)['nodegroups']
+    expected = [CLUSTER + '-az-1', CLUSTER + '-az-2']
+    if names not in ([expected[0]], expected, list(reversed(expected))):
+        raise ValueError('one first-AZ or two exact lab managed node groups required')
+    node_subnets = set()
+    for name in names:
+        group = remote.aws('eks', 'describe-nodegroup', '--cluster-name', CLUSTER,
+                           '--nodegroup-name', name)['nodegroup']
+        sid = subnets[CLUSTER + '-private-' + name[-1]]['SubnetId']
+        if (group.get('clusterName') != CLUSTER or group.get('nodegroupName') != name
+                or group.get('subnets') != [sid]):
+            raise ValueError('exact managed node group must use its private AZ subnet')
+        node_subnets.add(sid)
+    reservations = remote.aws('ec2', 'describe-instances', '--filters',
+        f'Name=vpc-id,Values={vpc_id}', 'Name=instance-state-name,Values=pending,running')['Reservations']
+    nodes = [node for reservation in reservations for node in reservation['Instances']]
+    if not nodes:
+        raise ValueError('at least one actual pending/running lab node required')
+    for node in nodes:
+        if (node.get('VpcId') != vpc_id or node.get('SubnetId') not in private_ids & node_subnets
+                or node.get('State', {}).get('Name') not in ('pending', 'running')
+                or not node.get('InstanceId')
+                or not any(t.get('Key') == 'eks:eks-cluster-name' and t.get('Value') == CLUSTER
+                           for t in node.get('Tags', []))
+                or node.get('PublicIpAddress')
+                or any(eni.get('Association', {}).get('PublicIp') for eni in node.get('NetworkInterfaces', []))):
+            raise ValueError('every live EC2 instance in lab VPC must be an eligible private lab node without public IP')
+
+
+def topology_alb(cluster, nat_cidr, remote, *, tls=False):
+    import ipaddress
+    vpc_id = cluster['resourcesVpcConfig']['vpcId']
+    groups = remote.aws('ec2', 'describe-security-groups', '--filters',
+        f'Name=vpc-id,Values={vpc_id}', f'Name=group-name,Values={CLUSTER}-alb')['SecurityGroups']
+    if (len(groups) != 1 or groups[0].get('VpcId') != vpc_id
+            or groups[0].get('GroupName') != CLUSTER + '-alb' or not groups[0].get('GroupId')):
+        raise ValueError('exact named lab VPC ALB security group required')
+    allowed = {port: set() for port in ((80, 443) if tls else (80,))}
+    for rule in groups[0].get('IpPermissions', []):
+        port = rule.get('FromPort')
+        if (rule.get('IpProtocol') not in ('tcp', '6') or port not in allowed or rule.get('ToPort') != port
+                or rule.get('Ipv6Ranges') or rule.get('UserIdGroupPairs') or rule.get('PrefixListIds')):
+            raise ValueError('ALB ingress must be host-only TCP80 or TLS TCP80+443 without other sources')
+        for source in rule.get('IpRanges', []):
+            value = source.get('CidrIp', '')
+            cidr = ipaddress.IPv4Network(value, strict=True)
+            if str(cidr) != value or cidr.prefixlen != 32 or not cidr.network_address.is_global or cidr.network_address.is_multicast:
+                raise ValueError('ALB sources must be canonical global IPv4 /32s')
+            allowed[port].add(value)
+    if any(nat_cidr not in clients for clients in allowed.values()) or (tls and allowed[80] != allowed[443]):
+        raise ValueError('exact NAT EIP /32 and identical ALB client allowlists required on every port')
+    return groups[0]['GroupId']
+
+
+def github_variable(remote, name):
+    value = remote.gh(f'repos/{REPO}/environments/eks-lab/variables/{name}')
+    if not isinstance(value, dict) or value.get('name') != name or not isinstance(value.get('value'), str):
+        raise ValueError('exact named string GitHub environment variable required')
+    return value['value']
+
+
+def https_mode(remote):
+    from urllib.parse import urlsplit
+    url = github_variable(remote, 'APP_URL')
+    if url == 'https://eks.manaleague.com.br':
+        return True
+    if url == '':
+        return False
+    try:
+        parsed = urlsplit(url)
+        host = parsed.hostname or ''
+        if (re.search(r'[\s\x00-\x1f\x7f\\?#%]', url) or not url.startswith('http://')
+                or parsed.scheme != 'http' or not host or host.endswith('.')
+                or host == 'manaleague.com.br' or host.endswith('.manaleague.com.br')
+                or parsed.username is not None or parsed.password is not None
+                or parsed.path not in ('', '/') or parsed.query or parsed.fragment
+                or (parsed.port is not None and not 1 <= parsed.port <= 65535)):
+            raise ValueError('invalid origin')
+    except ValueError:
+        raise ValueError('APP_URL must be isolated HTTP or exact https://eks.manaleague.com.br') from None
+    return False
+
+
+def https_preflight(args, remote, cluster, subnets, group_id):
+    # Load the pure contract only after consent and exact HTTPS mode selection.
+    spec = importlib.util.spec_from_file_location('eks_runner_https_contract',
+                                                HERE.parent / 'scripts' / 'https_contract.py')
+    assert spec is not None and spec.loader is not None
+    contract = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(contract)
+    arn = github_variable(remote, 'ACM_CERTIFICATE_ARN')
+    contract.validate_certificate_arn(arn, account=args.account, region=args.region)
+    certificate = remote.aws('acm', 'describe-certificate', '--certificate-arn', arn)['Certificate']
+    tags = remote.aws('acm', 'list-tags-for-certificate', '--certificate-arn', arn)['Tags']
+    contract.validate_certificate(certificate, tags, account=args.account, region=args.region, arn=arn)
+    balancers = remote.aws('elbv2', 'describe-load-balancers', '--names', CLUSTER)['LoadBalancers']
+    if len(balancers) != 1:
+        raise ValueError('one exact lab HTTPS ALB required')
+    balancer = balancers[0]
+    balancer_arn = balancer.get('LoadBalancerArn', '')
+    prefix = f'arn:aws:elasticloadbalancing:{args.region}:{args.account}:'
+    zones = balancer.get('AvailabilityZones', [])
+    public_ids = {subnets[CLUSTER + '-public-' + str(i)]['SubnetId'] for i in (1, 2)}
+    if (not isinstance(balancer_arn, str)
+            or not re.fullmatch(re.escape(prefix + 'loadbalancer/app/' + CLUSTER + '/') + r'[a-f0-9]{16}', balancer_arn)
+            or balancer.get('LoadBalancerName') != CLUSTER
+            or balancer.get('VpcId') != cluster['resourcesVpcConfig']['vpcId']
+            or balancer.get('Type') != 'application' or balancer.get('Scheme') != 'internet-facing'
+            or balancer.get('SecurityGroups') != [group_id]
+            or len(zones) != 2 or {zone.get('SubnetId') for zone in zones} != public_ids):
+        raise ValueError('exact account/region lab internet-facing ALB, public subnets and SG required')
+    listeners = remote.aws('elbv2', 'describe-listeners', '--load-balancer-arn', balancer_arn)['Listeners']
+    if len(listeners) != 2:
+        raise ValueError('exactly HTTP80 and HTTPS443 listeners required')
+    by_port, listener_ids = {}, set()
+    listener_prefix = balancer_arn.replace(':loadbalancer/', ':listener/') + '/'
+    for listener in listeners:
+        port, identity = listener.get('Port'), listener.get('ListenerArn', '')
+        if (port not in (80, 443) or port in by_port
+                or listener.get('Protocol') != {80: 'HTTP', 443: 'HTTPS'}[port]
+                or listener.get('LoadBalancerArn') != balancer_arn or not isinstance(identity, str)
+                or not re.fullmatch(re.escape(listener_prefix) + r'[a-f0-9]{16}', identity)
+                or identity in listener_ids):
+            raise ValueError('listener identity must scope exactly to lab ALB and HTTP80/HTTPS443')
+        listener_ids.add(identity)
+        by_port[port] = listener
+    tls = by_port[443]
+    certs = tls.get('Certificates', [])
+    if (tls.get('SslPolicy') != contract.SSL_POLICY or len(certs) != 1
+            or certs[0].get('CertificateArn') != arn or certs[0].get('IsDefault') is False):
+        raise ValueError('HTTPS listener must use exact issued lab certificate and TLS policy')
+    actions = by_port[80].get('DefaultActions', [])
+    redirect = actions[0].get('RedirectConfig', {}) if len(actions) == 1 else {}
+    if (len(actions) != 1 or actions[0].get('Type') != 'redirect'
+            or redirect.get('Protocol') != 'HTTPS' or redirect.get('Port') != '443'
+            or redirect.get('StatusCode') not in ('HTTP_301', 'HTTP_302')
+            or redirect.get('Host', '#{host}') not in ('#{host}', contract.HOSTNAME)
+            or redirect.get('Path', '/#{path}') != '/#{path}'
+            or redirect.get('Query', '#{query}') != '#{query}'):
+        raise ValueError('HTTP80 must redirect to HTTPS443 without foreign origin/path rewriting')
+
+
 def preflight(args, remote):
     authorize(args)
     verify_provenance()
+    tls = https_mode(remote)
     cluster = target(args, remote)
     vpc_id = cluster['resourcesVpcConfig']['vpcId']
     vpcs = remote.aws('ec2', 'describe-vpcs', '--vpc-ids', vpc_id)['Vpcs']
-    if len(vpcs) != 1 or vpcs[0].get('VpcId') != vpc_id or vpcs[0].get('CidrBlock') != args.vpc_cidr:
+    if (len(vpcs) != 1 or vpcs[0].get('VpcId') != vpc_id or vpcs[0].get('OwnerId') != args.account
+            or vpcs[0].get('CidrBlock') != args.vpc_cidr):
         raise ValueError('exact cluster VPC CIDR required')
+    subnets, private_ids = topology_subnets(cluster, args, remote)
+    nat_cidr = topology_nat(cluster, subnets, private_ids, remote)
+    topology_nodes(cluster, subnets, private_ids, remote)
+    group_id = topology_alb(cluster, nat_cidr, remote, tls=tls)
+    if tls:
+        https_preflight(args, remote, cluster, subnets, group_id)
     ips = {cidr.split('/')[0] for cidr in args.api_cidr}
     enis = remote.aws('ec2', 'describe-network-interfaces', '--filters',
                       f'Name=vpc-id,Values={vpc_id}',
                       'Name=addresses.private-ip-address,Values=' + ','.join(sorted(ips)))['NetworkInterfaces']
     verified = set()
     for eni in enis:
-        if (eni.get('VpcId') == vpc_id and eni.get('RequesterManaged') is True
+        if (eni.get('VpcId') == vpc_id and eni.get('SubnetId') in private_ids
+                and eni.get('RequesterManaged') is True
                 and eni.get('Description') == 'Amazon EKS ' + CLUSTER):
             verified.update(p['PrivateIpAddress'] for p in eni.get('PrivateIpAddresses', []))
     if not ips.issubset(verified):
@@ -673,8 +895,10 @@ def main(argv=None):
         print(json.dumps(plan(args), indent=2))
         return 0
     import tempfile
-    root = private_root(args)
     remote = Remote(args)
+    if args.action == 'start':
+        preflight(args, remote)  # Fail closed before private root, lock or temporary kubeconfig state.
+    root = private_root(args)
     journal = Journal(root / f'session-{args.run_id}.json')
     with session_lock(root), tempfile.TemporaryDirectory(prefix='session-', dir=root) as directory:
         operation = start if args.action == 'start' else cleanup

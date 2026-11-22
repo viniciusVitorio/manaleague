@@ -46,6 +46,16 @@ override_resource {
   override_during = plan
   values          = { arn = "arn:aws:iam::123456789012:policy/mock-ebs-csi-boundary" }
 }
+override_resource {
+  target          = aws_subnet.database[0]
+  override_during = plan
+  values          = { id = "subnet-1123456789abcdef0", arn = "arn:aws:ec2:us-east-1:123456789012:subnet/subnet-1123456789abcdef0" }
+}
+override_resource {
+  target          = aws_subnet.database[1]
+  override_during = plan
+  values          = { id = "subnet-1123456789abcdef1", arn = "arn:aws:ec2:us-east-1:123456789012:subnet/subnet-1123456789abcdef1" }
+}
 run "render_addon_boundaries" {
   command = plan
 }

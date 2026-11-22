@@ -19,7 +19,7 @@ def load(name):
 
 BASE = ['--account', '123456789012', '--region', 'us-east-1', '--cluster',
         'manaleague-eks-lab', '--vpc-cidr', '10.42.0.0/16', '--run-id', '44421131546',
-        '--sha', 'a' * 40, '--api-cidr', '10.42.1.8/32']
+        '--sha', 'a' * 40, '--api-cidr', '10.42.10.8/32']
 GATES = ['--allow-cloud', '--confirm-lab', 'manaleague-eks-lab',
          '--ack-public-self-hosted-risk', '--ack-network-verified-in-vpc']
 
@@ -98,8 +98,48 @@ class PreflightRemote:
             'labels': ['self-hosted', 'linux', 'eks-lab-44421131546']}]
         self.runners = []
         self.gate = 'true'
+        self.app_url = ''
+        self.certificate_arn = ''
+        self.vpc_owner = self.account
         self.vpc = '10.42.0.0/16'
         self.eni_vpc = 'vpc-1234'
+        self.cluster['resourcesVpcConfig']['subnetIds'] = ['subnet-priv1', 'subnet-priv2']
+        self.subnets = [
+            {'SubnetId': 'subnet-' + suffix, 'VpcId': 'vpc-1234', 'MapPublicIpOnLaunch': public,
+             'CidrBlock': cidr, 'Tags': [{'Key': 'Name', 'Value': 'manaleague-eks-lab-' + name}]}
+            for suffix, public, cidr, name in (
+                ('pub1', True, '10.42.0.0/24', 'public-1'),
+                ('pub2', True, '10.42.1.0/24', 'public-2'),
+                ('priv1', False, '10.42.10.0/24', 'private-1'),
+                ('priv2', False, '10.42.11.0/24', 'private-2'))]
+        self.security_groups = [{'GroupId': 'sg-lab', 'GroupName': 'manaleague-eks-lab-alb',
+            'VpcId': 'vpc-1234', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 80, 'ToPort': 80,
+                'IpRanges': [{'CidrIp': '1.1.1.1/32'}, {'CidrIp': '8.8.8.8/32'}],
+                'Ipv6Ranges': [], 'UserIdGroupPairs': [], 'PrefixListIds': []}]}]
+        self.nodegroups = ['manaleague-eks-lab-az-1']
+        self.nodegroup = {'clusterName': 'manaleague-eks-lab', 'nodegroupName': self.nodegroups[0],
+            'nodegroupArn': 'arn:aws:eks:us-east-1:123456789012:nodegroup/manaleague-eks-lab/manaleague-eks-lab-az-1/fixture',
+            'status': 'ACTIVE', 'subnets': ['subnet-priv1']}
+        self.instances = [{'InstanceId': 'i-node', 'VpcId': 'vpc-1234', 'SubnetId': 'subnet-priv1', 'State': {'Name': 'running'},
+            'Tags': [{'Key': 'eks:eks-cluster-name', 'Value': 'manaleague-eks-lab'}]}]
+        self.routes = [
+            {'VpcId': 'vpc-1234', 'RouteTableId': 'rtb-' + suffix,
+             'Associations': [{'SubnetId': 'subnet-' + suffix,
+                               'AssociationState': {'State': 'associated'}}],
+             'Routes': [{'DestinationCidrBlock': '0.0.0.0/0', 'State': 'active', **target}]}
+            for suffix, target in (
+                ('pub1', {'GatewayId': 'igw-1234'}), ('pub2', {'GatewayId': 'igw-1234'}),
+                ('priv1', {'NatGatewayId': 'nat-0123456789abcdef0'}),
+                ('priv2', {'NatGatewayId': 'nat-0123456789abcdef0'}))]
+        self.nats = [{'NatGatewayId': 'nat-0123456789abcdef0', 'VpcId': 'vpc-1234',
+            'SubnetId': 'subnet-pub1', 'ConnectivityType': 'public', 'State': 'available',
+            'NatGatewayAddresses': [{'AllocationId': 'eipalloc-1234', 'PublicIp': '8.8.8.8'}]}]
+        self.addresses = [{'AllocationId': 'eipalloc-1234', 'PublicIp': '8.8.8.8', 'Domain': 'vpc'}]
+        self.igws = [{'InternetGatewayId': 'igw-1234',
+                      'Attachments': [{'VpcId': 'vpc-1234', 'State': 'available'}]}]
+        self.eni = {'VpcId': self.eni_vpc, 'SubnetId': 'subnet-priv1',
+            'Description': 'Amazon EKS manaleague-eks-lab', 'RequesterManaged': True,
+            'PrivateIpAddresses': [{'PrivateIpAddress': '10.42.10.8'}]}
 
     def aws(self, *args):
         self.calls.append(('aws', args))
@@ -108,16 +148,37 @@ class PreflightRemote:
         if args[:2] == ('eks', 'describe-cluster'):
             return {'cluster': self.cluster}
         if args[:2] == ('ec2', 'describe-vpcs'):
-            return {'Vpcs': [{'VpcId': 'vpc-1234', 'CidrBlock': self.vpc}]}
+            return {'Vpcs': [{'VpcId': 'vpc-1234', 'CidrBlock': self.vpc, 'OwnerId': self.vpc_owner}]}
+        if args[:2] == ('eks', 'list-nodegroups'):
+            return {'nodegroups': self.nodegroups}
+        if args[:2] == ('eks', 'describe-nodegroup'):
+            return {'nodegroup': self.nodegroup}
+        if args[:2] == ('ec2', 'describe-security-groups'):
+            return {'SecurityGroups': self.security_groups}
+        if args[:2] == ('ec2', 'describe-instances'):
+            return {'Reservations': [{'Instances': self.instances}]}
+        if args[:2] == ('ec2', 'describe-route-tables'):
+            return {'RouteTables': self.routes}
+        if args[:2] == ('ec2', 'describe-nat-gateways'):
+            return {'NatGateways': self.nats}
+        if args[:2] == ('ec2', 'describe-addresses'):
+            return {'Addresses': self.addresses}
+        if args[:2] == ('ec2', 'describe-internet-gateways'):
+            return {'InternetGateways': self.igws}
+        if args[:2] == ('ec2', 'describe-subnets'):
+            return {'Subnets': self.subnets}
         if args[:2] == ('ec2', 'describe-network-interfaces'):
-            return {'NetworkInterfaces': [{'VpcId': self.eni_vpc, 'Description': 'Amazon EKS manaleague-eks-lab',
-                'RequesterManaged': True, 'PrivateIpAddresses': [{'PrivateIpAddress': '10.42.1.8'}]}]}
+            self.eni['VpcId'] = self.eni_vpc
+            return {'NetworkInterfaces': [self.eni]}
         raise AssertionError(args)
 
     def gh(self, path, method='GET', collection=None):
         self.calls.append(('gh', path, method))
         if '/variables/' in path:
-            return {'name': 'LAB_DEPLOY_ENABLED', 'value': self.gate}
+            name = path.rsplit('/', 1)[1]
+            values = {'LAB_DEPLOY_ENABLED': self.gate, 'APP_URL': self.app_url,
+                      'ACM_CERTIFICATE_ARN': self.certificate_arn}
+            return {'name': name, 'value': values[name]}
         if path.endswith('/runners'):
             return self.runners
         if '/jobs?' in path:
@@ -128,6 +189,102 @@ class PreflightRemote:
 
 
 class PreflightTests(unittest.TestCase):
+    def test_tls_security_group_requires_matching_host_sets_and_nat_on_both_ports(self):
+        import copy
+        session = load('session')
+        for case in ('valid', 'missing443', 'missing80', 'missingnat', 'unequal', 'wide',
+                     'ipv6', 'group', 'prefix', 'udp', 'otherport', 'noncanonical', 'private'):
+            remote = PreflightRemote()
+            rules = remote.security_groups[0]['IpPermissions']
+            rules.append(copy.deepcopy(rules[0]))
+            rules[1]['FromPort'] = rules[1]['ToPort'] = 443
+            if case == 'missing443': rules.pop()
+            elif case == 'missing80': rules.pop(0)
+            elif case == 'missingnat': rules[1]['IpRanges'].pop()
+            elif case == 'unequal': rules[1]['IpRanges'].append({'CidrIp': '9.9.9.9/32'})
+            elif case == 'wide': rules[1]['IpRanges'].append({'CidrIp': '0.0.0.0/0'})
+            elif case == 'ipv6': rules[1]['Ipv6Ranges'] = [{'CidrIpv6': '::/0'}]
+            elif case == 'group': rules[1]['UserIdGroupPairs'] = [{'GroupId': 'sg-other'}]
+            elif case == 'prefix': rules[1]['PrefixListIds'] = [{'PrefixListId': 'pl-other'}]
+            elif case == 'udp': rules[1]['IpProtocol'] = 'udp'
+            elif case == 'otherport': rules[1]['ToPort'] = 444
+            elif case == 'noncanonical': rules[1]['IpRanges'][0]['CidrIp'] = '1.1.1.1'
+            elif case == 'private': rules[1]['IpRanges'][0]['CidrIp'] = '10.0.0.1/32'
+            with self.subTest(case=case):
+                if case == 'valid':
+                    self.assertEqual(session.topology_alb(remote.cluster, '8.8.8.8/32', remote, tls=True), 'sg-lab')
+                else:
+                    with self.assertRaises(ValueError):
+                        session.topology_alb(remote.cluster, '8.8.8.8/32', remote, tls=True)
+
+    def test_app_url_is_exact_named_read_and_rejects_nonlab_origins_before_state(self):
+        for value in ('https://manaleague.com.br', 'https://other.test',
+                      'https://eks.manaleague.com.br/', 'http://www.manaleague.com.br',
+                      'http://user@lab.test', 'http://lab.test/path', 'http://lab.test?x=1',
+                      'http://lab.test\\evil', None):
+            remote = LifecycleRemote()
+            remote.app_url = value
+            journal = MemoryJournal()
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                load('session').start(live_args(), remote, journal, ROOT)
+            self.assertIsNone(journal.value)
+            self.assertEqual(remote.applied, [])
+            self.assertFalse(any(c[0] == 'configure' or c[-1] == 'POST' for c in remote.calls))
+        for value in ('', 'http://isolated.test', 'http://isolated.test:8080/'):
+            remote = PreflightRemote()
+            remote.app_url = value
+            self.assertEqual(load('session').preflight(live_args(), remote)['job_id'], 42)
+            self.assertIn(('gh', 'repos/viniciusVitorio/manaleague/environments/eks-lab/variables/APP_URL', 'GET'), remote.calls)
+
+    def test_wrong_app_url_variable_identity_fails_closed(self):
+        remote = PreflightRemote()
+        original = remote.gh
+        def gh(path, **kwargs):
+            if path.endswith('/APP_URL'):
+                return {'name': 'APP_URL_OTHER', 'value': ''}
+            return original(path, **kwargs)
+        remote.gh = gh
+        with self.assertRaises(ValueError):
+            load('session').preflight(live_args(), remote)
+
+    def test_preflight_accepts_private_names_from_actual_terraform_subnet_tags(self):
+        import re
+        source = (ROOT.parent / 'terraform' / 'rds.tf').read_text(encoding='utf-8')
+        blocks = re.findall(r'^resource "aws_subnet" "database" \{\n(.*?)^\}',
+                            source, re.MULTILINE | re.DOTALL)
+        self.assertEqual(len(blocks), 1)
+        block = blocks[0]
+        self.assertEqual(re.findall(r'^\s*count\s*=\s*(\d+)\s*$', block, re.MULTILINE), ['2'])
+        # Intentionally accept only the current literal Name form, not arbitrary HCL.
+        templates = re.findall(r'^\s*tags\s*=\s*\{\s*Name\s*=\s*"([^"\n]+)"\s*\}\s*$',
+                               block, re.MULTILINE)
+        self.assertEqual(templates, ['${local.name}-private-${count.index + 1}'])
+        session = load('session')
+        names = [templates[0].replace('${local.name}', session.CLUSTER)
+                 .replace('${count.index + 1}', str(index + 1)) for index in range(2)]
+        remote = PreflightRemote()
+        for subnet, name in zip(remote.subnets[2:], names):
+            subnet['Tags'] = [{'Key': 'Name', 'Value': name}]
+        with mock.patch('subprocess.run', side_effect=AssertionError('process')), \
+             mock.patch('socket.socket', side_effect=AssertionError('network')):
+            try:
+                proof = session.preflight(live_args(), remote)
+            except (ValueError, KeyError) as error:
+                self.fail(f'preflight rejected actual Terraform subnet Names: {error}')
+            self.assertEqual(proof['job_id'], 42)
+        self.assertEqual([s['Tags'][0]['Value'] for s in PreflightRemote().subnets[2:]], names)
+
+    def test_legacy_database_subnet_names_are_rejected_before_any_write(self):
+        for indices in ((2,), (3,), (2, 3)):
+            remote = LifecycleRemote()
+            for index in indices:
+                remote.subnets[index]['Tags'] = [{'Key': 'Name',
+                    'Value': 'manaleague-eks-lab-database-' + str(index - 1)}]
+            with self.subTest(indices=indices), self.assertRaisesRegex(ValueError, 'subnet identity'):
+                load('session').start(live_args(), remote, MemoryJournal(), ROOT)
+            self.assertEqual(remote.applied, [])
+            self.assertFalse(any(c[0] == 'configure' or c[-1] == 'POST' for c in remote.calls))
+
     def test_readonly_preflight_binds_run_job_cluster_vpc_and_account(self):
         session = load('session')
         remote = PreflightRemote()
@@ -169,11 +326,368 @@ class PreflightTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             session.preflight(live_args(), remote)
 
+    def test_private_cluster_subnets_and_exact_api_eni_are_required_before_any_write(self):
+        for case in ('wrong_vpc', 'public_mapping', 'public_cluster', 'foreign_cluster',
+                     'missing_private', 'foreign_eni', 'public_eni', 'unmanaged_eni'):
+            remote = LifecycleRemote()
+            if case == 'wrong_vpc':
+                remote.subnets[2]['VpcId'] = 'vpc-foreign'
+            elif case == 'public_mapping':
+                remote.subnets[2]['MapPublicIpOnLaunch'] = True
+            elif case == 'public_cluster':
+                remote.cluster['resourcesVpcConfig']['subnetIds'] = ['subnet-pub1', 'subnet-pub2']
+            elif case == 'foreign_cluster':
+                remote.cluster['resourcesVpcConfig']['subnetIds'] = ['subnet-priv1', 'subnet-foreign']
+            elif case == 'missing_private':
+                remote.subnets.pop()
+            elif case == 'foreign_eni':
+                remote.eni['Description'] = 'Amazon EKS another-cluster'
+            elif case == 'public_eni':
+                remote.eni['SubnetId'] = 'subnet-pub1'
+            else:
+                remote.eni['RequesterManaged'] = False
+            with self.subTest(case=case), self.assertRaises(ValueError):
+                load('session').start(live_args(), remote, MemoryJournal(), ROOT)
+            self.assertEqual(remote.applied, [])
+            self.assertFalse(any(c[0] == 'configure' or c[-1] == 'POST' for c in remote.calls))
+
+    def test_single_available_public_nat_and_both_private_default_routes_are_required(self):
+        cases = ('missing_nat', 'foreign_nat_vpc', 'private_nat', 'pending_nat', 'wrong_nat_subnet',
+                 'foreign_nat_id', 'private_route_igw', 'wrong_route_nat', 'blackhole',
+                 'foreign_table', 'missing_route', 'duplicate_association', 'public_no_igw',
+                 'foreign_igw', 'private_eip', 'wrong_eip', 'missing_allocation')
+        for case in cases:
+            remote = LifecycleRemote()
+            if case == 'missing_nat': remote.nats = []
+            elif case == 'foreign_nat_vpc': remote.nats[0]['VpcId'] = 'vpc-foreign'
+            elif case == 'private_nat': remote.nats[0]['ConnectivityType'] = 'private'
+            elif case == 'pending_nat': remote.nats[0]['State'] = 'pending'
+            elif case == 'wrong_nat_subnet': remote.nats[0]['SubnetId'] = 'subnet-pub2'
+            elif case == 'foreign_nat_id': remote.nats[0]['NatGatewayId'] = 'nat-foreign'
+            elif case == 'private_route_igw': remote.routes[2]['Routes'][0] = {
+                'DestinationCidrBlock': '0.0.0.0/0', 'State': 'active', 'GatewayId': 'igw-1234'}
+            elif case == 'wrong_route_nat': remote.routes[3]['Routes'][0]['NatGatewayId'] = 'nat-1123456789abcdef0'
+            elif case == 'blackhole': remote.routes[2]['Routes'][0]['State'] = 'blackhole'
+            elif case == 'foreign_table': remote.routes[2]['VpcId'] = 'vpc-foreign'
+            elif case == 'missing_route': remote.routes[3]['Routes'] = []
+            elif case == 'duplicate_association': remote.routes.append(remote.routes[2])
+            elif case == 'public_no_igw': remote.routes[0]['Routes'][0]['GatewayId'] = 'local'
+            elif case == 'foreign_igw': remote.igws[0]['Attachments'][0]['VpcId'] = 'vpc-foreign'
+            elif case == 'private_eip': remote.nats[0]['NatGatewayAddresses'][0]['PublicIp'] = '10.42.0.5'
+            elif case == 'wrong_eip': remote.addresses[0]['PublicIp'] = '1.1.1.1'
+            else: remote.nats[0]['NatGatewayAddresses'][0].pop('AllocationId')
+            with self.subTest(case=case):
+                with self.assertRaises(ValueError):
+                    load('session').start(live_args(), remote, MemoryJournal(), ROOT)
+                self.assertEqual(remote.applied, [])
+                self.assertFalse(any(c[0] == 'configure' or c[-1] == 'POST' for c in remote.calls))
+
+    def test_managed_nodes_are_private_and_no_tagged_node_has_a_public_ip(self):
+        for case in ('public_node', 'public_ip', 'foreign_node_vpc', 'foreign_node_subnet',
+                     'foreign_node_tag', 'public_mng', 'foreign_mng_cluster', 'foreign_mng_name',
+                     'missing_mng', 'single_node_wrong_private', 'secondary_eni_public_ip'):
+            remote = LifecycleRemote()
+            if case == 'public_node': remote.instances[0]['SubnetId'] = 'subnet-pub1'
+            elif case == 'public_ip': remote.instances[0]['PublicIpAddress'] = '8.8.8.8'
+            elif case == 'foreign_node_vpc': remote.instances[0]['VpcId'] = 'vpc-foreign'
+            elif case == 'foreign_node_subnet': remote.instances[0]['SubnetId'] = 'subnet-foreign'
+            elif case == 'foreign_node_tag': remote.instances[0]['Tags'] = []
+            elif case == 'public_mng': remote.nodegroup['subnets'] = ['subnet-pub1']
+            elif case == 'foreign_mng_cluster': remote.nodegroup['clusterName'] = 'production'
+            elif case == 'foreign_mng_name': remote.nodegroup['nodegroupName'] = 'production'
+            elif case == 'missing_mng': remote.nodegroups = []
+            elif case == 'single_node_wrong_private': remote.nodegroup['subnets'] = ['subnet-priv2']
+            else: remote.instances[0]['NetworkInterfaces'] = [{'Association': {'PublicIp': '8.8.8.8'}}]
+            with self.subTest(case=case):
+                with self.assertRaises(ValueError):
+                    load('session').start(live_args(), remote, MemoryJournal(), ROOT)
+                self.assertEqual(remote.applied, [])
+                self.assertFalse(any(c[0] == 'configure' or c[-1] == 'POST' for c in remote.calls))
+
+    def test_exact_alb_security_group_must_allow_only_host_http_including_nat_eip(self):
+        for case in ('missing', 'duplicate', 'wrong_vpc', 'wrong_name', 'wrong_nat',
+                     'global', 'broad', 'ipv6_global', 'all_protocols', 'wrong_port', 'group_source'):
+            remote = LifecycleRemote()
+            group = remote.security_groups[0]
+            rule = group['IpPermissions'][0]
+            if case == 'missing': remote.security_groups = []
+            elif case == 'duplicate': remote.security_groups *= 2
+            elif case == 'wrong_vpc': group['VpcId'] = 'vpc-foreign'
+            elif case == 'wrong_name': group['GroupName'] = 'production-alb'
+            elif case == 'wrong_nat': rule['IpRanges'].pop()
+            elif case == 'global': rule['IpRanges'].append({'CidrIp': '0.0.0.0/0'})
+            elif case == 'broad': rule['IpRanges'][0]['CidrIp'] = '1.1.1.0/24'
+            elif case == 'ipv6_global': rule['Ipv6Ranges'] = [{'CidrIpv6': '::/0'}]
+            elif case == 'all_protocols': rule['IpProtocol'] = '-1'
+            elif case == 'wrong_port': rule['FromPort'] = rule['ToPort'] = 443
+            else: rule['UserIdGroupPairs'] = [{'GroupId': 'sg-foreign'}]
+            with self.subTest(case=case):
+                with self.assertRaises(ValueError):
+                    load('session').start(live_args(), remote, MemoryJournal(), ROOT)
+                self.assertEqual(remote.applied, [])
+                self.assertFalse(any(c[0] == 'configure' or c[-1] == 'POST' for c in remote.calls))
+
+    def test_inventory_covers_all_live_vpc_instances_and_requires_a_real_node_and_owner(self):
+        session = load('session')
+        remote = PreflightRemote()
+        session.preflight(live_args(), remote)
+        calls = [c[1] for c in remote.calls if c[0] == 'aws' and c[1][:2] == ('ec2', 'describe-instances')]
+        self.assertEqual(len(calls), 1)
+        self.assertIn('Name=vpc-id,Values=vpc-1234', calls[0])
+        self.assertIn('Name=instance-state-name,Values=pending,running', calls[0])
+        self.assertFalse(any('tag:' in arg for arg in calls[0]))
+        for case in ('empty', 'foreign_owner', 'untagged_public', 'only_untagged', 'stopped'):
+            remote = LifecycleRemote()
+            if case == 'empty': remote.instances = []
+            elif case == 'foreign_owner': remote.vpc_owner = '999999999999'
+            elif case == 'untagged_public': remote.instances.append({'InstanceId': 'i-rogue',
+                'VpcId': 'vpc-1234', 'SubnetId': 'subnet-pub1', 'State': {'Name': 'running'},
+                'PublicIpAddress': '8.8.4.4', 'Tags': []})
+            elif case == 'only_untagged': remote.instances[0]['Tags'] = []
+            else: remote.instances[0]['State']['Name'] = 'stopped'
+            with self.subTest(case=case):
+                with self.assertRaises(ValueError):
+                    session.start(live_args(), remote, MemoryJournal(), ROOT)
+                self.assertEqual(remote.applied, [])
+                self.assertFalse(any(c[0] == 'configure' or c[-1] == 'POST' for c in remote.calls))
+
+    def test_two_az_private_nodegroups_and_documented_minimal_responses_pass(self):
+        import copy
+        remote = PreflightRemote()
+        remote.nodegroups.append('manaleague-eks-lab-az-2')
+        second = copy.deepcopy(remote.nodegroup)
+        second.update(nodegroupName=remote.nodegroups[1], subnets=['subnet-priv2'])
+        original = remote.aws
+        def aws(*args):
+            if args[:2] == ('eks', 'describe-nodegroup') and args[-1] == remote.nodegroups[1]:
+                remote.calls.append(('aws', args))
+                return {'nodegroup': second}
+            return original(*args)
+        remote.aws = aws
+        second_node = copy.deepcopy(remote.instances[0])
+        second_node.update(InstanceId='i-second', SubnetId='subnet-priv2', State={'Name': 'pending'})
+        remote.instances.append(second_node)
+        self.assertEqual(load('session').preflight(live_args(), remote)['job_id'], 42)
+        permitted = {'get-caller-identity', 'describe-cluster', 'describe-vpcs', 'describe-subnets',
+            'describe-route-tables', 'describe-nat-gateways', 'describe-addresses',
+            'describe-internet-gateways', 'describe-security-groups', 'describe-instances',
+            'list-nodegroups', 'describe-nodegroup', 'describe-network-interfaces'}
+        self.assertEqual({c[1][1] for c in remote.calls if c[0] == 'aws'}, permitted)
+
+    def test_multicast_cannot_be_a_nat_eip_or_an_alb_client(self):
+        for case in ('nat', 'sg'):
+            remote = PreflightRemote()
+            if case == 'nat':
+                remote.nats[0]['NatGatewayAddresses'][0]['PublicIp'] = '224.0.0.1'
+                remote.addresses[0]['PublicIp'] = '224.0.0.1'
+                remote.security_groups[0]['IpPermissions'][0]['IpRanges'].append({'CidrIp': '224.0.0.1/32'})
+            else:
+                remote.security_groups[0]['IpPermissions'][0]['IpRanges'].append({'CidrIp': '224.0.0.1/32'})
+            with self.subTest(case=case), self.assertRaises(ValueError):
+                load('session').preflight(live_args(), remote)
+
     def test_provenance_file_tampering_is_rejected(self):
         session = load('session')
         session.verify_provenance()
         with mock.patch.object(pathlib.Path, 'read_bytes', return_value=b'{}'), self.assertRaises(ValueError):
             session.verify_provenance()
+
+
+def tls_remote():
+    """All AWS metadata here is synthetic, never a live account snapshot."""
+    import copy
+    remote = LifecycleRemote()
+    remote.app_url = 'https://eks.manaleague.com.br'
+    remote.certificate_arn = 'arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789abc'
+    remote.certificate = {'CertificateArn': remote.certificate_arn, 'DomainName': 'eks.manaleague.com.br',
+        'SubjectAlternativeNames': ['eks.manaleague.com.br'], 'Status': 'ISSUED', 'Type': 'AMAZON_ISSUED', 'InUseBy': []}
+    remote.certificate_tags = [{'Key': 'Project', 'Value': 'manaleague-eks-lab'},
+                               {'Key': 'Environment', 'Value': 'eks-lab'}]
+    rules = remote.security_groups[0]['IpPermissions']
+    rules.append(copy.deepcopy(rules[0]))
+    rules[1]['FromPort'] = rules[1]['ToPort'] = 443
+    arn = 'arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/manaleague-eks-lab/0123456789abcdef'
+    remote.balancers = [{'LoadBalancerArn': arn, 'LoadBalancerName': 'manaleague-eks-lab',
+        'VpcId': 'vpc-1234', 'Type': 'application', 'Scheme': 'internet-facing',
+        'AvailabilityZones': [{'SubnetId': 'subnet-pub1'}, {'SubnetId': 'subnet-pub2'}],
+        'SecurityGroups': ['sg-lab']}]
+    prefix = arn.replace(':loadbalancer/', ':listener/') + '/'
+    remote.listeners = [
+        {'LoadBalancerArn': arn, 'ListenerArn': prefix + '1111111111111111', 'Protocol': 'HTTP', 'Port': 80,
+         'DefaultActions': [{'Type': 'redirect', 'RedirectConfig': {'Protocol': 'HTTPS', 'Port': '443',
+             'Host': '#{host}', 'Path': '/#{path}', 'Query': '#{query}', 'StatusCode': 'HTTP_301'}}]},
+        {'LoadBalancerArn': arn, 'ListenerArn': prefix + '2222222222222222', 'Protocol': 'HTTPS', 'Port': 443,
+         'SslPolicy': 'ELBSecurityPolicy-TLS13-1-2-Res-2021-06',
+         'Certificates': [{'CertificateArn': remote.certificate_arn}],
+         'DefaultActions': [{'Type': 'fixed-response', 'FixedResponseConfig': {'StatusCode': '404'}}]}]
+    original = remote.aws
+    def aws(*args):
+        responses = {('acm', 'describe-certificate'): {'Certificate': remote.certificate},
+            ('acm', 'list-tags-for-certificate'): {'Tags': remote.certificate_tags},
+            ('elbv2', 'describe-load-balancers'): {'LoadBalancers': remote.balancers},
+            ('elbv2', 'describe-listeners'): {'Listeners': remote.listeners}}
+        if args[:2] in responses:
+            remote.calls.append(('aws', args))
+            return responses[args[:2]]
+        return original(*args)
+    remote.aws = aws
+    return remote
+
+
+class HTTPSPreflightTests(unittest.TestCase):
+    def test_cli_rejects_tls_before_creating_private_root_or_temporary_state(self):
+        session = load('session')
+        remote = tls_remote()
+        remote.listeners[1]['SslPolicy'] = 'wrong-policy'
+        with mock.patch.object(session, 'Remote', return_value=remote), \
+             mock.patch.object(session, 'private_root', side_effect=AssertionError('premature state')), \
+             mock.patch('tempfile.TemporaryDirectory', side_effect=AssertionError('premature temporary state')), \
+             self.assertRaisesRegex(ValueError, 'TLS policy'):
+            session.main(['start'] + BASE + GATES)
+
+    def test_tls_policy_is_rechecked_before_registration_token(self):
+        session = load('session')
+        remote = tls_remote()
+        journal = MemoryJournal()
+        original = remote.create
+        def create(obj):
+            result = original(obj)
+            if obj['kind'] == 'NetworkPolicy':
+                remote.listeners[1]['SslPolicy'] = 'ELBSecurityPolicy-2016-08'
+            return result
+        remote.create = create
+        with self.assertRaisesRegex(ValueError, 'TLS policy'):
+            session.start(live_args(), remote, journal, ROOT)
+        self.assertEqual([obj['kind'] for obj in remote.applied], ['Namespace', 'ServiceAccount', 'NetworkPolicy'])
+        self.assertFalse(any(c[-1] == 'POST' for c in remote.calls))
+
+    def test_plan_and_http_preflight_never_load_https_contract(self):
+        session = load('session')
+        args = live_args()
+        with mock.patch.object(session.importlib.util, 'spec_from_file_location', side_effect=AssertionError('HTTPS import')):
+            self.assertFalse(session.plan(args)['cloud_actions'])
+            self.assertEqual(session.preflight(args, PreflightRemote())['job_id'], 42)
+
+    def test_tls_cleanup_ignores_gate_nat_certificate_and_origin_after_start(self):
+        session = load('session')
+        remote = tls_remote()
+        journal = MemoryJournal()
+        session.POLL_ATTEMPTS = 1
+        self.assertEqual(session.start(live_args(), remote, journal, ROOT)['status'], 'online')
+        remote.gate = 'false'
+        remote.nats = []
+        remote.app_url = 'https://production.invalid'
+        remote.certificate_arn = ''
+        remote.calls = []
+        args = live_args()
+        args.action = 'cleanup'
+        self.assertEqual(session.cleanup(args, remote, journal, ROOT)['status'], 'cleaned')
+        self.assertEqual({c[1][1] for c in remote.calls if c[0] == 'aws'}, {'get-caller-identity', 'describe-cluster'})
+        self.assertFalse(any('/variables/' in str(c) for c in remote.calls))
+
+    def assert_refused_before_state(self, remote):
+        journal = MemoryJournal()
+        with self.assertRaises(ValueError):
+            load('session').start(live_args(), remote, journal, ROOT)
+        self.assertIsNone(journal.value)
+        self.assertEqual(remote.applied, [])
+        self.assertFalse(any(c[0] == 'configure' or c[-1] == 'POST' for c in remote.calls))
+
+    def test_https_balancer_identity_is_exact_before_listener_lookup(self):
+        for case in ('missing', 'duplicate', 'name', 'account', 'region', 'suffix', 'vpc',
+                     'scheme', 'type', 'private_subnet', 'missing_subnet', 'duplicate_subnet', 'extra_sg'):
+            remote = tls_remote()
+            balancer = remote.balancers[0]
+            if case == 'missing': remote.balancers = []
+            elif case == 'duplicate': remote.balancers *= 2
+            elif case == 'name': balancer['LoadBalancerName'] = 'production'
+            elif case == 'account': balancer['LoadBalancerArn'] = balancer['LoadBalancerArn'].replace('123456789012', '999999999999')
+            elif case == 'region': balancer['LoadBalancerArn'] = balancer['LoadBalancerArn'].replace('us-east-1', 'us-east-2')
+            elif case == 'suffix': balancer['LoadBalancerArn'] += '/foreign'
+            elif case == 'vpc': balancer['VpcId'] = 'vpc-other'
+            elif case == 'scheme': balancer['Scheme'] = 'internal'
+            elif case == 'type': balancer['Type'] = 'network'
+            elif case == 'private_subnet': balancer['AvailabilityZones'][0]['SubnetId'] = 'subnet-priv1'
+            elif case == 'missing_subnet': balancer['AvailabilityZones'].pop()
+            elif case == 'duplicate_subnet': balancer['AvailabilityZones'][1]['SubnetId'] = 'subnet-pub1'
+            else: balancer['SecurityGroups'].append('sg-foreign')
+            with self.subTest(case=case):
+                self.assert_refused_before_state(remote)
+                self.assertFalse(any(c[0] == 'aws' and c[1][:2] == ('elbv2', 'describe-listeners') for c in remote.calls))
+
+    def test_https_listeners_require_scoped_arns_redirect_and_exact_policy_certificate(self):
+        for case in ('missing443', 'duplicate', 'otherport', 'protocol', 'lbarn', 'listenerarn',
+                     'listeneraccount', 'duplicatearn', 'policy', 'wrongcert', 'extracert', 'notdefault',
+                     'redirecttype', 'redirectprotocol', 'redirectport', 'redirecthost', 'redirectpath'):
+            remote = tls_remote()
+            http, tls = remote.listeners
+            if case == 'missing443': remote.listeners.pop()
+            elif case == 'duplicate': remote.listeners.append(tls)
+            elif case == 'otherport': tls['Port'] = 8443
+            elif case == 'protocol': tls['Protocol'] = 'HTTP'
+            elif case == 'lbarn': tls['LoadBalancerArn'] += '0'
+            elif case == 'listenerarn': tls['ListenerArn'] = tls['ListenerArn'].replace('/manaleague-eks-lab/', '/production/')
+            elif case == 'listeneraccount': http['ListenerArn'] = http['ListenerArn'].replace('123456789012', '999999999999')
+            elif case == 'duplicatearn': tls['ListenerArn'] = http['ListenerArn']
+            elif case == 'policy': tls['SslPolicy'] = 'ELBSecurityPolicy-2016-08'
+            elif case == 'wrongcert': tls['Certificates'][0]['CertificateArn'] += '0'
+            elif case == 'extracert': tls['Certificates'].append(tls['Certificates'][0])
+            elif case == 'notdefault': tls['Certificates'][0]['IsDefault'] = False
+            elif case == 'redirecttype': http['DefaultActions'][0]['Type'] = 'forward'
+            elif case == 'redirectprotocol': http['DefaultActions'][0]['RedirectConfig']['Protocol'] = 'HTTP'
+            elif case == 'redirectport': http['DefaultActions'][0]['RedirectConfig']['Port'] = '80'
+            elif case == 'redirecthost': http['DefaultActions'][0]['RedirectConfig']['Host'] = 'manaleague.com.br'
+            else: http['DefaultActions'][0]['RedirectConfig']['Path'] = '/other'
+            with self.subTest(case=case):
+                self.assert_refused_before_state(remote)
+
+    def test_certificate_arn_rejects_foreign_or_malformed_before_acm_lookup(self):
+        for value in ('', None, [], 'arn:aws:acm:us-east-2:123456789012:certificate/12345678-1234-1234-1234-123456789abc',
+                      'arn:aws:acm:us-east-1:999999999999:certificate/12345678-1234-1234-1234-123456789abc',
+                      'arn:aws:acm:us-east-1:123456789012:certificate/not-a-uuid'):
+            remote = tls_remote()
+            remote.certificate_arn = value
+            with self.subTest(value=value):
+                self.assert_refused_before_state(remote)
+                self.assertFalse(any(c[0] == 'aws' and c[1][0] == 'acm' for c in remote.calls))
+
+    def test_certificate_exact_host_status_tags_and_usage_are_validated_by_real_contract(self):
+        for case in ('san', 'wildcard', 'domain', 'pending', 'imported', 'foreignarn', 'project', 'environment', 'foreignuse'):
+            remote = tls_remote()
+            cert = remote.certificate
+            if case == 'san': cert['SubjectAlternativeNames'].append('www.manaleague.com.br')
+            elif case == 'wildcard': cert['SubjectAlternativeNames'] = ['*.manaleague.com.br']
+            elif case == 'domain': cert['DomainName'] = 'manaleague.com.br'
+            elif case == 'pending': cert['Status'] = 'PENDING_VALIDATION'
+            elif case == 'imported': cert['Type'] = 'IMPORTED'
+            elif case == 'foreignarn': cert['CertificateArn'] = cert['CertificateArn'].replace('123456789012', '999999999999')
+            elif case == 'project': remote.certificate_tags[0]['Value'] = 'production'
+            elif case == 'environment': remote.certificate_tags[1]['Value'] = 'production'
+            else: cert['InUseBy'] = [remote.balancers[0]['LoadBalancerArn'].replace('/manaleague-eks-lab/', '/production/')]
+            with self.subTest(case=case):
+                self.assert_refused_before_state(remote)
+
+    def test_missing_tls_ingress_fails_before_any_objects(self):
+        remote = tls_remote()
+        remote.security_groups[0]['IpPermissions'].pop()
+        self.assert_refused_before_state(remote)
+
+    def test_exact_https_reads_explicit_certificate_and_scoped_listeners_before_objects(self):
+        session = load('session')
+        remote = tls_remote()
+        with mock.patch('subprocess.run', side_effect=AssertionError('process')), \
+             mock.patch('socket.socket', side_effect=AssertionError('network')):
+            self.assertEqual(session.preflight(live_args(), remote)['job_id'], 42)
+        self.assertEqual(remote.applied, [])
+        self.assertTrue(all(c[-1] == 'GET' for c in remote.calls if c[0] == 'gh'))
+        self.assertIn(('gh', 'repos/viniciusVitorio/manaleague/environments/eks-lab/variables/ACM_CERTIFICATE_ARN', 'GET'), remote.calls)
+        for action in ('describe-certificate', 'list-tags-for-certificate'):
+            self.assertIn(('aws', ('acm', action, '--certificate-arn', remote.certificate_arn)), remote.calls)
+        self.assertIn(('aws', ('elbv2', 'describe-load-balancers', '--names', 'manaleague-eks-lab')), remote.calls)
+        self.assertIn(('aws', ('elbv2', 'describe-listeners', '--load-balancer-arn', remote.balancers[0]['LoadBalancerArn'])), remote.calls)
+        remote.certificate['InUseBy'] = [remote.balancers[0]['LoadBalancerArn']]
+        remote.listeners[1]['Certificates'][0]['IsDefault'] = True
+        self.assertEqual(session.preflight(live_args(), remote)['job_id'], 42)
 
 
 class MemoryJournal:
@@ -331,6 +845,37 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual([d[0] for d in remote.deleted], ['Secret', 'Job'])
         self.assertEqual(session.cleanup(args, remote, journal, ROOT)['status'], 'cleaned')
 
+    def test_cleanup_after_job_ignores_closed_deploy_gate_and_unavailable_nat(self):
+        remote = LifecycleRemote()
+        remote.terminal = True
+        session, remote, journal, result = self.start(remote)
+        remote.gate = 'false'
+        remote.nats = []
+        remote.routes = []
+        remote.instances = []
+        remote.calls = []
+        args = live_args()
+        args.action = 'cleanup'
+        result = session.cleanup(args, remote, journal, ROOT)
+        self.assertEqual(result['status'], 'cleaned')
+        self.assertEqual({c[1][1] for c in remote.calls if c[0] == 'aws'},
+                         {'get-caller-identity', 'describe-cluster'})
+        self.assertFalse(any('/variables/' in str(c) for c in remote.calls))
+
+    def test_network_metadata_is_rechecked_before_registration_token(self):
+        remote = LifecycleRemote()
+        original = remote.create
+        def create(obj):
+            result = original(obj)
+            if obj['kind'] == 'NetworkPolicy':
+                remote.nats[0]['State'] = 'failed'
+            return result
+        remote.create = create
+        with self.assertRaises(ValueError):
+            self.start(remote)
+        self.assertEqual([o['kind'] for o in remote.applied], ['Namespace', 'ServiceAccount', 'NetworkPolicy'])
+        self.assertFalse(any(c[-1] == 'POST' for c in remote.calls))
+
     def test_cleanup_refuses_unrecorded_namespace_uid_or_runner_id_renamed(self):
         for mutation in ('missing_uid', 'renamed_runner'):
             session, remote, journal, result = self.start()
@@ -359,6 +904,14 @@ class LifecycleTests(unittest.TestCase):
 
 
 class TransportTests(unittest.TestCase):
+    def test_operator_aws_reads_pin_profile_and_region_not_the_deploy_role(self):
+        session = load('session')
+        remote = session.Remote(live_args())
+        with mock.patch.object(remote, 'command', return_value='{"Reservations": []}') as command:
+            remote.aws('ec2', 'describe-instances')
+        self.assertEqual(command.call_args.args[0], ['aws', '--profile', 'eks-lab',
+            '--region', 'us-east-1', '--output', 'json', 'ec2', 'describe-instances'])
+
     def test_transport_passes_registration_secret_only_stdin_and_suppresses_failures(self):
         import subprocess
         session = load('session')
@@ -442,6 +995,7 @@ class TransportTests(unittest.TestCase):
     def test_cli_live_dispatch_uses_only_explicitly_gated_transport(self):
         session = load('session')
         with mock.patch.object(session, 'Remote') as remote, \
+             mock.patch.object(session, 'preflight') as preflight, \
              mock.patch.object(session, 'Journal'), mock.patch.object(session, 'private_root', return_value=ROOT), \
              mock.patch.object(session, 'session_lock', return_value=contextlib.nullcontext()), \
              mock.patch.object(session, 'start', return_value={'status': 'online'}) as start, \
@@ -449,6 +1003,7 @@ class TransportTests(unittest.TestCase):
             self.assertEqual(session.main(['start'] + BASE + GATES), 0)
             start.assert_called_once()
             remote.assert_called_once()
+            preflight.assert_called_once_with(start.call_args.args[0], remote.return_value)
 
 
 class WindowsBridgeTests(unittest.TestCase):

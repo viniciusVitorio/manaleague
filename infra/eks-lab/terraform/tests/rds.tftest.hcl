@@ -42,7 +42,7 @@ run "deploy_database_policy_and_output_contract" {
     error_message = "Deploy requires an exact database/managed-secret read policy and RDS output contracts."
   }
 }
-run "private_database_public_nodes_topology" {
+run "shared_private_database_nodes_topology" {
   command = plan
   assert {
     condition     = length(aws_subnet.database) == 2 && toset(aws_subnet.database[*].availability_zone) == toset(["us-east-1a", "us-east-1b"]) && alltrue([for subnet in aws_subnet.database : !subnet.map_public_ip_on_launch && subnet.vpc_id == aws_vpc.lab.id]) && length(setintersection(toset(aws_subnet.database[*].cidr_block), toset(aws_subnet.public[*].cidr_block))) == 0
@@ -53,12 +53,12 @@ run "private_database_public_nodes_topology" {
     error_message = "RDS must be private Single-AZ using only the dedicated subnet group."
   }
   assert {
-    condition     = length(aws_route_table.database.route) == 0 && aws_route_table.database.vpc_id == aws_vpc.lab.id && alltrue([for i, association in aws_route_table_association.database : association.subnet_id == aws_subnet.database[i].id && association.route_table_id == aws_route_table.database.id])
-    error_message = "Private route table must contain no configured NAT/IGW/default routes and must own both database subnet associations."
+    condition     = aws_route.private_nat.destination_cidr_block == "0.0.0.0/0" && aws_route.private_nat.gateway_id == null && aws_route_table.database.vpc_id == aws_vpc.lab.id && alltrue([for i, association in aws_route_table_association.database : association.subnet_id == aws_subnet.database[i].id && association.route_table_id == aws_route_table.database.id])
+    error_message = "Shared private subnets must use the standalone NAT default route, never a direct IGW route."
   }
   assert {
-    condition     = length(aws_subnet.public) == 2 && alltrue([for subnet in aws_subnet.public : subnet.map_public_ip_on_launch]) && aws_eks_node_group.lab["0"].subnet_ids == toset(aws_subnet.public[*].id) && aws_eks_cluster.lab.vpc_config[0].subnet_ids == toset(aws_subnet.public[*].id)
-    error_message = "Existing EKS two-AZ public topology must not move to the database subnets."
+    condition     = length(aws_subnet.public) == 2 && alltrue([for subnet in aws_subnet.public : subnet.map_public_ip_on_launch]) && aws_eks_node_group.lab["0"].subnet_ids == toset([aws_subnet.database[0].id]) && aws_eks_cluster.lab.vpc_config[0].subnet_ids == toset(aws_subnet.database[*].id)
+    error_message = "Only ALB/NAT use the public subnets; EKS ENIs use both private subnets and the default node stays in private AZ 0."
   }
 }
 run "database_only_accepts_lab_nodes" {
@@ -127,8 +127,8 @@ run "two_node_option_preserves_private_single_az_rds" {
   command = plan
   variables { node_count = 2 }
   assert {
-    condition     = length(aws_eks_node_group.lab) == 2 && alltrue([for i, group in aws_eks_node_group.lab : group.subnet_ids == toset([aws_subnet.public[tonumber(i)].id])]) && !aws_db_instance.lab.multi_az && !aws_db_instance.lab.publicly_accessible && aws_db_subnet_group.lab.subnet_ids == toset(aws_subnet.database[*].id)
-    error_message = "Two EKS nodes must stay in separate public AZs without changing private Single-AZ RDS."
+    condition     = length(aws_eks_node_group.lab) == 2 && alltrue([for i, group in aws_eks_node_group.lab : group.subnet_ids == toset([aws_subnet.database[tonumber(i)].id])]) && !aws_db_instance.lab.multi_az && !aws_db_instance.lab.publicly_accessible && aws_db_subnet_group.lab.subnet_ids == toset(aws_subnet.database[*].id)
+    error_message = "Two EKS nodes must stay in separate private AZs without changing private Single-AZ RDS."
   }
 }
 run "required_rds_not_an_in_cluster_database" {

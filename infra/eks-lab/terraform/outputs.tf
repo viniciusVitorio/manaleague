@@ -71,7 +71,20 @@ output "api_public_access_cidrs" {
 }
 output "allowed_client_cidrs" {
   description = "Authoritative ALB frontend security-group IPv4 allowlist."
-  value       = var.allowed_client_cidrs
+  value       = sort(distinct(concat(var.allowed_client_cidrs, ["${aws_eip.nat.public_ip}/32"])))
+}
+output "node_subnet_ids" {
+  description = "Actual managed-node-group subnet membership, not all cluster subnets."
+  value       = flatten([for group in aws_eks_node_group.lab : tolist(group.subnet_ids)])
+}
+output "nat_gateway_id" {
+  value = aws_nat_gateway.lab.id
+}
+output "nat_public_ip" {
+  value = aws_eip.nat.public_ip
+}
+output "nat_egress_cidr" {
+  value = "${aws_eip.nat.public_ip}/32"
 }
 output "alb_security_group_id" {
   value = aws_security_group.alb.id

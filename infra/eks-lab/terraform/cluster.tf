@@ -17,13 +17,13 @@ resource "aws_eks_cluster" "lab" {
   }
   upgrade_policy { support_type = "STANDARD" }
   vpc_config {
-    subnet_ids              = aws_subnet.public[*].id
+    subnet_ids              = aws_subnet.database[*].id
     security_group_ids      = [aws_security_group.cluster.id]
     endpoint_private_access = true
     endpoint_public_access  = true
     public_access_cidrs     = var.api_public_access_cidrs
   }
-  depends_on = [aws_iam_role_policy_attachment.cluster, aws_route_table_association.public]
+  depends_on = [aws_iam_role_policy_attachment.cluster, aws_route_table_association.database]
   lifecycle {
     precondition {
       condition     = split(":", var.provisioner_principal_arn)[4] == var.expected_account_id && split(":", var.github_oidc_provider_arn)[4] == var.expected_account_id
@@ -63,9 +63,12 @@ resource "aws_iam_role_policy_attachment" "nodes" {
 }
 resource "aws_launch_template" "nodes" {
   name                   = "${local.name}-nodes"
-  description            = "AL2023 managed nodes, no SSH/key pair, public IPv4, encrypted gp3, standard CPU credits"
-  vpc_security_group_ids = [aws_security_group.nodes.id]
+  description            = "AL2023 private managed nodes, no SSH/key pair or public IPv4, encrypted gp3, standard CPU credits"
   update_default_version = true
+  network_interfaces {
+    associate_public_ip_address = false
+    security_groups             = [aws_security_group.nodes.id]
+  }
   credit_specification { cpu_credits = "standard" }
   metadata_options {
     http_endpoint               = "enabled"
@@ -102,7 +105,7 @@ resource "aws_eks_node_group" "lab" {
   cluster_name    = aws_eks_cluster.lab.name
   node_group_name = "${local.name}-az-${each.value + 1}"
   node_role_arn   = aws_iam_role.nodes.arn
-  subnet_ids      = var.node_count == 1 ? aws_subnet.public[*].id : [aws_subnet.public[each.value].id]
+  subnet_ids      = [aws_subnet.database[each.value].id]
   ami_type        = "AL2023_x86_64_STANDARD"
   instance_types  = ["t3.medium"]
   capacity_type   = "ON_DEMAND"
@@ -118,5 +121,5 @@ resource "aws_eks_node_group" "lab" {
   }
   update_config { max_unavailable = 1 }
   labels     = { "manaleague.io/environment" = "eks-lab" }
-  depends_on = [aws_iam_role_policy_attachment.nodes, aws_eks_addon.cni, aws_vpc_security_group_ingress_rule.nodes_control_plane, aws_vpc_security_group_ingress_rule.nodes_internal, aws_vpc_security_group_ingress_rule.cluster_nodes, aws_vpc_security_group_egress_rule.nodes, aws_vpc_security_group_egress_rule.cluster_nodes]
+  depends_on = [aws_iam_role_policy_attachment.nodes, aws_eks_addon.cni, aws_route.private_nat, aws_route_table_association.database, aws_vpc_security_group_ingress_rule.nodes_control_plane, aws_vpc_security_group_ingress_rule.nodes_internal, aws_vpc_security_group_ingress_rule.cluster_nodes, aws_vpc_security_group_egress_rule.nodes, aws_vpc_security_group_egress_rule.cluster_nodes]
 }

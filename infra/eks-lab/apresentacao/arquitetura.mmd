@@ -1,0 +1,80 @@
+%% HISTÓRICO: revisão anterior com nós públicos e sem NAT.
+%% Topologia atual em infraestrutura-simples.mmd e ../REDE_PRIVADA.md.
+flowchart TB
+    DEV["Push na branch eks-lab"] --> CI["GitHub Actions - SSDLC<br/>Testes + Sonar SAST + Trivy + testes WAF"]
+    CI --> GATE{"Deploy autorizado?<br/>LAB_DEPLOY_ENABLED"}
+    GATE -->|false| OFF["Laboratorio pausado<br/>Sem publish ou deploy"]
+    GATE -->|true| BUILD["Build app/web + smoke + TLS<br/>Imagens testadas do mesmo commit"]
+
+    TF["Terraform - infraestrutura como codigo<br/>Recomposicao da infraestrutura / DR"]
+    USER["Usuario de teste<br/>IP autorizado"]
+
+    subgraph AWS["AWS - laboratorio isolado"]
+        ECR["Amazon ECR<br/>SHA imutavel + digest"]
+        API["EKS - control plane gerenciado"]
+        OIDC["GitHub OIDC<br/>Role exclusiva do laboratorio"]
+        S3["S3 privado<br/>Avatares ficticios via IRSA"]
+        SM["Secrets Manager<br/>Credencial gerenciada do RDS"]
+
+        subgraph VPC["VPC exclusiva - sem NAT Gateway"]
+            subgraph PUB["Duas subnets publicas - duas zonas"]
+                ALB["Application Load Balancer<br/>Entrada HTTP restrita por IP"]
+                subgraph NODE["Um no EKS t3.medium - uma zona"]
+                    LBC["AWS Load Balancer Controller<br/>Namespace kube-system"]
+                    subgraph APPNS["Namespace manaleague-eks-lab"]
+                        POD1["Pod HTTP 1<br/>Nginx + ModSecurity / OWASP CRS<br/>Laravel + PHP-FPM"]
+                        POD2["Pod HTTP 2<br/>Nginx + ModSecurity / OWASP CRS<br/>Laravel + PHP-FPM"]
+                        RV["Reverb - uma replica<br/>WebSocket / tempo real"]
+                        MIG["Job de migrations e seed<br/>Somente dados ficticios"]
+                    end
+                    subgraph RUNNS["Namespace exclusivo do runner"]
+                        RUN["Runner efemero por execucao<br/>Sem credenciais administrativas do operador"]
+                    end
+                end
+            end
+
+            subgraph PRIV["Duas subnets privadas - DB subnet group"]
+                DB["RDS PostgreSQL 17 - Single-AZ<br/>Criptografado e sem acesso publico<br/>Porta 5432 restrita aos nos do lab"]
+            end
+        end
+    end
+
+    BUILD --> ECR
+    ECR -->|digests aprovados para entrega| RUN
+    TF -.->|provisiona| VPC
+    TF -.->|provisiona| API
+    TF -.->|provisiona| ECR
+    USER --> ALB
+    LBC -.->|reconcilia Ingress / ALB| ALB
+    ALB --> POD1
+    ALB --> POD2
+    ECR -.->|pull das imagens testadas| POD1
+    ECR -.->|pull das imagens testadas| POD2
+    OIDC -.->|credenciais temporarias do lab| RUN
+    RUN -->|entrega via API / RBAC do lab| API
+    API -.->|migrations, seed e rollout| MIG
+    API -.->|orquestra| POD1
+    API -.->|orquestra| POD2
+    RUN -.->|leitura restrita no deploy| SM
+    SM -.->|credencial do banco| MIG
+    MIG --> DB
+    POD1 -->|TLS verify-full / sessoes| DB
+    POD2 -->|TLS verify-full / sessoes| DB
+    POD1 --> S3
+    POD2 --> S3
+    POD1 <-.-> RV
+    POD2 <-.-> RV
+
+    PROD["PRODUCAO - fora do laboratorio<br/>main / EC2 + Compose<br/>Outro banco, volumes e credenciais<br/>Nenhuma alteracao"]
+    NOTE["Limites: um no nao e HA; RDS Single-AZ nao e Multi-AZ.<br/>Terraform recompoe infraestrutura; restauracao de dados e outro procedimento.<br/>WAF = ModSecurity, nao AWS WAF gerenciado. Lab atualmente desligado."]
+
+    classDef ci fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+    classDef security fill:#ffe4e6,stroke:#e11d48,color:#881337
+    classDef app fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef data fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class DEV,CI,BUILD,ECR ci
+    class GATE,OIDC,RUN,SM security
+    class POD1,POD2,RV,MIG app
+    class DB,S3 data
+    class TF,USER,OFF,PROD,NOTE neutral

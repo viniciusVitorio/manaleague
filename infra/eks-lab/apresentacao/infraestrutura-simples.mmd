@@ -1,0 +1,36 @@
+---
+title: ManaLeague — rede preparada / laboratório desligado
+---
+flowchart LR
+    INTERNET["Internet / usuários<br/>GitHub e serviços AWS"]
+
+    subgraph VPC["VPC exclusiva do laboratório — us-east-1"]
+        direction TB
+        IGW["Internet Gateway"]
+
+        subgraph PUBLICAS["Redes públicas — 2 sub-redes / 2 zonas"]
+            ALB["Load Balancer (ALB)<br/>Entrada restrita por IP"]
+            NAT["NAT Gateway + IP fixo<br/>Somente saída das privadas"]
+        end
+
+        subgraph PRIVADAS["Redes privadas — 2 sub-redes / 2 zonas"]
+            EC2["Servidor EC2 — nó do EKS<br/>ModSecurity + ManaLeague<br/>Sem IP público"]
+            DB[("RDS PostgreSQL<br/>Single-AZ / sem acesso público")]
+        end
+    end
+
+    INTERNET <-->|HTTP de entrada / HTTPS de saída| IGW
+    IGW --> ALB
+    ALB -->|Aplicação / porta 8080| EC2
+    EC2 -->|PostgreSQL / TLS / 5432| DB
+    EC2 -. Saída HTTPS .-> NAT
+    NAT -.-> IGW
+
+    classDef entrada fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef servidor fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef banco fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    class ALB entrada
+    class EC2 servidor
+    class DB banco
+    classDef rede fill:#fff7ed,stroke:#ea580c,color:#7c2d12
+    class NAT,IGW rede
