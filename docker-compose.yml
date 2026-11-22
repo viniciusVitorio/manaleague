@@ -26,7 +26,10 @@ services:
       CACHE_STORE: database
       QUEUE_CONNECTION: database
       # E-mail: log em dev; ses em producao (credenciais vem da IAM Role da EC2, nunca de chave fixa).
+      # Para ver os e-mails em dev: MAIL_MAILER=smtp no .env e o Mailpit ligado (profile "mail", abaixo).
       MAIL_MAILER: "${MAIL_MAILER:-log}"
+      MAIL_HOST: "${MAIL_HOST:-mailpit}"
+      MAIL_PORT: "${MAIL_PORT:-1025}"
       MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:-nao-responda@manaleague.com.br}"
       MAIL_FROM_NAME: "${MAIL_FROM_NAME:-ManaLeague}"
       AWS_SES_REGION: "${AWS_SES_REGION:-us-east-1}"
@@ -185,6 +188,15 @@ services:
       - ./deploy:/etc/caddy/deploy:ro
       - caddy_data:/data
       - caddy_config:/config
+
+  mailpit:
+    # So em dev: caixa de entrada falsa que guarda tudo o que o app envia (nada sai para a internet).
+    # Liga com --profile mail; o deploy nao passa o profile, entao nunca sobe em producao.
+    image: axllent/mailpit:v1.21.8
+    profiles: ["mail"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
 
 volumes:
   app_storage:

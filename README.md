@@ -58,6 +58,7 @@ docker compose up -d --build --wait --wait-timeout 300
 
 - The app runs at [http://localhost:8080](http://localhost:8080). Migrations run automatically on startup.
 - After changing code, run the same `docker compose up` again to update it.
+- To see the e-mails the app sends (account confirmation, password reset, podium), set `MAIL_MAILER=smtp` in `.env` and start the stack with `docker compose --profile mail up -d --build --wait`. [Mailpit](https://mailpit.axllent.org) catches every message at [http://localhost:8025](http://localhost:8025); nothing leaves your machine. The `mail` profile never runs in production.
 
 Demo data (it **never** runs in production):
 

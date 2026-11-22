@@ -57,3 +57,17 @@ test('remote verifies and imports before activation and cannot compile', () => {
   assert.match(remote, /database-pre-postgres.sqlite/);
   assert.match(workflow, /name: Remove temporary SSH access\s+if: always\(\)/);
 });
+test('Mailpit (e-mail preview) exists only in dev: behind a profile, local port, never enabled by the deploy', () => {
+  const compose = fs.readFileSync(path.join(root, 'docker-compose.yml'), 'utf8').replace(/\r\n/g, '\n');
+  const mailpit = compose.split('\n  mailpit:\n')[1]?.split(/\n\n|\nvolumes:/)[0];
+  assert.ok(mailpit, 'mailpit service must exist in docker-compose.yml');
+  // Sem profile ele subiria em todo "docker compose up", inclusive no deploy.
+  assert.match(mailpit, /\n    profiles: \["mail"\]/);
+  // Porta presa ao 127.0.0.1: mesmo ligado à mão na EC2, não fica acessível de fora.
+  const ports = mailpit.match(/^      - "(.+)"$/gm) ?? [];
+  assert.ok(ports.length > 0 && ports.every(p => p.includes('"127.0.0.1:')), `ports must bind to 127.0.0.1: ${ports}`);
+  // Nada no CI ou no deploy liga o profile, nem pelo .env gerado (COMPOSE_PROFILES).
+  assert.doesNotMatch(workflow, /--profile|COMPOSE_PROFILES/);
+  const daily = fs.readFileSync(path.join(root, '.github/workflows/daily-tasks.yml'), 'utf8');
+  assert.doesNotMatch(daily, /--profile|COMPOSE_PROFILES/);
+});
