@@ -1,0 +1,5 @@
+# Files consumed by Linux containers must keep LF even on a Windows checkout:
+# a CRLF checksum manifest makes sha256sum look for '<file>\r' and the image build fails.
+*.sha256 text eol=lf
+*.pem text eol=lf
+*.sh text eol=lf

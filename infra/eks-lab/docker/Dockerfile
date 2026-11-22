@@ -39,10 +39,12 @@ STOPSIGNAL SIGQUIT
 ENTRYPOINT ["/var/www/html/infra/eks-lab/runtime/entrypoint.sh"]
 CMD ["php-fpm", "-F"]
 
-FROM owasp/modsecurity-crs:4.25.2-nginx-alpine-202610180210-lts AS web
+FROM owasp/modsecurity-crs:4.25.2-nginx-alpine-202611190211-lts AS web
 # Patch fixable HIGH/CRITICAL base OS packages; retain the upstream nonroot runtime.
+# Never upgrade nginx itself here: the CRS ModSecurity module is compiled against
+# the base image's exact nginx version and refuses to load against another one.
 USER root
-RUN apk upgrade --no-cache brotli-libs curl libcurl libexpat libx11 libxslt musl musl-utils perl
+RUN apk upgrade --no-cache brotli-libs curl libcurl libexpat libx11 libxslt musl musl-utils libxml2 perl
 USER nginx
 COPY public /var/www/html/public
 COPY infra/eks-lab/docker/nginx.conf.template /etc/nginx/templates/conf.d/default.conf.template
