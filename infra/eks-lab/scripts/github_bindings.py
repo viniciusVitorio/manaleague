@@ -27,6 +27,23 @@ DNS_NAME_SERVERS = frozenset(('ns-605.awsdns-11.net', 'ns-16.awsdns-02.com',
                              'ns-1514.awsdns-61.org', 'ns-1580.awsdns-05.co.uk'))
 HTTPS_HOSTNAME = 'eks.manaleague.com.br'
 HTTPS_ORIGIN = 'https://' + HTTPS_HOSTNAME
+# Fixed lab sender on the verified parent domain; never a production address.
+MAIL_FROM = 'eks-lab@manaleague.com.br'
+
+
+def mail_bindings(source):
+    """Render the lab sender only when Terraform reports it enabled."""
+    enabled = source['lab_mail_enabled']
+    sender = source['lab_mail_from']
+    if type(enabled) is not bool or not isinstance(sender, str):
+        raise ValueError('Invalid explicit lab mail metadata')
+    if not enabled:
+        if sender != '':
+            raise ValueError('Disabled lab mail must not carry a sender')
+        return {'MAIL_FROM_ADDRESS': ''}
+    if sender != MAIL_FROM:
+        raise ValueError('Lab mail may only send as the fixed lab address')
+    return {'MAIL_FROM_ADDRESS': MAIL_FROM}
 
 
 def https_bindings(source, account, region):
@@ -61,7 +78,7 @@ def render(outputs, account, region):
     required = set(MAPPING.values()) | {'lab_identity', 'rds_identifier', 'rds_database',
         'private_subnet_ids', 'node_subnet_ids', 'nat_gateway_id', 'nat_public_ip', 'nat_egress_cidr',
         'lab_https_enabled', 'lab_hostname', 'lab_url', 'lab_certificate_arn',
-        'lab_dns_zone_id', 'lab_dns_name_servers'}
+        'lab_dns_zone_id', 'lab_dns_name_servers', 'lab_mail_enabled', 'lab_mail_from'}
     if not isinstance(outputs, dict):
         raise ValueError('Terraform outputs object required')
     source = {}
@@ -134,6 +151,7 @@ def render(outputs, account, region):
     for key in ('SUBNET_IDS', 'ALLOWED_CIDRS'):
         values[key] = ','.join(values[key])
     values.update(https_bindings(source, account, region))
+    values.update(mail_bindings(source))
     values['LAB_DEPLOY_ENABLED'] = 'false'
     return {'repository': 'viniciusVitorio/manaleague', 'environment': 'eks-lab',
             'variables': [{'name': k, 'value': v} for k, v in values.items()]}

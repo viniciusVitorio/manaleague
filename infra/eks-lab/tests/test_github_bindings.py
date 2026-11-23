@@ -34,6 +34,7 @@ def fixture():
         'lab_hostname': 'eks.manaleague.com.br',
         'lab_url': '', 'lab_certificate_arn': '', 'lab_dns_zone_id': '',
         'lab_dns_name_servers': [],
+        'lab_mail_enabled': False, 'lab_mail_from': '',
     }
     return {k: {'value': v, 'sensitive': False} for k, v in values.items()}
 
@@ -110,7 +111,7 @@ class GithubBindings(unittest.TestCase):
         module = self.load()
         data = fixture()
         result = module.render(data, ACCOUNT, REGION)
-        self.assertEqual(len(result['variables']), 18)
+        self.assertEqual(len(result['variables']), 19)
         for key in ('private_subnet_ids', 'node_subnet_ids', 'nat_gateway_id', 'nat_public_ip', 'nat_egress_cidr'):
             missing = dict(data)
             del missing[key]
@@ -145,7 +146,7 @@ class GithubBindings(unittest.TestCase):
             module.render(fixture(), ACCOUNT, REGION)
         data = fixture()
         data['node_subnet_ids']['value'] = data['private_subnet_ids']['value']
-        self.assertEqual(len(module.render(data, ACCOUNT, REGION)['variables']), 18)
+        self.assertEqual(len(module.render(data, ACCOUNT, REGION)['variables']), 19)
 
     def test_multicast_is_not_a_public_nat_eip_even_if_ipaddress_marks_it_global(self):
         data = fixture()
@@ -169,9 +170,31 @@ class GithubBindings(unittest.TestCase):
         self.assertEqual(values['APP_URL'], tls['lab_url'])
         self.assertEqual(values['ACM_CERTIFICATE_ARN'], cert)
         self.assertEqual(values['LAB_DEPLOY_ENABLED'], 'false')
-        self.assertEqual(len(values), 18)
+        self.assertEqual(len(values), 19)
         self.assertNotIn('ROUTE53_ZONE_ID', values)
         self.assertNotIn('lab_dns_name_servers', values)
+
+    def test_mail_renders_only_the_exact_lab_sender_and_stays_empty_when_disabled(self):
+        module = self.load()
+        disabled = {row['name']: row['value'] for row in module.render(fixture(), ACCOUNT, REGION)['variables']}
+        self.assertEqual(disabled['MAIL_FROM_ADDRESS'], '')
+        enabled = fixture()
+        enabled.update({k: {'value': v, 'sensitive': False} for k, v in
+                        {'lab_mail_enabled': True, 'lab_mail_from': 'eks-lab@manaleague.com.br'}.items()})
+        values = {row['name']: row['value'] for row in module.render(enabled, ACCOUNT, REGION)['variables']}
+        self.assertEqual(values['MAIL_FROM_ADDRESS'], 'eks-lab@manaleague.com.br')
+        # Never the production sender, never a foreign domain, never a mismatch
+        # between the enabled flag and the rendered address.
+        for broken in ({'lab_mail_enabled': True, 'lab_mail_from': ''},
+                       {'lab_mail_enabled': False, 'lab_mail_from': 'eks-lab@manaleague.com.br'},
+                       {'lab_mail_enabled': True, 'lab_mail_from': 'contato@manaleague.com.br'},
+                       {'lab_mail_enabled': True, 'lab_mail_from': 'eks-lab@evil.com'},
+                       {'lab_mail_enabled': True, 'lab_mail_from': 'eks-lab@manaleague.com.br\n'},
+                       {'lab_mail_enabled': 'true', 'lab_mail_from': 'eks-lab@manaleague.com.br'}):
+            data = fixture()
+            data.update({k: {'value': v, 'sensitive': False} for k, v in broken.items()})
+            with self.subTest(broken=broken), self.assertRaises(ValueError):
+                module.render(data, ACCOUNT, REGION)
 
     def test_https_metadata_rejects_foreign_and_inconsistent_domains_without_echoing_values(self):
         import copy

@@ -5,6 +5,8 @@ HOSTNAME = 'eks.manaleague.com.br'
 ORIGIN = 'https://' + HOSTNAME
 SSL_POLICY = 'ELBSecurityPolicy-TLS13-1-2-Res-2021-06'
 COOKIE = '__Host-manaleague_eks_lab_session'
+# Fixed lab sender on the verified parent domain; never a production address.
+MAIL_FROM = 'eks-lab@manaleague.com.br'
 
 
 def validate_certificate_arn(arn, *, account, region):

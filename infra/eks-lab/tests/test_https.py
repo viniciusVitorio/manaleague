@@ -95,6 +95,36 @@ class HttpsTests(unittest.TestCase):
                     self.lab.configure_runtime(base, url, secrets)
                 self.assertEqual((base / 'app-config.yaml').read_bytes(), before)
 
+    def test_mail_stays_in_the_log_driver_unless_the_exact_lab_sender_is_supplied(self):
+        import os
+        secrets = {'APP_KEY': 'mock-key', 'DB_PASSWORD': 'mock-password'}
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory) / 'base'
+            self.lab.render_tree(LAB / 'kubernetes/base', base, MOCK_ENV)
+            # No sender configured: delivery must stay local to the Pod log.
+            self.lab.configure_runtime(base, MOCK_ORIGIN, secrets)
+            data = json.loads((base / 'app-config.yaml').read_text())['data']
+            self.assertEqual(data['MAIL_MAILER'], 'log')
+            self.assertEqual(data['MAIL_FROM_ADDRESS'], 'demo@manaleague.test')
+            previous = os.environ.get('MAIL_FROM_ADDRESS')
+            try:
+                os.environ['MAIL_FROM_ADDRESS'] = 'eks-lab@manaleague.com.br'
+                self.lab.configure_runtime(base, MOCK_ORIGIN, secrets)
+                data = json.loads((base / 'app-config.yaml').read_text())['data']
+                self.assertEqual(data['MAIL_MAILER'], 'ses')
+                self.assertEqual(data['MAIL_FROM_ADDRESS'], 'eks-lab@manaleague.com.br')
+                for rejected in ('contato@manaleague.com.br', 'eks-lab@evil.com', 'eks-lab@manaleague.com.br ',
+                                 'eks-lab@manaleague.com.br\n', 'not-an-address', ''):
+                    os.environ['MAIL_FROM_ADDRESS'] = rejected
+                    before = (base / 'app-config.yaml').read_bytes()
+                    with self.subTest(rejected=rejected), self.assertRaises(ValueError):
+                        self.lab.configure_runtime(base, MOCK_ORIGIN, secrets)
+                    self.assertEqual((base / 'app-config.yaml').read_bytes(), before)
+            finally:
+                os.environ.pop('MAIL_FROM_ADDRESS', None)
+                if previous is not None:
+                    os.environ['MAIL_FROM_ADDRESS'] = previous
+
     def test_rendered_ingress_exact_tls_contract_preserves_base_and_private_publisher(self):
         self.assertTrue(callable(getattr(self.lab, 'configure_ingress', None)), 'missing rendered ingress configurator')
         original = (LAB / 'kubernetes/base/ingress.yaml').read_bytes()

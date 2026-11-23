@@ -227,6 +227,7 @@ jobs:
       RELEASE: ${{ github.sha }}
       APP_URL: ${{ vars.APP_URL }}
       ACM_CERTIFICATE_ARN: ${{ vars.ACM_CERTIFICATE_ARN }}
+      MAIL_FROM_ADDRESS: ${{ vars.MAIL_FROM_ADDRESS }}
       AVATAR_BUCKET: ${{ vars.AVATAR_BUCKET }}
       APP_ROLE_ARN: ${{ vars.APP_ROLE_ARN }}
       VPC_CIDR: ${{ vars.VPC_CIDR }}

@@ -357,6 +357,17 @@ def deployment_values(account):
             raise ValueError('ALB_SECURITY_GROUP_ID must be the exact Terraform lab ALB SG ID')
     return values
 
+def _mail_config():
+    """Keep mail local unless the exact lab sender is explicitly supplied."""
+    import os
+    sender = os.environ.get('MAIL_FROM_ADDRESS')
+    if sender is None:
+        return {}
+    if sender != https_contract.MAIL_FROM:
+        raise ValueError('Lab mail may only send as the fixed lab address on the verified domain')
+    return {'MAIL_MAILER': 'ses', 'MAIL_FROM_ADDRESS': https_contract.MAIL_FROM}
+
+
 def _runtime_config(app_url):
     from urllib.parse import urlparse
     https_contract.validate_app_url(app_url)
@@ -374,6 +385,7 @@ def _runtime_config(app_url):
 def configure_runtime(base, app_url, secrets):
     """Roll envFrom consumers on config/secret changes, including future CronJob Pods."""
     runtime = _runtime_config(app_url)
+    runtime.update(_mail_config())
     path = base / 'app-config.yaml'
     config = json.loads(path.read_text())
     config['data'].update(runtime)
