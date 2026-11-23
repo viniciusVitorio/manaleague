@@ -1,13 +1,13 @@
 @extends('layouts.app')
 @push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/ranked.css') }}"><link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/landing.css') }}">@endpush
 @php
-    $title = 'ManaLeague - decks, coleção, partidas e torneios de Magic';
-    $og = ['title' => $title, 'description' => 'Monte e teste decks, saiba quanto vale sua coleção, desafie amigos valendo ELO e organize torneios. Seu Magic inteiro num lugar só.'];
+    $title = 'ManaLeague - decks, coleção, partidas, campeonatos e torneios de Magic';
+    $og = ['title' => $title, 'description' => 'Monte e teste decks, saiba quanto vale sua coleção, desafie amigos valendo ELO e organize campeonatos e torneios. Seu Magic inteiro num lugar só.'];
     $systems = array_values(\App\Models\Tournament::SYSTEMS);
     $rankedFormats = config('ranked.formats', []);
     $achievementCount = count(\App\Services\AchievementService::definitions());
     $tiers = ['ferro' => 'Ferro', 'bronze' => 'Bronze', 'prata' => 'Prata', 'ouro' => 'Ouro', 'platina' => 'Platina', 'diamante' => 'Diamante', 'mestre' => 'Mestre'];
-    $tabs = [['decks', 'Decks'], ['colecao', 'Coleção'], ['mesa', 'Mesa e desafios'], ['ranked', 'Ranked'], ['torneios', 'Torneios'], ['comunidade', 'Comunidade']];
+    $tabs = [['decks', 'Decks'], ['colecao', 'Coleção'], ['mesa', 'Mesa e desafios'], ['ranked', 'Ranked'], ['eventos', 'Eventos'], ['comunidade', 'Comunidade']];
     $audiences = [
         ['user', 'Para quem joga', 'Seu histórico de Magic, finalmente guardado.', [
             'Decks, coleção e lista de compras no mesmo lugar',
@@ -40,7 +40,7 @@
     <div class="lp-copy">
         <p class="eyebrow">Para jogadores, grupos e lojas de Magic</p>
         <h1>Seu Magic inteiro, <span>num lugar só.</span></h1>
-        <p class="lp-lead">Monte e teste decks, saiba quanto vale sua coleção, desafie amigos valendo ELO e organize torneios da mesa da cozinha ao evento da loja. O ManaLeague guarda cada deck, cada partida e cada conquista.</p>
+        <p class="lp-lead">Monte e teste decks, saiba quanto vale sua coleção, desafie amigos valendo ELO e organize campeonatos e torneios da mesa da cozinha ao evento da loja. O ManaLeague guarda cada deck, cada partida e cada conquista.</p>
         <div class="lp-actions">
             @auth
                 <a class="ui-btn ui-btn-primary lp-btn" href="{{ route('dashboard') }}">Ir para o painel <x-icon name="arrow-right" :size="16" /></a>
@@ -126,7 +126,7 @@
         <ul class="lp-list">
             <li><x-icon name="check-check" :size="14" /><span><b>Simulador de mão</b> com mulligan de Londres e estatística de 1.000 mãos iniciais</span></li>
             <li><x-icon name="check-check" :size="14" /><span><b>Tag "Banido"</b> nas cartas fora do formato, com a lista oficial atualizada todo dia</span></li>
-            <li><x-icon name="check-check" :size="14" /><span><b>Histórico de versões</b>: cada torneio congela a lista que você jogou</span></li>
+            <li><x-icon name="check-check" :size="14" /><span><b>Histórico de versões</b>: cada evento congela a lista que você jogou</span></li>
             <li><x-icon name="check-check" :size="14" /><span><b>Comparador</b> entre dois decks, seus ou de amigos que compartilharam</span></li>
             <li><x-icon name="check-check" :size="14" /><span>Sideboard e comandante, capa com a arte da carta e exportação em um clique</span></li>
         </ul>
@@ -215,7 +215,7 @@
         <ul class="lp-list">
             <li><x-icon name="check-check" :size="14" /><span><b>{{ count($tiers) }} patentes</b> com divisões; sobe e cai na hora, sem série de promoção</span></li>
             <li><x-icon name="check-check" :size="14" /><span><b>Justo de verdade</b>: placar confirmado pelos dois, limite de partidas por dupla e histórico auditável</span></li>
-            <li><x-icon name="check-check" :size="14" /><span>Ranking entre amigos e torneios ranqueados que também valem pontos</span></li>
+            <li><x-icon name="check-check" :size="14" /><span>Ranking entre amigos e eventos ranqueados que também valem pontos</span></li>
         </ul>
     </div>
     <figure class="lp-shot" aria-label="Exemplo de ranque">
@@ -242,19 +242,19 @@
 </section>
 
 {{-- TORNEIOS --}}
-<section class="lp-split" id="torneios" aria-labelledby="lp-tournaments-title">
+<section class="lp-split" id="eventos" aria-labelledby="lp-tournaments-title">
     <div class="lp-split-copy">
-        <p class="eyebrow">Torneios</p>
+        <p class="eyebrow">Campeonatos e torneios</p>
         <h2 id="lp-tournaments-title">Do convite ao pódio, sem planilha.</h2>
-        <p>{{ implode(', ', array_slice($systems, 0, -1)) }} ou {{ end($systems) }}, com final e disputa de terceiro lugar. Regras do formato ou regras da casa. Ninguém fica em volta do organizador.</p>
+        <p>Campeonato por pontos corridos (liga, suíço ou pods de Commander) ou torneio mata-mata em chaves (eliminação simples, dupla ou por pods). Regras do formato ou regras da casa. Ninguém fica em volta do organizador.</p>
         <ul class="lp-list">
             <li><x-icon name="check-check" :size="14" /><span><b>Placar pelo celular</b>: o jogador envia, o oponente confirma ou contesta</span></li>
             <li><x-icon name="check-check" :size="14" /><span><b>Dia do evento</b>: QR de inscrição, check-in, cronômetro da rodada e remoção de ausentes</span></li>
             <li><x-icon name="check-check" :size="14" /><span><b>Modo TV</b> para o telão e página pública com prévia no WhatsApp</span></li>
-            <li><x-icon name="check-check" :size="14" /><span>Decks conferidos na inscrição, retrospectiva do campeão e "repetir torneio" para a semana seguinte</span></li>
+            <li><x-icon name="check-check" :size="14" /><span>Decks conferidos na inscrição, retrospectiva do campeão e "repetir" para a semana seguinte</span></li>
         </ul>
     </div>
-    <figure class="lp-shot" aria-label="Exemplo da arena de um torneio em andamento">
+    <figure class="lp-shot" aria-label="Exemplo da arena de um campeonato em andamento">
         <div class="lp-shot-head">
             <div><span class="lp-kicker">Pauper · Suíço</span><strong>Friday Night Magic</strong></div>
             <span class="ui-badge ui-badge-success"><span class="ui-dot"></span>Ao vivo</span>
@@ -282,9 +282,9 @@
     <div class="lp-split-copy">
         <p class="eyebrow">Comunidade</p>
         <h2 id="lp-community-title">O grupo e a loja, juntos num feed.</h2>
-        <p>Crie o clube da sua loja ou do seu grupo, aberto ou só com convite. Os torneios do clube entram num ranking acumulado e os membros são avisados.</p>
+        <p>Crie o clube da sua loja ou do seu grupo, aberto ou só com convite. Os eventos do clube entram num ranking acumulado e os membros são avisados.</p>
         <ul class="lp-list">
-            <li><x-icon name="check-check" :size="14" /><span><b>Clubes</b> com mural, agenda de torneios e ranking da loja</span></li>
+            <li><x-icon name="check-check" :size="14" /><span><b>Clubes</b> com mural, agenda de eventos e ranking da loja</span></li>
             <li><x-icon name="check-check" :size="14" /><span><b>Feed</b> com resultados, campeões, subidas de patente e conquistas dos amigos</span></li>
             <li><x-icon name="check-check" :size="14" /><span><b>{{ $achievementCount }} conquistas</b>, algumas secretas, de "First Blood" a "Dinastia"</span></li>
         </ul>
@@ -315,7 +315,7 @@
         @endforeach
     </div>
     <dl class="lp-numbers">
-        <div><dd>{{ count($systems) }}</dd><dt>sistemas de torneio</dt></div>
+        <div><dd>{{ count($systems) }}</dd><dt>sistemas de disputa</dt></div>
         <div><dd>{{ count($rankedFormats) }}</dd><dt>formatos no ranked</dt></div>
         <div><dd>{{ count($tiers) }}</dd><dt>patentes</dt></div>
         <div><dd>{{ $achievementCount }}</dd><dt>conquistas</dt></div>

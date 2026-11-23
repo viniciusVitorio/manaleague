@@ -104,7 +104,7 @@ class BannedCardsTest extends TestCase
         $this->assertSame([Tournament::RULES_CUSTOM, true, false], [$custom->rules, $custom->allow_banned, $custom->blocksBannedCards()]);
         $this->get(route('arena.public', $custom->public_slug))->assertSee('Regras personalizadas · cartas banidas ou inválidas liberadas')->assertSee('Proxies liberados');
         $this->actingAs($org)->get(route('tournaments.invite.show', $custom->invite_token))->assertSee('Proxies liberados');
-        $this->actingAs($org)->get(route('tournaments.create'))->assertSee('Regras do torneio')->assertSee('Permitir cartas banidas no formato');
+        $this->actingAs($org)->get(route('tournaments.create'))->assertSee('Regras do evento')->assertSee('Permitir cartas banidas no formato');
 
         // ranqueado não aceita banidas
         $this->actingAs($org)->post(route('tournaments.store'), $base + ['ranked' => 1, 'rules' => 'custom', 'allow_banned' => 1])->assertSessionHasErrors('allow_banned');
@@ -131,7 +131,7 @@ class BannedCardsTest extends TestCase
         $this->travelTo($t->tournament_date->copy()->setTime(12, 0)); // o jogador só confirma presença no dia do evento
 
         // convite: o seletor avisa e a inscrição com o deck banido é recusada, com as cartas
-        $this->actingAs($ana)->get(route('tournaments.invite.show', $t->invite_token))->assertSee('Tron Gush · tem cartas banidas ou inválidas')->assertSee('não podem ser usados neste torneio');
+        $this->actingAs($ana)->get(route('tournaments.invite.show', $t->invite_token))->assertSee('Tron Gush · tem cartas banidas ou inválidas')->assertSee('não podem ser usados neste campeonato');
         $this->actingAs($ana)->post(route('tournaments.invite.store', $t->invite_token), ['deck_id' => $banned->id])
             ->assertSessionHasErrors(['deck_id' => 'Seu deck tem cartas banidas ou inválidas no Pauper: Gush e High Tide. Troque essas cartas ou escolha outro deck.']);
         $this->assertSame(0, $t->players()->count());
@@ -187,13 +187,13 @@ class BannedCardsTest extends TestCase
 
         // formato "Outro" (sem lista de banidas) libera
         $other = $this->tournament($org, ['format' => 'Outro']);
-        $this->actingAs($org)->post(route('tournaments.friends.store', [$other, $ana->playerProfile]))->assertSessionHas('status', 'Amigo adicionado ao torneio.');
+        $this->actingAs($org)->post(route('tournaments.friends.store', [$other, $ana->playerProfile]))->assertSessionHas('status', 'Amigo adicionado ao campeonato.');
         $this->assertSame($deck->id, $other->players()->first()->deck_id);
 
         // editar o torneio para as regras padrão avisa sobre inscritos com banidas
         $loose = $this->tournament($org, ['rules' => 'custom', 'allow_banned' => true]);
         $loose->players()->create(['name' => 'Ana', 'player_profile_id' => $ana->playerProfile->id, 'deck_id' => $deck->id]);
         $this->actingAs($org)->put(route('tournaments.update', $loose), ['name' => 'Copa', 'format' => 'Pauper', 'tournament_date' => '2026-11-01', 'rules' => 'standard'])
-            ->assertSessionHas('status', 'Torneio atualizado. Atenção: 1 inscrito está com cartas banidas ou inválidas no deck e só pode fazer check-in depois de trocar.');
+            ->assertSessionHas('status', 'Campeonato atualizado. Atenção: 1 inscrito está com cartas banidas ou inválidas no deck e só pode fazer check-in depois de trocar.');
     }
 }

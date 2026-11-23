@@ -18,7 +18,7 @@
         @if($prizesEditable)<a class="ui-btn ui-btn-outline ui-btn-sm" href="{{ route('tournaments.prizes.edit', $tournament) }}"><x-icon name="pencil" />{{ $prizes->isEmpty() ? 'Definir premiação' : 'Editar premiação' }}</a>@endif
     </div>
     @if($prizes->isEmpty())
-        <p class="muted prize-board-empty">Nenhum prêmio definido. Você pode oferecer boosters e um troféu ou medalha por colocação: quem ganhar recebe sozinho quando o torneio encerrar.</p>
+        <p class="muted prize-board-empty">Nenhum prêmio definido. Você pode oferecer boosters e um troféu ou medalha por colocação: quem ganhar recebe sozinho quando o {{ $tournament->kindNoun() }} encerrar.</p>
     @else
     <ol class="prize-places">
         @foreach($prizes as $place)

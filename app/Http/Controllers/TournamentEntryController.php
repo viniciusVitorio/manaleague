@@ -19,7 +19,7 @@ class TournamentEntryController extends Controller
     {
         $profile = $request->user()->ensurePlayerProfile();
         $entry = $tournament->players()->where('player_profile_id', $profile->id)->firstOrFail();
-        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'O torneio já começou; o deck não pode mais ser trocado.');
+        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'O '.$tournament->kindNoun().' já começou; o deck não pode mais ser trocado.');
 
         $deck = self::validatedDeck($request, $profile, $tournament);
         if ($banned = app(BanListService::class)->blockingCards($tournament, $deck['deck_id'])) {
@@ -36,7 +36,7 @@ class TournamentEntryController extends Controller
             return 'updated';
         });
 
-        abort_if($result === 'closed', 409, 'O torneio já começou; o deck não pode mais ser trocado.');
+        abort_if($result === 'closed', 409, 'O '.$tournament->kindNoun().' já começou; o deck não pode mais ser trocado.');
 
         return back()->with('status', 'Deck da inscrição atualizado.');
     }
@@ -51,8 +51,8 @@ class TournamentEntryController extends Controller
         $validated = $request->validate([
             'deck_id' => [$tournament->requiresDeck() ? 'required' : 'nullable', 'integer', Rule::exists('decks', 'id')->where('player_profile_id', $profile->id)],
         ], [
-            'deck_id.required' => 'Escolha um dos seus decks para o torneio.',
-            'deck_id.exists' => 'Escolha um dos seus decks para o torneio.',
+            'deck_id.required' => 'Escolha um dos seus decks para o '.$tournament->kindNoun().'.',
+            'deck_id.exists' => 'Escolha um dos seus decks para o '.$tournament->kindNoun().'.',
         ]);
 
         $deck = ($validated['deck_id'] ?? null) ? Deck::query()->find($validated['deck_id']) : null;

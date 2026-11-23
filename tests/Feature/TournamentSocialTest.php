@@ -131,6 +131,6 @@ class TournamentSocialTest extends TestCase
             ->assertSee(route('tournaments.show', $mine), false);
 
         $fresh = $this->account('Novato');
-        $this->actingAs($fresh)->get(route('tournaments.index'))->assertSee('Nenhum torneio criado')->assertSee('Você ainda não está em nenhum torneio');
+        $this->actingAs($fresh)->get(route('tournaments.index'))->assertSee('Nenhum evento criado')->assertSee('Você ainda não está em nenhum evento');
     }
 }

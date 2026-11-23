@@ -132,6 +132,7 @@ class DashboardService
 
             return [
                 'kind' => 'tournament',
+                'label' => $m->tournament->kindLabel(),
                 'context' => $m->tournament->name,
                 'detail' => trim(($m->pod_player_ids ? 'Mesa Commander' : 'Rodada '.$m->round).' · '.$m->tournament->format),
                 'me' => $me?->name ?? $user->name,

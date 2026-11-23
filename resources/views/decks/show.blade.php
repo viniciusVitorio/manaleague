@@ -2,7 +2,7 @@
 @push('head')<script src="{{ \App\Support\VersionedAsset::url('js/deck-builder.js') }}" defer></script><script src="{{ \App\Support\VersionedAsset::url('js/copy-link.js') }}" defer></script>@endpush
 @section('content')
 @if(($public ?? false) && ! auth()->check())
-<div class="ui-hint deck-public-hint"><x-icon name="info" /><p>Este deck foi compartilhado com você. <a href="{{ route('register') }}">Crie sua conta</a> para montar os seus, comparar e levar para torneios.</p></div>
+<div class="ui-hint deck-public-hint"><x-icon name="info" /><p>Este deck foi compartilhado com você. <a href="{{ route('register') }}">Crie sua conta</a> para montar os seus, comparar e levar para campeonatos e torneios.</p></div>
 @endif
 @php
     // $public: aberto pelo link público (ML-023), por qualquer pessoa, até sem conta. Mostra o deck como um amigo veria.
@@ -85,7 +85,7 @@
 @endif
 
 @if($bannedNames || $invalidNames)
-<div class="alert alert-danger ban-alert" role="status"><strong>{{ $blockedHeadline }}</strong> Torneios com as regras padrão do formato não aceitam este deck até a troca{{ $bannedCount + $invalidCount === 1 ? ' dela' : ' delas' }}. Elas estão marcadas com @if($bannedNames)<span class="ban-tag">Banido</span>@endif @if($bannedNames && $invalidNames) e @endif @if($invalidNames)<span class="ban-tag is-invalid">Inválida</span>@endif na lista.</div>
+<div class="alert alert-danger ban-alert" role="status"><strong>{{ $blockedHeadline }}</strong> Eventos com as regras padrão do formato não aceitam este deck até a troca{{ $bannedCount + $invalidCount === 1 ? ' dela' : ' delas' }}. Elas estão marcadas com @if($bannedNames)<span class="ban-tag">Banido</span>@endif @if($bannedNames && $invalidNames) e @endif @if($invalidNames)<span class="ban-tag is-invalid">Inválida</span>@endif na lista.</div>
 @endif
 @if($summary['warnings'])
 <div class="alert alert-warning"><strong>Construção:</strong><ul>@foreach($summary['warnings'] as $warning)<li>{{ $warning }}</li>@endforeach</ul></div>
@@ -246,7 +246,7 @@
     </header>
     <div class="deck-add-tabs" role="tablist" aria-label="Como adicionar">
         <button type="button" role="tab" id="deck-add-tab-search" aria-controls="deck-add-search" aria-selected="true" data-add-tab><x-icon name="search" />Buscar cartas</button>
-        <button type="button" role="tab" id="deck-add-tab-list" aria-controls="deck-add-list" aria-selected="false" data-add-tab><x-icon name="upload" />Colar lista</button>
+        <button type="button" role="tab" id="deck-add-tab-list" aria-controls="deck-add-list" aria-selected="false" tabindex="-1" data-add-tab><x-icon name="upload" />Colar lista</button>
     </div>
     <div class="ui-dialog-body" id="deck-add-search" role="tabpanel" aria-labelledby="deck-add-tab-search">
         <div class="deck-add-bar">

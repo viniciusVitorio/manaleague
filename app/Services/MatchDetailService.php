@@ -88,13 +88,13 @@ class MatchDetailService
             default => 'Rodada '.$match->round,
         };
         $link = $organizer
-            ? ['url' => route('tournaments.show', $t), 'label' => 'Ver torneio']
-            : ($t->public_slug ? ['url' => route('arena.public', $t->public_slug), 'label' => 'Ver torneio'] : null);
+            ? ['url' => route('tournaments.show', $t), 'label' => 'Ver '.$t->kindNoun()]
+            : ($t->public_slug ? ['url' => route('arena.public', $t->public_slug), 'label' => 'Ver '.$t->kindNoun()] : null);
 
         // Torneio ranqueado: o ELO vem da partida ranqueada que nasce da partida do torneio.
         $ranked = $t->ranked && ! $pod ? RankedMatch::where(['source_type' => 'tournament_match', 'source_id' => $match->id])->first() : null;
 
-        return $this->summary('tournament', $t->ranked ? 'Torneio ranqueado' : 'Torneio', (bool) $t->ranked,
+        return $this->summary('tournament', $t->kindLabel().($t->ranked ? ' ranqueado' : ''), (bool) $t->ranked,
             [$t->name, $t->system === 'pod_elimination' ? $match->podPhaseLabel() : ($pod ? 'Mesa Commander' : $stage), $t->format], $finished ? ($match->played_at ?? $match->updated_at) : null,
             $status, $pod, $players, $finished, $this->logs->chartFor('tournament', $match->id, $user), $link, $this->elo($ranked, $user));
     }

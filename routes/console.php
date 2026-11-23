@@ -137,7 +137,7 @@ Artisan::command('tournaments:podium-emails', function (): int {
     $result = app(\App\Services\PodiumEmailService::class)->deliverPending();
     $this->info("E-mails de pódio: {$result['sent']} enviado(s), {$result['failed']} com falha.");
     return $result['failed'] > 0 ? 1 : 0;
-})->purpose('Tenta de novo os e-mails de pódio que não saíram ao encerrar o torneio');
+})->purpose('Tenta de novo os e-mails de pódio que não saíram ao encerrar o evento');
 
 // Estas tarefas rodam todo dia pelo workflow .github/workflows/daily-tasks.yml (o Docker de produção não tem
 // agendador do Laravel). As conferências de cartas também rodam no deploy; a dos desafios também ao abrir as páginas.

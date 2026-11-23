@@ -22,10 +22,10 @@
         @endforeach
     </select>
 </label>
-@if($bannedPicker)<p class="muted small-note">Decks com {{ $blockedLabel }} no {{ $tournament->format }} não podem ser usados neste torneio.</p>@endif
+@if($bannedPicker)<p class="muted small-note">Decks com {{ $blockedLabel }} no {{ $tournament->format }} não podem ser usados neste {{ $tournament->kindNoun() }}.</p>@endif
 @if($hiddenDecks > 0)<p class="muted small-note">Aparecem só os decks de {{ $tournament->format }} e os decks sem formato definido.</p>@endif
 @elseif($tournament->requiresDeck())
-<div class="alert alert-warning" role="status">Para entrar neste torneio você precisa de um deck de {{ $tournament->format }} salvo na sua conta. <a href="{{ route('decks.index') }}">Criar um deck</a></div>
+<div class="alert alert-warning" role="status">Para entrar neste {{ $tournament->kindNoun() }} você precisa de um deck de {{ $tournament->format }} salvo na sua conta. <a href="{{ route('decks.index') }}">Criar um deck</a></div>
 @else
 <p class="muted small-note">Neste draft o deck é montado na mesa: não precisa escolher um deck salvo.</p>
 @endif

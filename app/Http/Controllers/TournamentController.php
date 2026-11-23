@@ -30,7 +30,15 @@ class TournamentController extends Controller
             ->whereHas('players.profile', fn ($query) => $query->where('account_user_id', $user->id))
             ->with('user.playerProfile')->withCount('players')->latest()->get();
 
-        return view('tournaments.index', compact('tournaments', 'playing'));
+        // Filtro por tipo (sai do sistema de disputa). A contagem de cada aba soma os dois grupos da página.
+        $filters = ['todos' => ['Todos', 'evento', null], 'campeonatos' => ['Campeonatos', 'campeonato', 'championship'], 'torneios' => ['Torneios', 'torneio', 'tournament']];
+        $filter = array_key_exists((string) $request->query('tipo'), $filters) ? (string) $request->query('tipo') : 'todos';
+        $ofKind = fn ($list, ?string $kind) => $kind ? $list->filter(fn (Tournament $t) => $t->kind() === $kind)->values() : $list;
+        $counts = collect($filters)->map(fn ($f) => $ofKind($tournaments, $f[2])->count() + $ofKind($playing, $f[2])->count())->all();
+        [$tournaments, $playing] = [$ofKind($tournaments, $filters[$filter][2]), $ofKind($playing, $filters[$filter][2])];
+        $noun = $filters[$filter][1];
+
+        return view('tournaments.index', compact('tournaments', 'playing', 'filters', 'filter', 'counts', 'noun'));
     }
 
     public function create(): View { return view('tournaments.create'); }
@@ -43,7 +51,7 @@ class TournamentController extends Controller
         $validated['public_slug'] = Str::limit(Str::slug($validated['name']), 60, '').'-'.Str::lower(Str::random(16));
         $validated['invite_token'] = Str::random(40);
         $tournament = $request->user()->tournaments()->create($validated);
-        return redirect()->route('tournaments.show', $tournament)->with('status', 'Torneio criado. Agora chame a galera!');
+        return redirect()->route('tournaments.show', $tournament)->with('status', ucfirst($tournament->kindNoun()).' criado. Agora chame a galera!');
     }
 
     public function show(Tournament $tournament, StandingsService $standings, TournamentRecapService $recaps): View
@@ -84,7 +92,7 @@ class TournamentController extends Controller
             return back()->withErrors(['max_players' => 'O limite não pode ser menor que o total de inscritos.'])->withInput();
         }
         $tournament->update($validated);
-        return redirect()->route('tournaments.show', $tournament)->with('status', 'Torneio atualizado.'.$this->bannedWarning($tournament));
+        return redirect()->route('tournaments.show', $tournament)->with('status', ucfirst($tournament->kindNoun()).' atualizado.'.$this->bannedWarning($tournament));
     }
 
     /**
@@ -131,15 +139,15 @@ class TournamentController extends Controller
 
         if ($club) {
             foreach ($club->members()->where('users.id', '!=', $user->id)->get() as $member) {
-                app(NotificationService::class)->send($member, 'club.tournament', "Novo torneio no {$club->name}: {$copy->name}", '/clubs/'.$club->id, "club:{$club->id}:tournament:{$copy->id}:{$member->id}", ['club_id' => $club->id]);
+                app(NotificationService::class)->send($member, 'club.tournament', "Novo {$copy->kindNoun()} no {$club->name}: {$copy->name}", '/clubs/'.$club->id, "club:{$club->id}:tournament:{$copy->id}:{$member->id}", ['club_id' => $club->id]);
             }
         }
 
         $players = $copy->players()->count();
 
         return redirect()->route('tournaments.show', $copy)->with('status', ($players
-            ? "Torneio criado a partir de \"{$tournament->name}\" com {$players} jogadores. Confira a lista antes de começar."
-            : "Torneio criado a partir de \"{$tournament->name}\". Agora chame a galera!").$this->bannedWarning($copy));
+            ? ucfirst($copy->kindNoun())." criado a partir de \"{$tournament->name}\" com {$players} jogadores. Confira a lista antes de começar."
+            : ucfirst($copy->kindNoun())." criado a partir de \"{$tournament->name}\". Agora chame a galera!").$this->bannedWarning($copy));
     }
 
     /** Aviso quando as regras barram quem já está inscrito: deck com banidas ou nenhum deck escolhido. */
@@ -178,7 +186,7 @@ class TournamentController extends Controller
         $images = $tournament->prizes()->whereNotNull('image_path')->pluck('image_path')->all();
         DB::transaction(fn () => $tournament->delete());
         app(\App\Services\PrizeService::class)->forgetImages($images);
-        return redirect()->route('tournaments.index')->with('status', 'Torneio excluido.');
+        return redirect()->route('tournaments.index')->with('status', ucfirst($tournament->kindNoun()).' excluído.');
     }
 
     private function validateTournament(Request $request): array
@@ -187,12 +195,12 @@ class TournamentController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'format' => ['required', Rule::in(self::FORMATS)],
             'system' => ['sometimes', 'required', Rule::in(array_keys(Tournament::SYSTEMS)), function ($attribute,$value,$fail) use ($request) { if ($value==='commander_pods' && $request->input('format')!=='Commander') $fail('Selecione o formato Commander para pods.'); }],
-            'ranked' => ['sometimes', 'boolean', function ($attribute, $value, $fail) use ($request) { if ($value && $request->input('system') === 'commander_pods') $fail('Torneios com pods Commander não podem ser ranqueados.'); }],
+            'ranked' => ['sometimes', 'boolean', function ($attribute, $value, $fail) use ($request) { if ($value && $request->input('system') === 'commander_pods') $fail('Campeonatos de Pods Commander não podem ser ranqueados.'); }],
             'round_limit' => ['nullable','integer','min:1','max:20'],
             'tournament_date' => ['required', 'date'],
             'max_players' => ['nullable', 'integer', $request->input('system') === 'pod_elimination' ? 'min:3' : 'min:4', 'max:128'],
             'rules' => ['sometimes', 'required', Rule::in([Tournament::RULES_STANDARD, Tournament::RULES_CUSTOM])],
-            'allow_banned' => ['sometimes', 'boolean', function ($attribute, $value, $fail) use ($request) { if ($value && $request->input('rules') === Tournament::RULES_CUSTOM && $request->boolean('ranked')) $fail('Torneios ranqueados não aceitam cartas banidas.'); }],
+            'allow_banned' => ['sometimes', 'boolean', function ($attribute, $value, $fail) use ($request) { if ($value && $request->input('rules') === Tournament::RULES_CUSTOM && $request->boolean('ranked')) $fail('Eventos ranqueados não aceitam cartas banidas.'); }],
             'house_rules' => ['nullable', 'string', 'max:1000'],
         ]);
 

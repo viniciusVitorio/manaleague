@@ -19,7 +19,7 @@
     <section class="card settings-card" id="foto">
         <div class="settings-card-body">
             <h2>Foto de perfil</h2>
-            <p class="settings-card-desc">Aparece no seu perfil, nas partidas e nos torneios.</p>
+            <p class="settings-card-desc">Aparece no seu perfil, nas partidas e nos eventos.</p>
             @error('photo')<div class="alert alert-danger" role="alert">{{ $message }}</div>@enderror
             <div class="avatar-upload">
                 <x-avatar :of="$profile" class="profile-avatar large" id="photo-preview" />
@@ -47,7 +47,7 @@
                 <h2>Dados pessoais</h2>
                 <p class="settings-card-desc">Como os outros jogadores veem você.</p>
                 <div class="settings-fields settings-fields-emoji">
-                    <label>Nome de exibição <small>Aparece no perfil, nos torneios e no ranking. Pode ter espaços e acentos.</small><input name="nickname" value="{{ old('nickname', $profile->nickname) }}" maxlength="80" required></label>
+                    <label>Nome de exibição <small>Aparece no perfil, nos eventos e no ranking. Pode ter espaços e acentos.</small><input name="nickname" value="{{ old('nickname', $profile->nickname) }}" maxlength="80" required></label>
                     <label>Avatar <small>Só 1 emoji. Digitar outro troca o atual.</small><input class="emoji-input" name="avatar" value="{{ old('avatar', $profile->emoji()) }}" maxlength="20" placeholder="🧙" autocomplete="off" spellcheck="false" data-single-emoji></label>
                 </div>
             </div>
@@ -135,19 +135,23 @@
                     <div class="notify-prefs-head" aria-hidden="true"><span></span><span>App</span><span>E-mail</span></div>
                     <div class="notify-prefs-row is-master">
                         <span class="ui-option-text"><span class="ui-option-title">Todas as notificações</span><span class="ui-option-desc">Desligar pausa o canal inteiro.</span></span>
-                        <span class="notify-prefs-cell"><input type="hidden" name="enabled" value="0"><input type="checkbox" class="ui-switch" role="switch" name="enabled" value="1" aria-label="Todas as notificações no app" @checked($notify->enabled)></span>
-                        <span class="notify-prefs-cell"><input type="hidden" name="email_enabled" value="0"><input type="checkbox" class="ui-switch" role="switch" name="email_enabled" value="1" aria-label="Todas as notificações por e-mail" @checked($notify->email_enabled ?? true)></span>
+                        <span class="notify-prefs-cell"><input type="hidden" name="enabled" value="0"><input type="checkbox" class="ui-switch" role="switch" name="enabled" value="1" aria-label="Todas as notificações no app" data-channel-master="app" @checked($notify->enabled)></span>
+                        <span class="notify-prefs-cell"><input type="hidden" name="email_enabled" value="0"><input type="checkbox" class="ui-switch" role="switch" name="email_enabled" value="1" aria-label="Todas as notificações por e-mail" data-channel-master="email" @checked($notify->email_enabled ?? true)></span>
                     </div>
+                    @php($appChannel = (bool) $notify->enabled)
+                    @php($emailChannel = (bool) ($notify->email_enabled ?? true))
                     @foreach(\App\Models\NotificationPreference::CATEGORIES as $type => [$label, $desc])
+                        @php($appOn = ! in_array($type, $notify->muted_types ?? []))
+                        @php($emailOn = ! in_array($type, $notify->email_muted_types ?? []))
                         <div class="notify-prefs-row">
                             <span class="ui-option-text"><span class="ui-option-title">{{ $label }}</span><span class="ui-option-desc">{{ $desc }}</span></span>
                             <span class="notify-prefs-cell">
-                                <input type="checkbox" class="ui-switch" role="switch" aria-label="{{ $label }} no app" data-mute="{{ $type }}" @checked(! in_array($type, $notify->muted_types ?? []))>
+                                <input type="checkbox" class="ui-switch" role="switch" aria-label="{{ $label }} no app" data-mute="{{ $type }}" data-channel="app" data-saved="{{ $appOn ? 1 : 0 }}" @checked($appChannel && $appOn) @disabled(! $appChannel)>
                                 <input type="hidden" name="muted_types[]" value="{{ $type }}" @disabled(! in_array($type, $notify->muted_types ?? [])) data-mute-field="{{ $type }}">
                             </span>
                             <span class="notify-prefs-cell">
                                 @if(in_array($type, \App\Models\NotificationPreference::EMAIL_CATEGORIES, true))
-                                    <input type="checkbox" class="ui-switch" role="switch" aria-label="{{ $label }} por e-mail" data-mute="email.{{ $type }}" @checked(! in_array($type, $notify->email_muted_types ?? []))>
+                                    <input type="checkbox" class="ui-switch" role="switch" aria-label="{{ $label }} por e-mail" data-mute="email.{{ $type }}" data-channel="email" data-saved="{{ $emailOn ? 1 : 0 }}" @checked($emailChannel && $emailOn) @disabled(! $emailChannel)>
                                     <input type="hidden" name="email_muted_types[]" value="{{ $type }}" @disabled(! in_array($type, $notify->email_muted_types ?? [])) data-mute-field="email.{{ $type }}">
                                 @else
                                     <span class="notify-prefs-none">Só no app</span>

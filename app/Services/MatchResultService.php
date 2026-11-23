@@ -19,9 +19,9 @@ class MatchResultService
         DB::transaction(function () use ($tournament, $match, $scores): void {
             $t = Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
             $m = GameMatch::query()->lockForUpdate()->findOrFail($match->id);
-            if ($m->tournament_id !== $t->id) throw new LogicException('Partida de outro torneio.');
+            if ($m->tournament_id !== $t->id) throw new LogicException('Partida de outro evento.');
             if ($m->status === 'bye') throw new LogicException('BYE não pode ser alterado.');
-            if (! $this->editable($t, $m)) throw new LogicException('Resultado travado: uma fase dependente já foi gerada ou o torneio não começou.');
+            if (! $this->editable($t, $m)) throw new LogicException('Resultado travado: uma fase dependente já foi gerada ou o '.$t->kindNoun().' não começou.');
             if ($t->system === 'pod_elimination') {
                 app(PodEliminationService::class)->record($t, $m, $scores);
                 $t->refresh();
@@ -69,7 +69,7 @@ class MatchResultService
     {
         $one = $match->playerOne()->with('profile')->first()?->profile;
         $two = $match->playerTwo()->with('profile')->first()?->profile;
-        if (! $one || ! $two) throw new LogicException('Torneios ranqueados exigem jogadores com perfil de conta.');
+        if (! $one || ! $two) throw new LogicException('Eventos ranqueados exigem jogadores com perfil de conta.');
         $season = app(\App\Services\Ranked\SeasonService::class)->activeFor($tournament->format);
         if (! $season) throw new LogicException('Não há temporada ranqueada ativa para este formato.');
         $format = $season->formats->firstWhere('format', $tournament->format);

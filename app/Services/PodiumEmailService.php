@@ -161,6 +161,7 @@ class PodiumEmailService
     {
         return [
             'tournament' => Str::squish($tournament->name),
+            'kind' => $tournament->kindNoun(),
             'format' => $tournament->format,
             'date' => $tournament->tournament_date?->timezone(config('app.timezone'))->format('d/m/Y'),
             'players' => $players,

@@ -51,7 +51,7 @@ class ProfileSocialTest extends TestCase
             ->assertSee('<a class="back-link" href="'.route('friends.index').'">← Amigos</a>', false);
         // o próprio perfil continua voltando para Torneios
         $this->actingAs($bia)->from(route('friends.index'))->get(route('profiles.show', $bia->playerProfile))
-            ->assertSee('← Torneios', false);
+            ->assertSee('← Eventos', false);
     }
 
     public function test_profile_has_copy_link_button_and_clickable_avatars(): void

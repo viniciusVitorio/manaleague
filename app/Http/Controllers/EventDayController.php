@@ -16,7 +16,7 @@ class EventDayController extends Controller
     public function startTimer(Request $request, Tournament $tournament): RedirectResponse
     {
         $this->authorize('update', $tournament);
-        abort_unless(in_array($tournament->status, [Tournament::STATUS_LEAGUE, Tournament::STATUS_FINALS], true), 409, 'O cronômetro só funciona com o torneio em andamento.');
+        abort_unless(in_array($tournament->status, [Tournament::STATUS_LEAGUE, Tournament::STATUS_FINALS], true), 409, 'O cronômetro só funciona com o '.$tournament->kindNoun().' em andamento.');
         $minutes = (int) $request->validate(['minutes' => ['required', 'integer', 'min:5', 'max:180']])['minutes'];
 
         $tournament->forceFill(['round_minutes' => $minutes, 'round_ends_at' => now()->addMinutes($minutes)])->save();
@@ -35,7 +35,7 @@ class EventDayController extends Controller
     /** O próprio jogador confirma (só no dia do evento) ou desfaz (a qualquer hora) a presença, até o torneio começar. */
     public function checkIn(Request $request, Tournament $tournament): RedirectResponse
     {
-        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'O check-in fecha quando o torneio começa.');
+        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'O check-in fecha quando o '.$tournament->kindNoun().' começa.');
         $entry = $tournament->players()->whereHas('profile', fn ($q) => $q->where('account_user_id', $request->user()->id))->firstOrFail();
         if ($entry->checked_in_at === null && ($window = $tournament->playerCheckInWindow()) !== 'open') {
             $day = $tournament->tournament_date->format('d/m/Y');
@@ -58,7 +58,7 @@ class EventDayController extends Controller
     public function togglePlayer(Tournament $tournament, Player $player): RedirectResponse
     {
         $this->authorize('update', $tournament);
-        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'O check-in fecha quando o torneio começa.');
+        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'O check-in fecha quando o '.$tournament->kindNoun().' começa.');
         abort_unless($player->tournament_id === $tournament->id, 404);
         if ($player->checked_in_at === null && $player->needsDeck($tournament)) {
             return back()->withErrors(['check_in' => $player->name.' ainda não escolheu um deck. A presença só pode ser marcada depois que a pessoa escolher o deck pelo link de inscrição.']);
@@ -74,7 +74,7 @@ class EventDayController extends Controller
     public function removeAbsent(Tournament $tournament): RedirectResponse
     {
         $this->authorize('update', $tournament);
-        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'O torneio já começou.');
+        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'O '.$tournament->kindNoun().' já começou.');
         if (! $tournament->players()->whereNotNull('checked_in_at')->exists()) {
             return back()->withErrors(['check_in' => 'Ninguém fez check-in ainda. Marque as presenças antes de remover os ausentes.']);
         }

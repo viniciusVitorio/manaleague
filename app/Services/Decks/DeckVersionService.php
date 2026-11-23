@@ -24,7 +24,7 @@ class DeckVersionService {
             Tournament::whereKey($tournament->id)->lockForUpdate()->firstOrFail();
             foreach ($tournament->players()->with('deck')->get() as $player) {
                 if (!$player->deck || DeckUse::where('player_id', $player->id)->exists()) continue;
-                $version = $this->snapshot($player->deck, 'Inscrição em torneio');
+                $version = $this->snapshot($player->deck, 'Inscrição em evento');
                 DeckUse::create(['deck_version_id' => $version->id, 'player_id' => $player->id, 'tournament_id' => $tournament->id,
                     'tournament_name' => $tournament->name, 'created_at' => now()]);
             }

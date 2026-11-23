@@ -279,7 +279,7 @@ class PodEliminationTest extends TestCase
                 'tournament_date' => today()->toDateString(), 'max_players' => 3];
             $this->post(route('tournaments.store'), $data)->assertSessionHasErrors('max_players');
             $html = $this->get(route('tournaments.show', $t))->assertOk()->assertSee('Com 4 ou mais jogadores')->getContent();
-            $this->assertMatchesRegularExpression('/<button[^>]*disabled[^>]*>Começar torneio<\/button>/', $html);
+            $this->assertMatchesRegularExpression('/<button[^>]*disabled[^>]*>Começar '.$t->kindNoun().'<\/button>/', $html);
         }
     }
 

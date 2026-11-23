@@ -91,7 +91,7 @@ class ConfirmAllResultsTest extends TestCase
         $closed->update(['status' => Tournament::STATUS_SETUP]); // a fase fechou antes da confirmação
 
         $this->actingAs($felipe)->post(route('results.confirm-all'))
-            ->assertSessionHas('status', '1 placar confirmado. 1 placar não pôde ser confirmado porque mudou, foi contestado ou a fase do torneio fechou. Confira um por um.');
+            ->assertSessionHas('status', '1 placar confirmado. 1 placar não pôde ser confirmado porque mudou, foi contestado ou a fase do evento fechou. Confira um por um.');
         $this->assertSame(['confirmed', 'pending'], MatchResultSubmission::orderBy('id')->pluck('status')->all());
     }
 

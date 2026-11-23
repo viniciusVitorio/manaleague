@@ -21,6 +21,11 @@ class CollectionController extends Controller
 
     public const RARITIES = ['common' => 'Comum', 'uncommon' => 'Incomum', 'rare' => 'Rara', 'mythic' => 'Mítica'];
 
+    /** Cartas por página: no celular a grade tem 2 colunas, então meia página já enche várias telas. */
+    public const PER_PAGE = 48;
+
+    public const PER_PAGE_PHONE = 24;
+
     public function index(Request $request, CollectionService $service)
     {
         $user = $request->user();
@@ -60,7 +65,7 @@ class CollectionController extends Controller
             'recent' => $query->latest('updated_at'),
             default => $query->orderBy('name'),
         };
-        $items = $query->orderBy('id')->paginate(48)->withQueryString();
+        $items = $query->orderBy('id')->paginate($this->isPhone($request) ? self::PER_PAGE_PHONE : self::PER_PAGE)->withQueryString();
 
         return view('decks.collection', [
             'items' => $items, 'filters' => $filters, 'stats' => $service->stats($user),
@@ -154,6 +159,15 @@ class CollectionController extends Controller
         $item->update($data);
 
         return $this->backTo($request, $item)->with('status', $item->for_trade ? "Salvo. {$item->for_trade} para troca." : 'Quantidade atualizada.');
+    }
+
+    /**
+     * Celular, para escolher o tamanho da página: a dica Sec-CH-UA-Mobile (Chrome/Android) ou "Mobi" no user agent
+     * (Safari do iPhone e demais). Tablet fica com a página cheia.
+     */
+    private function isPhone(Request $request): bool
+    {
+        return $request->header('Sec-CH-UA-Mobile') === '?1' || str_contains((string) $request->userAgent(), 'Mobi');
     }
 
     /** Volta para a mesma página da lista, rolando até o item editado. */

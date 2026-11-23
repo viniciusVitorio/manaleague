@@ -65,12 +65,12 @@
 
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:24px;">
         <tr><td style="background-color:#18181b;border-radius:6px;">
-            <a href="{{ $podium['url'] }}" style="display:inline-block;padding:12px 20px;font-size:15px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;">Ver resultado do torneio</a>
+            <a href="{{ $podium['url'] }}" style="display:inline-block;padding:12px 20px;font-size:15px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;">Ver resultado do {{ $podium['kind'] }}</a>
         </td></tr>
         </table>
     </td></tr>
     <tr><td style="padding:16px 4px 0;font-size:12px;line-height:18px;color:#71717a;">
-        Você recebeu este e-mail porque subiu ao pódio de um torneio no ManaLeague. Para não receber mais, desligue o e-mail de <strong>Torneios</strong> em <a href="{{ $podium['preferences_url'] }}" style="color:#52525b;">Editar perfil › Notificações</a>.
+        Você recebeu este e-mail porque subiu ao pódio de um {{ $podium['kind'] }} no ManaLeague. Para não receber mais, desligue o e-mail de <strong>Eventos</strong> em <a href="{{ $podium['preferences_url'] }}" style="color:#52525b;">Editar perfil › Notificações</a>.
     </td></tr>
     </table>
 </td></tr>

@@ -11,7 +11,7 @@
     $backUrl = ! $isOwner && $previous !== url()->current() && str_starts_with($previous, url('/').'/') ? $previous : null;
 @endphp
 @push('head')<script src="{{ \App\Support\VersionedAsset::url('js/copy-link.js') }}" defer></script>@endpush
-<a class="back-link" href="{{ $isOwner ? route('tournaments.index') : ($backUrl ?? route('friends.index')) }}">← {{ $isOwner ? 'Torneios' : ($backUrl ? 'Voltar' : 'Amigos') }}</a>
+<a class="back-link" href="{{ $isOwner ? route('tournaments.index') : ($backUrl ?? route('friends.index')) }}">← {{ $isOwner ? 'Eventos' : ($backUrl ? 'Voltar' : 'Amigos') }}</a>
 <header class="profile-hero card">
     <div>
         <div class="profile-title">
@@ -95,7 +95,7 @@
 
 {{-- Ranked desligado e sem partida ranqueada no histórico: a aba some. --}}
 @php($statTabs = array_filter(['all' => 'Geral'] + \App\Services\PlayerStatsService::KINDS, fn ($kind) => $kind !== 'ranked' || config('ranked.enabled') || $summary['by_kind']['ranked']['played'], ARRAY_FILTER_USE_KEY))
-@php($statEmpty = ['all' => 'Nenhuma partida ainda. Entre num torneio ou desafie um amigo.', 'tournament' => 'Nenhuma partida de torneio ainda.', 'casual' => 'Nenhum desafio casual confirmado ainda.', 'ranked' => 'Nenhuma partida ranqueada confirmada ainda.'])
+@php($statEmpty = ['all' => 'Nenhuma partida ainda. Entre num evento ou desafie um amigo.', 'tournament' => 'Nenhuma partida de evento ainda.', 'casual' => 'Nenhum desafio casual confirmado ainda.', 'ranked' => 'Nenhuma partida ranqueada confirmada ainda.'])
 <section class="stat-tabs" aria-label="Estatísticas de partidas">
     @foreach($statTabs as $kind => $label)
         <input type="radio" name="stat-kind" id="stat-{{ $kind }}" value="{{ $kind }}" class="stat-tab-input" data-async-keep @checked($kind === 'all')>
@@ -253,11 +253,11 @@
 @endif
 
 <div class="profile-columns">
-    <section class="card section-card"><span class="eyebrow">Arsenal utilizado</span><h2>Decks nos torneios</h2>
+    <section class="card section-card"><span class="eyebrow">Arsenal utilizado</span><h2>Decks nos eventos</h2>
         @forelse($summary['decks'] as $deck)<div class="history-row"><div><strong>{{ $deck['name'] }}</strong><small>@if($deck['colors'])@include('partials.color-pips', ['colors' => $deck['colors']])@else Cores não informadas @endif</small></div><b>{{ $deck['wins'] }}W — {{ $deck['losses'] }}L</b></div>@empty<p class="muted">Nenhum deck registrado.</p>@endforelse
     </section>
     <section class="card section-card"><span class="eyebrow">Histórico</span><h2>Campeonatos</h2>
-        @forelse($summary['tournaments'] as $tournament)<a class="history-row" href="{{ route('arena.public', $tournament->public_slug) }}"><div><strong>{{ $tournament->name }}</strong><small>{{ $tournament->format }} · {{ $tournament->tournament_date?->format('d/m/Y') }}</small></div><span>→</span></a>@empty<p class="muted">Nenhum torneio disputado.</p>@endforelse
+        @forelse($summary['tournaments'] as $tournament)<a class="history-row" href="{{ route('arena.public', $tournament->public_slug) }}"><div><strong>{{ $tournament->name }}</strong><small>{{ $tournament->format }} · {{ $tournament->tournament_date?->format('d/m/Y') }}</small></div><span>→</span></a>@empty<p class="muted">Nenhum evento disputado.</p>@endforelse
     </section>
 </div>
 

@@ -192,7 +192,7 @@ class ClubController extends Controller
             return $t;
         });
         foreach ($club->members()->where('users.id', '!=', $request->user()->id)->get() as $member) {
-            app(NotificationService::class)->send($member, 'club.tournament', "Novo torneio no {$club->name}: {$tournament->name}", '/clubs/'.$club->id, "club:{$club->id}:tournament:{$tournament->id}:{$member->id}", ['club_id' => $club->id]);
+            app(NotificationService::class)->send($member, 'club.tournament', "Novo {$tournament->kindNoun()} no {$club->name}: {$tournament->name}", '/clubs/'.$club->id, "club:{$club->id}:tournament:{$tournament->id}:{$member->id}", ['club_id' => $club->id]);
         }
 
         return redirect()->route('tournaments.show', $tournament);
@@ -211,14 +211,14 @@ class ClubController extends Controller
         $tournament = DB::transaction(function () use ($data, $user, $club) {
             $t = Tournament::query()->lockForUpdate()->find($data['tournament_id']);
             abort_unless($t && $t->user_id === $user->id, 404);
-            abort_if($t->club_id !== null, 409, $t->club_id === $club->id ? 'Este torneio já é do clube.' : 'Este torneio já pertence a outro clube. Desvincule de lá primeiro.');
+            abort_if($t->club_id !== null, 409, $t->club_id === $club->id ? 'Este '.$t->kindNoun().' já é do clube.' : 'Este '.$t->kindNoun().' já pertence a outro clube. Desvincule de lá primeiro.');
             $t->club_id = $club->id;
             $t->save();
 
             return $t;
         });
         foreach ($club->members()->where('users.id', '!=', $user->id)->get() as $member) {
-            app(NotificationService::class)->send($member, 'club.tournament', "Torneio adicionado ao {$club->name}: {$tournament->name}", '/clubs/'.$club->id, "club:{$club->id}:tournament:{$tournament->id}:{$member->id}", ['club_id' => $club->id]);
+            app(NotificationService::class)->send($member, 'club.tournament', "{$tournament->kindLabel()} adicionado ao {$club->name}: {$tournament->name}", '/clubs/'.$club->id, "club:{$club->id}:tournament:{$tournament->id}:{$member->id}", ['club_id' => $club->id]);
         }
 
         return redirect()->route('clubs.show', $club)->with('status', "“{$tournament->name}” agora faz parte do clube e entra no ranking.");
@@ -232,7 +232,7 @@ class ClubController extends Controller
         $tournament->club_id = null;
         $tournament->save();
 
-        return redirect()->route('clubs.show', $club)->with('status', "“{$tournament->name}” saiu do clube e voltou a ser um torneio pessoal do criador.");
+        return redirect()->route('clubs.show', $club)->with('status', "“{$tournament->name}” saiu do clube e voltou a ser um {$tournament->kindNoun()} pessoal do criador.");
     }
 
     private function clubByToken(string $token): Club

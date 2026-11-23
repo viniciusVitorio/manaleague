@@ -79,7 +79,7 @@ class TournamentIntegrityTest extends TestCase
         $this->actingAs($player)->get(route('tournaments.invite.show', $tournament->invite_token))
             ->assertSee('você precisa de um deck de Pauper salvo na sua conta')->assertDontSee('name="deck_name"', false);
         $this->actingAs($player)->post(route('tournaments.invite.store', $tournament->invite_token), ['deck_name' => 'Teste 1'])
-            ->assertSessionHasErrors(['deck_id' => 'Escolha um dos seus decks para o torneio.']);
+            ->assertSessionHasErrors(['deck_id' => 'Escolha um dos seus decks para o campeonato.']);
 
         // deck de outro formato não entra; o do formato entra com o nome e as cores do deck
         $modern = $profile->decks()->create(['name' => 'Murktide', 'colors' => 'UR', 'format' => 'Modern']);
@@ -153,7 +153,7 @@ class TournamentIntegrityTest extends TestCase
 
         $friend->decks()->update(['is_primary' => false]);
         $faeries = $friend->decks()->create(['name' => 'Faeries', 'colors' => 'U', 'format' => 'Pauper', 'is_primary' => true]);
-        $this->actingAs($organizer)->post(route('tournaments.friends.store', [$tournament, $friend]))->assertSessionHas('status', 'Amigo adicionado ao torneio.');
+        $this->actingAs($organizer)->post(route('tournaments.friends.store', [$tournament, $friend]))->assertSessionHas('status', 'Amigo adicionado ao campeonato.');
         $this->assertDatabaseHas('players', ['tournament_id' => $tournament->id, 'deck_id' => $faeries->id, 'deck_name' => 'Faeries', 'deck_colors' => 'U']);
     }
 

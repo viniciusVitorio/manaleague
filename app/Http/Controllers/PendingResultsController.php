@@ -20,7 +20,7 @@ class PendingResultsController extends Controller
         $message = $confirmed === 1 ? '1 placar confirmado.' : "{$confirmed} placares confirmados.";
         if ($skipped) {
             $message .= ' '.($skipped === 1 ? '1 placar não pôde ser confirmado' : "{$skipped} placares não puderam ser confirmados")
-                .' porque mudou, foi contestado ou a fase do torneio fechou. Confira um por um.';
+                .' porque mudou, foi contestado ou a fase do evento fechou. Confira um por um.';
         }
 
         return back()->with('status', $message);

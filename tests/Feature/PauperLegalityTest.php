@@ -121,7 +121,7 @@ class PauperLegalityTest extends TestCase
         $this->actingAs($user)->post(route('decks.cards.store', $deck), ['scryfall_id' => $this->catalog['Swords to Plowshares']['id']]);
         $this->actingAs($user)->get(route('decks.show', $deck))->assertOk()
             ->assertSee('<strong>1 carta banida e 1 inválida no Pauper.</strong>', false)
-            ->assertSeeInOrder(['Torneios com as regras padrão do formato não aceitam este deck até a troca delas', 'Banido', 'Inválida', 'na lista'], false);
+            ->assertSeeInOrder(['Eventos com as regras padrão do formato não aceitam este deck até a troca delas', 'Banido', 'Inválida', 'na lista'], false);
     }
 
     public function test_invalid_cards_block_pauper_tournaments_with_the_official_rules_like_banned_ones(): void
@@ -138,7 +138,7 @@ class PauperLegalityTest extends TestCase
 
         // Convite: o seletor avisa e a inscrição com o deck inválido é recusada, com as cartas.
         $this->actingAs($ana)->get(route('tournaments.invite.show', $t->invite_token))
-            ->assertSee('Swords Deck · tem cartas banidas ou inválidas')->assertSee('não podem ser usados neste torneio');
+            ->assertSee('Swords Deck · tem cartas banidas ou inválidas')->assertSee('não podem ser usados neste campeonato');
         $this->actingAs($ana)->post(route('tournaments.invite.store', $t->invite_token), ['deck_id' => $invalid->id])
             ->assertSessionHasErrors(['deck_id' => 'Seu deck tem cartas banidas ou inválidas no Pauper: Swords to Plowshares. Troque essas cartas ou escolha outro deck.']);
         $this->assertSame(0, $t->players()->count());

@@ -19,7 +19,7 @@ use Illuminate\Support\Collection;
  */
 class MyMatchesService
 {
-    public const FILTERS = ['todas' => 'Todas', 'torneios' => 'Torneios', 'desafios' => 'Desafios', 'ranked' => 'Ranked'];
+    public const FILTERS = ['todas' => 'Todas', 'torneios' => 'Eventos', 'desafios' => 'Desafios', 'ranked' => 'Ranked'];
 
     private const RELATIONS = ['tournament.players.profile', 'playerOne.profile', 'playerTwo.profile'];
 

@@ -45,7 +45,7 @@ class CommunityEvents
         }
 
         if ($t->user) {
-            $this->activities->record($t->user, 'tournament.started', "Torneio {$t->name} começou", $t, "tournament:{$t->id}:started");
+            $this->activities->record($t->user, 'tournament.started', "{$t->kindLabel()} {$t->name} começou", $t, "tournament:{$t->id}:started");
         }
 
         $matches = $t->matches()->where('round', $round)->where('status', 'pending')->get();
@@ -60,7 +60,7 @@ class CommunityEvents
     private function tournamentFinished(Tournament $t): void
     {
         $champion = $this->championName($t);
-        $title = $champion ? "{$champion} venceu {$t->name}" : "Torneio {$t->name} encerrado";
+        $title = $champion ? "{$champion} venceu {$t->name}" : "{$t->kindLabel()} {$t->name} encerrado";
         if ($t->user) {
             $this->activities->record($t->user, 'tournament.finished', $title, $t, "tournament:{$t->id}:finished", $champion ? ['champion' => $champion] : []);
         }

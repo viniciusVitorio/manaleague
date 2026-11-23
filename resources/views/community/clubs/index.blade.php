@@ -2,7 +2,7 @@
 @section('content')
 @push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/hub.css') }}">@endpush
 <header class="page-head">
-    <div><h1>Clubes</h1><p>A sua loja, o grupo da faculdade, a mesa de sexta: torneios, ranking e avisos num lugar só.</p></div>
+    <div><h1>Clubes</h1><p>A sua loja, o grupo da faculdade, a mesa de sexta: eventos, ranking e avisos num lugar só.</p></div>
     <a class="ui-btn ui-btn-primary" href="#criar"><x-icon name="plus" />Criar clube</a>
 </header>
 
@@ -16,7 +16,7 @@
             <span class="club-mark" aria-hidden="true">{{ mb_strtoupper(mb_substr($club->name, 0, 2)) }}</span>
             <span class="club-card-body">
                 <strong>{{ $club->name }}</strong>
-                <small>{{ $club->members_count }} {{ $club->members_count === 1 ? 'membro' : 'membros' }} · {{ $club->tournaments_count }} {{ $club->tournaments_count === 1 ? 'torneio' : 'torneios' }}@if($club->location) · {{ $club->location }}@endif</small>
+                <small>{{ $club->members_count }} {{ $club->members_count === 1 ? 'membro' : 'membros' }} · {{ $club->tournaments_count }} {{ $club->tournaments_count === 1 ? 'evento' : 'eventos' }}@if($club->location) · {{ $club->location }}@endif</small>
                 @if($n = $next->get($club->id))<small class="club-next"><x-icon name="calendar" size="12" />{{ $n->name }} · {{ $n->tournament_date?->format('d/m') }}</small>@endif
             </span>
             <x-ui.badge :tone="$club->pivot->role === 'member' ? 'neutral' : 'info'">{{ ['owner' => 'Dono', 'organizer' => 'Organizador', 'member' => 'Membro'][$club->pivot->role] }}</x-ui.badge>
@@ -32,7 +32,7 @@
         @forelse($discover as $club)
             <div class="ui-row">
                 <span class="club-mark is-sm" aria-hidden="true">{{ mb_strtoupper(mb_substr($club->name, 0, 2)) }}</span>
-                <a class="ui-row-main" href="{{ route('clubs.show', $club) }}"><span class="ui-row-title">{{ $club->name }}</span><span class="ui-row-sub">{{ $club->members_count }} membros · {{ $club->tournaments_count }} torneios @if($club->location) · {{ $club->location }}@endif</span></a>
+                <a class="ui-row-main" href="{{ route('clubs.show', $club) }}"><span class="ui-row-title">{{ $club->name }}</span><span class="ui-row-sub">{{ $club->members_count }} membros · {{ $club->tournaments_count }} eventos @if($club->location) · {{ $club->location }}@endif</span></a>
                 <form method="POST" action="{{ route('clubs.join', $club) }}">@csrf<button class="ui-btn ui-btn-outline ui-btn-sm">Entrar</button></form>
             </div>
         @empty

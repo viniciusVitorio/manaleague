@@ -10,7 +10,7 @@
 @endphp
 <a class="back-link" href="{{ route('tournaments.show', $tournament) }}">← {{ $tournament->name }}</a>
 <header class="page-head">
-    <div><h1>Premiação</h1><p>Ligue o que cada colocação ganha. Quando o torneio encerrar, os prêmios vão sozinhos para quem ficou em cada lugar. Dá para mudar até lá.</p></div>
+    <div><h1>Premiação</h1><p>Ligue o que cada colocação ganha. Quando o {{ $tournament->kindNoun() }} encerrar, os prêmios vão sozinhos para quem ficou em cada lugar. Dá para mudar até lá.</p></div>
 </header>
 
 <form method="POST" action="{{ route('tournaments.prizes.update', $tournament) }}" class="prize-form" enctype="multipart/form-data">@csrf @method('PUT')

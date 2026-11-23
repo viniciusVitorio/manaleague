@@ -3,7 +3,7 @@
 @push('head')<link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/hub.css') }}"><link rel="stylesheet" href="{{ \App\Support\VersionedAsset::url('css/ranked.css') }}">@endpush
 @php($icons = ['tournament' => 'trophy', 'match' => 'target', 'challenge' => 'swords', 'ranked' => 'chart', 'club' => 'shield'])
 <header class="page-head">
-    <div><h1>Comunidade</h1><p>O que está rolando com seus amigos, clubes e torneios.</p></div>
+    <div><h1>Comunidade</h1><p>O que está rolando com seus amigos, clubes e eventos.</p></div>
     <div class="hub-actions"><a class="ui-btn ui-btn-outline" href="{{ route('friends.index') }}"><x-icon name="user-plus" />Amigos</a><a class="ui-btn ui-btn-primary" href="{{ route('challenges.create') }}"><x-icon name="swords" />Desafiar</a></div>
 </header>
 
@@ -25,7 +25,7 @@
                 @if($activity->type === 'tournament.finished' && ($activity->data['champion'] ?? null))<x-ui.badge tone="warning"><x-icon name="crown" size="12" />Campeão</x-ui.badge>@endif
             </a>
         @empty
-            <x-ui.empty icon="activity" :title="$filter === 'all' ? 'Nada por aqui ainda.' : 'Nada nessa categoria.'" text="Torneios, resultados confirmados, desafios e novidades dos clubes aparecem aqui." :href="route('friends.index')" action="Encontrar amigos" />
+            <x-ui.empty icon="activity" :title="$filter === 'all' ? 'Nada por aqui ainda.' : 'Nada nessa categoria.'" text="Eventos, resultados confirmados, desafios e novidades dos clubes aparecem aqui." :href="route('friends.index')" action="Encontrar amigos" />
         @endforelse
     </x-ui.card>
 </div>
@@ -52,15 +52,15 @@
         @forelse($weekly as $i => $w)
             <div class="friends-rank-row"><span class="num">{{ $i + 1 }}</span><x-profile-link :of="$w['profile']" class="avatar-link" tabindex="-1" aria-hidden="true"><x-avatar :of="$w['profile']" class="ui-avatar" aria-hidden="true" /></x-profile-link><span class="friends-rank-name"><x-profile-link :of="$w['profile']">{{ $w['profile']->nickname }}</x-profile-link></span><strong class="num">{{ $w['wins'] }} {{ $w['wins'] === 1 ? 'vitória' : 'vitórias' }}</strong></div>
         @empty
-            <p class="muted small">Ninguém do seu grupo jogou torneio nos últimos 7 dias.</p>
+            <p class="muted small">Ninguém do seu grupo jogou um evento nos últimos 7 dias.</p>
         @endforelse
     </x-ui.card>
 
-    <x-ui.card title="Próximos torneios" icon="calendar">
+    <x-ui.card title="Próximos eventos" icon="calendar">
         @forelse($upcoming as $t)
             <a class="ui-row" href="{{ route('tournaments.show', $t) }}"><span class="ui-row-main"><span class="ui-row-title">{{ $t->name }}</span><span class="ui-row-sub">{{ $t->format }} · {{ $t->tournament_date?->format('d/m') }}</span></span><x-icon name="chevron-right" /></a>
         @empty
-            <p class="muted small">Nenhum torneio marcado nos seus clubes. <a href="{{ route('clubs.index') }}">Ver clubes</a></p>
+            <p class="muted small">Nenhum evento marcado nos seus clubes. <a href="{{ route('clubs.index') }}">Ver clubes</a></p>
         @endforelse
     </x-ui.card>
 

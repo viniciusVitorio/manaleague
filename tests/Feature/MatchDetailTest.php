@@ -28,7 +28,7 @@ class MatchDetailTest extends TestCase
         // Partida antiga (sem o contador): o resumo aparece, só sem gráfico. Bia fica à esquerda (o ponto de vista é dela)
         // e vê o nome do deck da Ana, sem link (deck privado).
         $this->actingAs($bia)->get($url)->assertOk()
-            ->assertSeeInOrder(['Torneio', 'Copa', 'Rodada 1', 'Bia', 'Você', 'Deck não informado', '1', '2', 'Ana', 'Elfos', 'Vencedor', 'Ana venceu por 2–1'])
+            ->assertSeeInOrder(['Campeonato', 'Copa', 'Rodada 1', 'Bia', 'Você', 'Deck não informado', '1', '2', 'Ana', 'Elfos', 'Vencedor', 'Ana venceu por 2–1'])
             ->assertSee('Sem gráfico de vida')->assertDontSee('class="mdetail-chart"', false)
             ->assertDontSee('href="'.route('decks.show', $deck).'"', false);
 
@@ -42,7 +42,7 @@ class MatchDetailTest extends TestCase
         $this->assertStringStartsWith('<div class="mdetail">', ltrim(preg_replace('/\{\{--.*?--\}\}|<!--.*?-->/s', '', $fragment)));
         $this->assertStringNotContainsString('<html', $fragment);
 
-        $this->actingAs($owner)->get($url)->assertOk()->assertSee('Ver torneio');
+        $this->actingAs($owner)->get($url)->assertOk()->assertSee('Ver campeonato');
         $this->actingAs(User::factory()->create())->get($url)->assertNotFound();
         $this->actingAs($ana)->get(route('matches.detail', ['tournament', 999999]))->assertNotFound();
     }
@@ -107,7 +107,7 @@ class MatchDetailTest extends TestCase
         $url = route('matches.detail', ['tournament', $match->id]);
 
         $this->actingAs($ana)->get($url)->assertOk()
-            ->assertSeeInOrder(['Torneio ranqueado', 'Ana', 'Você', '+16 ELO', '600 → 616', 'Bia', '−16 ELO', '600 → 584']);
+            ->assertSeeInOrder(['Campeonato ranqueado', 'Ana', 'Você', '+16 ELO', '600 → 616', 'Bia', '−16 ELO', '600 → 584']);
         // O organizador vê o resumo, mas o ELO é dos jogadores (como na página da partida ranqueada).
         $this->actingAs($owner)->get($url)->assertOk()->assertSee('Ana venceu por 2–1')->assertDontSee('ELO</b>', false);
     }

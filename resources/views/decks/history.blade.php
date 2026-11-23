@@ -8,7 +8,7 @@
 @if($versions->isEmpty())
     <div class="ui-empty">
         <span class="ui-empty-icon"><x-icon name="clock" :size="18" /></span>
-        <div><p class="ui-empty-title">Seu histórico começa aqui</p><p class="ui-empty-text">Salve uma versão na página de um deck. Participações em torneios preservam automaticamente o estado usado na largada.</p></div>
+        <div><p class="ui-empty-title">Seu histórico começa aqui</p><p class="ui-empty-text">Salve uma versão na página de um deck. Participações em eventos preservam automaticamente o estado usado na largada.</p></div>
         <a class="ui-btn ui-btn-outline ui-btn-sm" href="{{ route('decks.index') }}">Meus decks</a>
     </div>
 @else
