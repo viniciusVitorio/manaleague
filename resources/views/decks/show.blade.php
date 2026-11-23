@@ -246,7 +246,7 @@
     </header>
     <div class="deck-add-tabs" role="tablist" aria-label="Como adicionar">
         <button type="button" role="tab" id="deck-add-tab-search" aria-controls="deck-add-search" aria-selected="true" data-add-tab><x-icon name="search" />Buscar cartas</button>
-        <button type="button" role="tab" id="deck-add-tab-list" aria-controls="deck-add-list" aria-selected="false" data-add-tab><x-icon name="upload" />Colar lista</button>
+        <button type="button" role="tab" id="deck-add-tab-list" aria-controls="deck-add-list" aria-selected="false" tabindex="-1" data-add-tab><x-icon name="upload" />Colar lista</button>
     </div>
     <div class="ui-dialog-body" id="deck-add-search" role="tabpanel" aria-labelledby="deck-add-tab-search">
         <div class="deck-add-bar">

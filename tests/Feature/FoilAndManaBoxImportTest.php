@@ -133,6 +133,6 @@ class FoilAndManaBoxImportTest extends TestCase
             ->assertSessionHasErrors(['file' => 'O arquivo não parece um CSV do ManaBox: falta a coluna "Name".']);
         $this->actingAs($user)->post(route('collection.import.csv'), ['file' => UploadedFile::fake()->create('foto.png', 10, 'image/png')])
             ->assertSessionHasErrors('file');
-        $this->actingAs($user)->get(route('collection.index'))->assertSee('Importar CSV do ManaBox');
+        $this->actingAs($user)->get(route('collection.index'))->assertSee('CSV do ManaBox')->assertSee('Importar CSV');
     }
 }

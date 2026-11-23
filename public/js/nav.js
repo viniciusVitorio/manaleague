@@ -202,6 +202,37 @@
         }, true);
     }
 
+    // Abas dentro de uma janela (ex.: "Adicionar cartas": buscar, colar lista, CSV). Cada [data-add-tab] mostra o painel
+    // do seu aria-controls e esconde os outros; setas esquerda/direita trocam de aba.
+    function initDialogTabs() {
+        function tabsOf(tab) { return Array.prototype.slice.call(tab.closest('[role=tablist]').querySelectorAll('[data-add-tab]')); }
+        function select(tab) {
+            tabsOf(tab).forEach(function (other) {
+                var on = other === tab;
+                other.setAttribute('aria-selected', on ? 'true' : 'false');
+                other.tabIndex = on ? 0 : -1;
+                var panel = document.getElementById(other.getAttribute('aria-controls'));
+                if (panel) panel.hidden = !on;
+            });
+            var current = document.getElementById(tab.getAttribute('aria-controls'));
+            var field = current && current.querySelector('input[type=search], textarea, input[type=file]');
+            if (field) field.focus();
+        }
+        document.addEventListener('click', function (event) {
+            var tab = event.target.closest && event.target.closest('[data-add-tab]');
+            if (tab) select(tab);
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+            var tab = event.target.closest && event.target.closest('[data-add-tab]');
+            if (!tab) return;
+            event.preventDefault();
+            var tabs = tabsOf(tab);
+            var next = tabs[(tabs.indexOf(tab) + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+            select(next); next.focus();
+        });
+    }
+
     // Link para uma linha que abre (ex.: #desafio-12, a partida em andamento de uma notificação): já chega aberta.
     function initTargetDetails() {
         function open() {
@@ -213,7 +244,7 @@
         window.addEventListener('hashchange', open);
     }
 
-    function boot() { init(); initToggles(); initMenus(); initMuteSwitches(); initConfirmAndCopy(); initDialogs(); initTargetDetails(); }
+    function boot() { init(); initToggles(); initMenus(); initMuteSwitches(); initConfirmAndCopy(); initDialogs(); initDialogTabs(); initTargetDetails(); }
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', boot);

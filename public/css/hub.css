@@ -25,8 +25,15 @@
 .binder-del{position:absolute;right:10px;top:10px;margin:0}
 .binder-del .ui-btn{background:rgba(9,9,11,.8);padding:4px;color:#e4e4e7}.binder-del .ui-btn:hover{background:rgba(9,9,11,.95);color:#fff}
 /* adicionar */
-.add-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s6);margin-bottom:var(--s3)}
-.add-grid form{display:grid;gap:var(--s2);align-content:start;margin:0}
+/* Janela "Adicionar cartas" da coleção: abas buscar, colar lista e CSV (as abas usam o estilo .deck-add-tabs) */
+.coll-add{width:min(620px,calc(100% - 32px))}
+.coll-add-form{display:grid;gap:var(--s3);margin:0}
+.coll-add-form textarea{width:100%;min-height:180px;padding:9px 11px;border:1px solid var(--ui-border-strong);border-radius:7px;background:var(--ui-bg);color:var(--ui-fg);font:inherit;resize:vertical}
+.coll-add-form > p,.coll-add-form .add-row label input,.coll-add-form .add-row label select{margin:0}
+.coll-add-form .ui-btn{justify-self:start}
+.coll-add .alert{margin:0 0 var(--s3)}
+.coll-add-note{margin:0}
+.coll-add-form > p:empty,.coll-add-form .pick-list:empty{display:none}
 .add-row{display:flex;gap:var(--s2);flex-wrap:wrap}
 .add-row label{display:grid;gap:4px;flex:1;min-width:90px;font-size:.75rem;color:var(--ui-fg-muted);margin:0}
 .pick-list{display:grid;gap:4px;max-height:280px;overflow:auto}
@@ -48,7 +55,8 @@
 .wish-row{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--ui-border);font-size:.82rem}
 .wish-row:last-child{border-bottom:0}.wish-row small{color:var(--ui-fg-subtle);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
 @media(max-width:1000px){.hub-grid{grid-template-columns:1fr}}
-@media(max-width:720px){.add-grid{grid-template-columns:1fr}.binder{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
+@media(max-width:720px){.binder{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
+@media(max-width:480px){.coll-add-form .ui-btn{justify-self:stretch;justify-content:center}}
 
 /* clubes */
 .hub-section-title{font-size:.95rem;font-weight:600;margin:0 0 var(--s3)}
@@ -315,4 +323,3 @@ details.deck-showcase-more summary{cursor:pointer;color:var(--ui-fg-muted);margi
 @media(max-width:900px){.showcase-slots{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.showcase-slots{grid-template-columns:1fr}.showcase-empty{min-height:0;flex-direction:row;gap:10px;padding:var(--s4)}.showcase-empty-icon{margin:0;width:32px;height:32px}}
 .dash-stats.dash-stats-3{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:640px){.dash-stats.dash-stats-3{grid-template-columns:1fr}}
-.add-bulk-col{display:grid;gap:var(--s5);align-content:start}

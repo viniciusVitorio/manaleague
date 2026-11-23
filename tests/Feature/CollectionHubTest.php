@@ -42,6 +42,26 @@ class CollectionHubTest extends TestCase
         $this->post('/me/collection/import', ['list' => '   ', 'condition' => 'NM'])->assertSessionHasErrors('list');
     }
 
+    public function test_add_cards_lives_in_a_dialog_opened_by_the_button(): void
+    {
+        $u = $this->user('Ana');
+        // Fechada por padrão: o botão do topo abre; a busca vem primeiro e as outras abas ficam escondidas.
+        $html = $this->actingAs($u)->get('/me/collection')->assertOk()
+            ->assertSee('data-dialog-open="adicionar"', false)
+            ->assertSeeInOrder(['<dialog class="ui-dialog coll-add" id="adicionar"', 'Buscar', 'Lista', 'CSV', 'id="collection-add"', 'CSV do ManaBox'], false)
+            ->getContent();
+        $this->assertDoesNotMatchRegularExpression('/id="adicionar"[^>]*data-open-on-load/', $html);
+        $this->assertMatchesRegularExpression('/id="coll-add-list"[^>]*hidden/', $html);
+
+        // Lista recusada: a janela volta aberta na aba da lista, com a mensagem dentro dela.
+        $this->from('/me/collection')->post('/me/collection/import', ['list' => '   ', 'condition' => 'NM'])->assertRedirect('/me/collection');
+        $html = $this->get('/me/collection')->getContent();
+        $this->assertMatchesRegularExpression('/id="adicionar"[^>]*data-open-on-load/', $html);
+        $this->assertMatchesRegularExpression('/id="coll-add-tab-list"[^>]*aria-selected="true"/', $html);
+        $this->assertDoesNotMatchRegularExpression('/id="coll-add-list"[^>]*hidden/', $html);
+        $this->assertMatchesRegularExpression('/id="coll-add-list".*?alert-danger/s', $html);
+    }
+
     public function test_deck_coverage_wishlist_and_friend_trade_matches(): void
     {
         [$ana, $bia, $zeca] = [$this->user('Ana'), $this->user('Bia'), $this->user('Zeca')];
