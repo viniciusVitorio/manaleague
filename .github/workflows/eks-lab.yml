@@ -2,6 +2,12 @@ name: EKS lab checks and deploy
 
 on:
   workflow_call:
+    secrets:
+      # Lab-only values, never the production APP_KEY.
+      LAB_APP_KEY:
+        required: true
+      LAB_DEMO_PASSWORD:
+        required: true
   workflow_dispatch:
 
 permissions:
@@ -227,11 +233,11 @@ jobs:
       SUBNET_IDS: ${{ vars.SUBNET_IDS }}
       ALLOWED_CIDRS: ${{ vars.ALLOWED_CIDRS }}
       ALB_SECURITY_GROUP_ID: ${{ vars.ALB_SECURITY_GROUP_ID }}
-      APP_KEY: ${{ secrets.APP_KEY }}
+      APP_KEY: ${{ secrets.LAB_APP_KEY }}
       DB_HOST: ${{ vars.DB_HOST }}
       VPC_ID: ${{ vars.VPC_ID }}
       RDS_MASTER_SECRET_ARN: ${{ vars.RDS_MASTER_SECRET_ARN }}
-      DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+      DEMO_PASSWORD: ${{ secrets.LAB_DEMO_PASSWORD }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Reject wrong lab role before requesting OIDC credentials

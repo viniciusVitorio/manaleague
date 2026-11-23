@@ -68,7 +68,15 @@ class CDEntrypoint(unittest.TestCase):
         self.assertIn('uses: ./.github/workflows/eks-lab.yml', call)
         self.assertIn('contents: read', call)
         self.assertIn('id-token: write', call)
-        self.assertNotIn('secrets:', call)
+        self.assertNotIn('secrets: inherit', call)
+        # Environment secrets do not cross a workflow_call boundary, so exactly
+        # the two lab-only secrets are passed and nothing else, especially not
+        # the production APP_KEY that also exists at repository level.
+        self.assertIn('LAB_APP_KEY: ${{ secrets.LAB_APP_KEY }}', call)
+        self.assertIn('LAB_DEMO_PASSWORD: ${{ secrets.LAB_DEMO_PASSWORD }}', call)
+        passed = [line.split(':')[0].strip() for line in call.splitlines()
+                  if line.startswith('      ') and 'secrets.' in line]
+        self.assertEqual(sorted(passed), ['LAB_APP_KEY', 'LAB_DEMO_PASSWORD'])
         self.assertNotIn('environment:', call)
         for event, ref, repo, expected in (
             ('push', 'refs/heads/eks-lab', 'viniciusVitorio/manaleague', True),

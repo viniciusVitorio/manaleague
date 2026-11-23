@@ -370,3 +370,10 @@ jobs:
       contents: read
       id-token: write
     uses: ./.github/workflows/eks-lab.yml
+    # Reusable workflows inherit nothing by default and environment secrets do
+    # not cross the call boundary, so the two lab-only secrets are passed
+    # explicitly. Never inherit every repository secret here: that would hand
+    # the lab the production APP_KEY along with everything else.
+    secrets:
+      LAB_APP_KEY: ${{ secrets.LAB_APP_KEY }}
+      LAB_DEMO_PASSWORD: ${{ secrets.LAB_DEMO_PASSWORD }}
