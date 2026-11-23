@@ -36,9 +36,9 @@ class WorkflowPolicy(unittest.TestCase):
         text = path.read_text(encoding='utf-8')
         for forbidden in ('AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'terraform apply', 'terraform destroy', 'authorize-security-group', 'update-cluster-config'):
             self.assertNotIn(forbidden, text)
-        for required in ("github.ref == 'refs/heads/eks-lab'", 'environment: eks-lab', 'cancel-in-progress: false', 'LAB_DEPLOY_ENABLED', 'id-token: write', '[self-hosted, linux, "eks-lab-${{ github.run_id }}"]', 'composer audit', 'node --test', 'trivy', 'docker save', 'docker load'):
+        for required in ("github.ref == 'refs/heads/eks-lab'", 'environment: eks-lab', 'cancel-in-progress: false', 'LAB_DEPLOY_ENABLED', 'id-token: write', '[self-hosted, linux, "${{ needs.gate.outputs.runner_label }}"]', 'composer audit', 'node --test', 'trivy', 'docker save', 'docker load'):
             self.assertIn(required, text)
-        self.assertEqual(text.count('id-token: write'), 2)
+        self.assertEqual(text.count('id-token: write'), 4)
 
     def test_actions_use_recorded_immutable_commit_pins(self):
         text = (ROOT / '.github/workflows/eks-lab.yml').read_text(encoding='utf-8')

@@ -133,7 +133,13 @@ class CDEntrypoint(unittest.TestCase):
         text = workflow('eks-lab.yml')
         blocks = jobs(text)
         self.assertIn('needs: [publish, gate]', blocks['deploy'])
-        self.assertIn('runs-on: [self-hosted, linux, "eks-lab-${{ github.run_id }}"]', blocks['deploy'])
+        self.assertIn('runs-on: [self-hosted, linux, "${{ needs.gate.outputs.runner_label }}"]', blocks['deploy'])
+        gate = blocks['gate']
+        self.assertIn('runner_label: ${{ steps.gate.outputs.runner_label }}', gate)
+        self.assertIn('LAB_CODEBUILD_RUNNER_ENABLED: ${{ vars.LAB_CODEBUILD_RUNNER_ENABLED }}', gate)
+        self.assertIn('codebuild-manaleague-eks-lab-runner-${{ github.run_id }}-${{ github.run_attempt }}', gate)
+        self.assertIn('eks-lab-${{ github.run_id }}', gate)
+        self.assertIn('[[ "$LAB_CODEBUILD_RUNNER_ENABLED" == true ]]', gate)
         self.assertNotIn('runs-on: [self-hosted, linux, eks-lab]', text)
         self.assertEqual(text.split('\njobs:', 1)[0].count('id-token'), 0)
         self.assertIn('needs: [checks, images, gate]', blocks['publish'])
@@ -151,7 +157,17 @@ class CDEntrypoint(unittest.TestCase):
                 with self.subTest(job=job, event=event, ref=ref, repo=repo, enabled=enabled):
                     self.assertEqual(allowed(condition(blocks[job]), **{
                         'github.event_name': event, 'github.ref': ref,
-                        'github.repository': repo, 'needs.gate.outputs.enabled': enabled}), expected)
+                        'github.repository': repo, 'needs.gate.outputs.enabled': enabled,
+                        'needs.gate.outputs.broker_enabled': 'false'}), expected)
+        deploy_context = {'github.event_name': 'push', 'github.ref': 'refs/heads/eks-lab',
+                          'github.repository': 'viniciusVitorio/manaleague',
+                          'needs.gate.outputs.enabled': 'true',
+                          'needs.gate.outputs.broker_enabled': 'true'}
+        self.assertFalse(allowed(condition(blocks['deploy']), **deploy_context))
+        self.assertTrue(allowed(condition(blocks['deploy_broker']), **deploy_context))
+        deploy_context['needs.gate.outputs.broker_enabled'] = 'false'
+        self.assertTrue(allowed(condition(blocks['deploy']), **deploy_context))
+        self.assertFalse(allowed(condition(blocks['deploy_broker']), **deploy_context))
         for job in ('publish', 'deploy'):
             block = blocks[job]
             self.assertIn('environment: eks-lab', block)

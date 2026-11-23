@@ -13,13 +13,16 @@ resource "aws_iam_role_policy" "app_mail" {
   count = var.enable_lab_mail ? 1 : 0
   name  = "${local.name}-ses-send"
   role  = aws_iam_role.irsa["app"].id
-  # Send only, only through the verified parent identity, and only as the lab
-  # address: the condition blocks any attempt to send as a production sender.
+  # Send only through the parent identity and its existing default configuration
+  # set, and only as the lab address; production senders remain disallowed.
   policy = jsonencode({ Version = "2012-10-17", Statement = [{
-    Sid       = "SendOnlyAsLabAddress"
-    Effect    = "Allow"
-    Action    = ["ses:SendEmail", "ses:SendRawEmail"]
-    Resource  = local.lab_mail_identity
+    Sid    = "SendOnlyAsLabAddress"
+    Effect = "Allow"
+    Action = ["ses:SendEmail", "ses:SendRawEmail"]
+    Resource = [
+      local.lab_mail_identity,
+      "arn:aws:ses:${var.aws_region}:${var.expected_account_id}:configuration-set/manaleague-transactional"
+    ]
     Condition = { StringEquals = { "ses:FromAddress" = local.lab_mail_from } }
   }] })
 }

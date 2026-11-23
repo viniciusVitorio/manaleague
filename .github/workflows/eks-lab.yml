@@ -140,16 +140,34 @@ jobs:
     environment: eks-lab
     outputs:
       enabled: ${{ steps.gate.outputs.enabled }}
+      broker_enabled: ${{ steps.gate.outputs.broker_enabled }}
+      runner_label: ${{ steps.gate.outputs.runner_label }}
+      account: ${{ vars.AWS_ACCOUNT_ID }}
+      region: ${{ vars.AWS_REGION }}
     steps:
       - id: gate
         env:
           LAB_DEPLOY_ENABLED: ${{ vars.LAB_DEPLOY_ENABLED }}
+          LAB_DEPLOY_BROKER_ENABLED: ${{ vars.LAB_DEPLOY_BROKER_ENABLED }}
+          LAB_CODEBUILD_RUNNER_ENABLED: ${{ vars.LAB_CODEBUILD_RUNNER_ENABLED }}
+          CODEBUILD_RUNNER_LABEL: codebuild-manaleague-eks-lab-runner-${{ github.run_id }}-${{ github.run_attempt }}
+          LEGACY_RUNNER_LABEL: eks-lab-${{ github.run_id }}
         run: |
+          if [[ "$LAB_DEPLOY_BROKER_ENABLED" == true ]]; then
+            echo 'broker_enabled=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'broker_enabled=false' >> "$GITHUB_OUTPUT"
+          fi
+          if [[ "$LAB_CODEBUILD_RUNNER_ENABLED" == true ]]; then
+            echo "runner_label=$CODEBUILD_RUNNER_LABEL" >> "$GITHUB_OUTPUT"
+          else
+            echo "runner_label=$LEGACY_RUNNER_LABEL" >> "$GITHUB_OUTPUT"
+          fi
           if [[ "$LAB_DEPLOY_ENABLED" == true ]]; then
             echo 'enabled=true' >> "$GITHUB_OUTPUT"
           else
             echo 'enabled=false' >> "$GITHUB_OUTPUT"
-            echo 'Cloud jobs disabled. Provision the isolated lab manually, configure the eks-lab Environment and stable-egress runner, then set LAB_DEPLOY_ENABLED=true.' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Cloud jobs disabled. Provision the isolated lab and configure the eks-lab Environment and authorized runner before enabling deployment.' >> "$GITHUB_STEP_SUMMARY"
           fi
 
   publish:
@@ -200,12 +218,12 @@ jobs:
         run: bash infra/eks-lab/scripts/lab.sh publish --allow-cloud --confirm-lab manaleague-eks-lab --expected-account "$AWS_ACCOUNT_ID"
 
   deploy:
-    if: needs.gate.outputs.enabled == 'true' && github.repository == 'viniciusVitorio/manaleague' && github.ref == 'refs/heads/eks-lab' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: needs.gate.outputs.enabled == 'true' && needs.gate.outputs.broker_enabled != 'true' && github.repository == 'viniciusVitorio/manaleague' && github.ref == 'refs/heads/eks-lab' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [publish, gate]
-    # Dedicated NON-production runner, stable egress in the cluster API allow-list.
     # Per-run routing is not authorization; provision only after explicit approval.
+    # CodeBuild is opt-in only after its webhook and isolated project are secured.
     # Never open the cluster endpoint to hosted-runner IPs dynamically.
-    runs-on: [self-hosted, linux, "eks-lab-${{ github.run_id }}"]
+    runs-on: [self-hosted, linux, "${{ needs.gate.outputs.runner_label }}"]
     environment: eks-lab
     timeout-minutes: 30
     permissions:
@@ -257,3 +275,104 @@ jobs:
           version: v1.37.0
       - name: Guard exact cluster, render, migrate, discover ALB URL and verify HTTP/WebSocket
         run: bash infra/eks-lab/scripts/lab.sh deploy --allow-cloud --confirm-lab manaleague-eks-lab --expected-account "$AWS_ACCOUNT_ID"
+
+  release_source:
+    if: needs.gate.outputs.enabled == 'true' && needs.gate.outputs.broker_enabled == 'true' && github.repository == 'viniciusVitorio/manaleague' && github.ref == 'refs/heads/eks-lab' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [checks, images, gate]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      source_sha256: ${{ steps.archive.outputs.source_sha256 }}
+    env:
+      AWS_ACCOUNT_ID: ${{ needs.gate.outputs.account }}
+      AWS_REGION: ${{ needs.gate.outputs.region }}
+      RELEASE: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build tracked deploy source from exact release
+        id: archive
+        run: |
+          set -euo pipefail
+          [[ "$AWS_ACCOUNT_ID" =~ ^[0-9]{12}$ && "$AWS_REGION" =~ ^[a-z]{2}-[a-z]+-[0-9]$ ]]
+          [[ "$RELEASE" =~ ^[0-9a-f]{40}$ && "$(git rev-parse HEAD)" == "$RELEASE" ]]
+          git archive --format=zip "$RELEASE" infra/eks-lab/scripts infra/eks-lab/kubernetes > "$RUNNER_TEMP/deploy-source.zip"
+          SOURCE_SHA256="$(sha256sum "$RUNNER_TEMP/deploy-source.zip" | cut -d' ' -f1)"
+          [[ "$SOURCE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          echo "source_sha256=$SOURCE_SHA256" >> "$GITHUB_OUTPUT"
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: arn:aws:iam::${{ needs.gate.outputs.account }}:role/manaleague-eks-lab-release-publisher
+          aws-region: ${{ needs.gate.outputs.region }}
+          unset-current-credentials: true
+          role-session-name: eks-lab-source-${{ github.run_id }}
+      - name: Upload content-addressed source
+        env:
+          SOURCE_SHA256: ${{ steps.archive.outputs.source_sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          aws s3api put-object --bucket "manaleague-eks-lab-releases-${AWS_ACCOUNT_ID}-${AWS_REGION}" --key "releases/${RELEASE}/${SOURCE_SHA256}.zip" --body "$RUNNER_TEMP/deploy-source.zip" --region "$AWS_REGION" > /dev/null
+
+  # Experimental: infrastructure remains separately blocked pending review.
+  deploy_broker:
+    if: needs.gate.outputs.enabled == 'true' && needs.gate.outputs.broker_enabled == 'true' && github.repository == 'viniciusVitorio/manaleague' && github.ref == 'refs/heads/eks-lab' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [publish, gate, release_source]
+    runs-on: ubuntu-latest
+    environment: eks-lab
+    # Includes setup and time for a best-effort stop after the client deadline.
+    timeout-minutes: 50
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: manaleague-eks-lab-deploy
+      cancel-in-progress: false
+    env:
+      LAB_DEPLOY_ENABLED: ${{ vars.LAB_DEPLOY_ENABLED }}
+      LAB_DEPLOY_BROKER_ENABLED: ${{ vars.LAB_DEPLOY_BROKER_ENABLED }}
+      LAB_DEPLOY_BROKER_ROLE_ARN: ${{ vars.LAB_DEPLOY_BROKER_ROLE_ARN }}
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      SOURCE_SHA256: ${{ needs.release_source.outputs.source_sha256 }}
+      RELEASE: ${{ github.sha }}
+      APP_IMAGE: ${{ needs.publish.outputs.app_image }}
+      WEB_IMAGE: ${{ needs.publish.outputs.web_image }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate broker inputs before requesting credentials
+        run: python3 infra/eks-lab/orchestrator/workflow_broker.py --check
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ vars.LAB_DEPLOY_BROKER_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          unset-current-credentials: true
+          role-session-name: eks-lab-broker-${{ github.run_id }}
+      - name: Start broker and fail unless deployment succeeds
+        run: python3 infra/eks-lab/orchestrator/workflow_broker.py
+
+  deploy_outcome:
+    name: Require a successful lab deployment on push
+    if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/eks-lab' }}
+    needs: [gate, publish, deploy, deploy_broker]
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Fail closed when deployment did not succeed
+        env:
+          GATE_RESULT: ${{ needs.gate.result }}
+          ENABLED: ${{ needs.gate.outputs.enabled }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          BROKER_RESULT: ${{ needs.deploy_broker.result }}
+        run: |
+          if [[ "$GATE_RESULT" == success && "$ENABLED" == true && "$PUBLISH_RESULT" == success ]] &&
+             { [[ "$DEPLOY_RESULT" == success && "$BROKER_RESULT" == skipped ]] || [[ "$DEPLOY_RESULT" == skipped && "$BROKER_RESULT" == success ]]; }; then
+            echo 'Lab deployment completed successfully.'
+          else
+            echo 'Lab deployment was disabled, skipped, cancelled, or failed.' >&2
+            exit 1
+          fi
