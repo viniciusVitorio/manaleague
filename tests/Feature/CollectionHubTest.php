@@ -94,6 +94,24 @@ class CollectionHubTest extends TestCase
         return CollectionItem::create($attrs + ['user_id' => $user->id, 'scryfall_id' => (string) Str::uuid(), 'name' => $name, 'quantity' => 1, 'condition' => 'NM']);
     }
 
+    public function test_phones_get_half_a_page_of_cards(): void
+    {
+        $u = $this->user('Ana');
+        foreach (range(1, 30) as $i) {
+            $this->item($u, sprintf('Carta %02d', $i));
+        }
+        $this->actingAs($u);
+        $cards = fn ($response) => substr_count($response->assertOk()->getContent(), 'class="binder-card"');
+
+        $desktop = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36';
+        $iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1';
+        $this->assertSame(30, $cards($this->withHeaders(['User-Agent' => $desktop])->get('/me/collection')));
+        $this->assertSame(24, $cards($this->withHeaders(['User-Agent' => $iphone])->get('/me/collection')));
+        // Chrome no Android avisa pela dica, mesmo com user agent reduzido.
+        $this->assertSame(24, $cards($this->withHeaders(['User-Agent' => $desktop, 'Sec-CH-UA-Mobile' => '?1'])->get('/me/collection')));
+        $this->assertSame(6, $cards($this->withHeaders(['User-Agent' => $iphone])->get('/me/collection?page=2')));
+    }
+
     public function test_filters_by_color_type_rarity_and_price_and_list_view(): void
     {
         $u = $this->user('Ana');

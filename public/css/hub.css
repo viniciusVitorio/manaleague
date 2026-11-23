@@ -55,7 +55,10 @@
 .wish-row{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--ui-border);font-size:.82rem}
 .wish-row:last-child{border-bottom:0}.wish-row small{color:var(--ui-fg-subtle);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
 @media(max-width:1000px){.hub-grid{grid-template-columns:1fr}}
-@media(max-width:720px){.binder{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
+@media(max-width:720px){.binder{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  /* Card mais baixo no celular: Qtd, Troca e Salvar numa linha só. */
+  .binder-edit{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto}
+  .binder-edit button{grid-column:auto;height:28px;min-height:0;padding:0 8px}}
 @media(max-width:480px){.coll-add-form .ui-btn{justify-self:stretch;justify-content:center}}
 
 /* clubes */
