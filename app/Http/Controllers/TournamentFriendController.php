@@ -45,11 +45,11 @@ class TournamentFriendController extends Controller
         });
 
         return match ($result) {
-            'closed' => abort(409, 'As inscrições deste torneio foram encerradas.'),
-            'full' => abort(409, 'O torneio atingiu o limite de participantes.'),
+            'closed' => abort(409, 'As inscrições deste '.$tournament->kindNoun().' foram encerradas.'),
+            'full' => abort(409, 'O '.$tournament->kindNoun().' atingiu o limite de participantes.'),
             'already' => back()->with('status', 'Este amigo já está inscrito.'),
-            'name_taken' => back()->withErrors(['player' => 'Já existe um jogador chamado "'.$profile->nickname.'" neste torneio.']),
-            default => back()->with('status', 'Amigo adicionado ao torneio.'),
+            'name_taken' => back()->withErrors(['player' => 'Já existe um jogador chamado "'.$profile->nickname.'" neste '.$tournament->kindNoun().'.']),
+            default => back()->with('status', 'Amigo adicionado ao '.$tournament->kindNoun().'.'),
         };
     }
 }

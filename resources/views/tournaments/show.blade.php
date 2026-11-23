@@ -11,6 +11,7 @@
     $finished = $tournament->status === 'finished';
     $statusLabel = match ($tournament->status) { 'setup' => 'Preparação', 'league' => 'Em andamento', 'finals' => 'Finais', 'finished' => 'Encerrado', default => $tournament->status };
     $systemLabel = \App\Models\Tournament::SYSTEMS[$tournament->system] ?? $tournament->system;
+    $noun = $tournament->kindNoun();
     $playersCount = $tournament->players->count();
     $present = $tournament->players->whereNotNull('checked_in_at')->count();
     $leaguePending = $tournament->matches->where('stage', 'league')->where('status', 'pending')->count();
@@ -37,8 +38,8 @@
 
 <header class="arena-header tourney-header">
     <div>
-        <a class="back-link" href="{{ route('tournaments.index') }}">← Todas as arenas</a>
-        <div class="title-line"><span class="format-badge">{{ $tournament->format }}</span><span class="status status-{{ $tournament->status }}">{{ $statusLabel }}</span></div>
+        <a class="back-link" href="{{ route('tournaments.index') }}">← Eventos</a>
+        <div class="title-line"><span class="ui-badge event-kind">{{ $tournament->kindLabel() }}</span><span class="format-badge">{{ $tournament->format }}</span><span class="status status-{{ $tournament->status }}">{{ $statusLabel }}</span></div>
         <h1>{{ $tournament->name }}</h1>
         <p class="tourney-meta">
             <span>{{ $systemLabel }}</span>
@@ -49,7 +50,7 @@
         @include('tournaments.partials.rules-note')
     </div>
     <div class="header-actions">
-        @if($inSetup && $canManage)<a class="btn btn-secondary" href="{{ route('tournaments.edit', $tournament) }}">Editar torneio</a>@endif
+        @if($inSetup && $canManage)<a class="btn btn-secondary" href="{{ route('tournaments.edit', $tournament) }}">Editar {{ $noun }}</a>@endif
         <a class="btn btn-ghost" target="_blank" rel="noopener" href="{{ route('arena.public', $tournament->public_slug) }}">Página pública ↗</a>
         <div class="ui-dropdown">
             <button type="button" class="btn btn-ghost" data-menu-button aria-expanded="false" aria-controls="tourney-menu">Mais <x-icon name="chevron-down" /></button>
@@ -58,9 +59,9 @@
                 <a class="ui-menu-item" target="_blank" rel="noopener" href="{{ route('arena.tv', $tournament->public_slug) }}"><x-icon name="layout-dashboard" />Modo TV ↗</a>
                 @if($canManage)
                     @unless($finished)<a class="ui-menu-item" href="{{ route('tournaments.prizes.edit', $tournament) }}"><x-icon name="gift" />Premiação</a>@endunless
-                    <a class="ui-menu-item" href="{{ route('tournaments.show', [$tournament, 'repetir' => 1]) }}#repetir"><x-icon name="repeat" />Repetir torneio</a>
-                    @if($clubManage)<form method="POST" action="{{ route('clubs.tournaments.unlink', [$tournament->club, $tournament]) }}" data-confirm="Tirar este torneio do clube? Ele sai do ranking do clube e volta a ser só do criador.">@csrf @method('DELETE')<button class="ui-menu-item"><x-icon name="shield" />Desvincular do clube</button></form>@endif
-                    <form method="POST" action="{{ route('tournaments.destroy', $tournament) }}" data-confirm="Excluir o torneio e todos os resultados?">@csrf @method('DELETE')<button class="ui-menu-item is-danger"><x-icon name="trash" />Excluir torneio</button></form>
+                    <a class="ui-menu-item" href="{{ route('tournaments.show', [$tournament, 'repetir' => 1]) }}#repetir"><x-icon name="repeat" />Repetir {{ $noun }}</a>
+                    @if($clubManage)<form method="POST" action="{{ route('clubs.tournaments.unlink', [$tournament->club, $tournament]) }}" data-confirm="Tirar este {{ $noun }} do clube? Ele sai do ranking do clube e volta a ser só do criador.">@csrf @method('DELETE')<button class="ui-menu-item"><x-icon name="shield" />Desvincular do clube</button></form>@endif
+                    <form method="POST" action="{{ route('tournaments.destroy', $tournament) }}" data-confirm="Excluir o {{ $noun }} e todos os resultados?">@csrf @method('DELETE')<button class="ui-menu-item is-danger"><x-icon name="trash" />Excluir {{ $noun }}</button></form>
                 @endif
             </div>
         </div>
@@ -75,8 +76,8 @@
         <button type="button" class="ui-icon-btn" data-dialog-close aria-label="Fechar"><x-icon name="x" /></button>
     </header>
     <div class="ui-dialog-body">
-        <img class="tourney-share-qr" src="{{ route('tournaments.qr.png', $tournament) }}" alt="QR de inscrição do torneio" width="240" height="240" loading="lazy">
-        <p class="muted tourney-share-hint">Quem escanear o QR ou abrir o link se inscreve no torneio. Novos jogadores entram só por aqui.</p>
+        <img class="tourney-share-qr" src="{{ route('tournaments.qr.png', $tournament) }}" alt="QR de inscrição do {{ $noun }}" width="240" height="240" loading="lazy">
+        <p class="muted tourney-share-hint">Quem escanear o QR ou abrir o link se inscreve no {{ $noun }}. Novos jogadores entram só por aqui.</p>
         <label for="invite-url">Link de inscrição</label>
         <div class="tourney-invite-row">
             <input id="invite-url" readonly value="{{ route('tournaments.invite.show', $tournament->invite_token) }}">
@@ -149,7 +150,7 @@
         </div>
         @if($canManage)
             @if($present > 0 && $present < $playersCount)
-                <div class="check-in-summary"><p class="muted">{{ $playersCount - $present }} {{ $playersCount - $present === 1 ? 'inscrito ainda não fez' : 'inscritos ainda não fizeram' }} check-in.</p><form method="POST" action="{{ route('tournaments.absent.destroy', $tournament) }}" data-confirm="Remover {{ $playersCount - $present }} {{ $playersCount - $present === 1 ? 'inscrito sem check-in' : 'inscritos sem check-in' }}? Eles saem do torneio.">@csrf @method('DELETE')<button class="btn btn-small btn-ghost">Remover ausentes</button></form></div>
+                <div class="check-in-summary"><p class="muted">{{ $playersCount - $present }} {{ $playersCount - $present === 1 ? 'inscrito ainda não fez' : 'inscritos ainda não fizeram' }} check-in.</p><form method="POST" action="{{ route('tournaments.absent.destroy', $tournament) }}" data-confirm="Remover {{ $playersCount - $present }} {{ $playersCount - $present === 1 ? 'inscrito sem check-in' : 'inscritos sem check-in' }}? Eles saem do {{ $noun }}.">@csrf @method('DELETE')<button class="btn btn-small btn-ghost">Remover ausentes</button></form></div>
             @endif
         @endif
         <div class="player-list">
@@ -180,10 +181,10 @@
     </section>
     @if($canManage)
     <aside class="card start-card">
-        <span class="eyebrow">Próximo passo</span><h2>Começar torneio</h2>
+        <span class="eyebrow">Próximo passo</span><h2>Começar {{ $noun }}</h2>
         @php($minimumPlayers = $tournament->system === 'pod_elimination' ? 3 : 4)
         <p>Com {{ $minimumPlayers }} ou mais jogadores, os confrontos seguem o sistema escolhido ({{ $systemLabel }}). Os decks são congelados no início.</p>
-        <form method="POST" action="{{ route('tournaments.start', $tournament) }}">@csrf<button class="btn btn-primary btn-block" @disabled($playersCount < $minimumPlayers)>Começar torneio</button></form>
+        <form method="POST" action="{{ route('tournaments.start', $tournament) }}">@csrf<button class="btn btn-primary btn-block" @disabled($playersCount < $minimumPlayers)>Começar {{ $noun }}</button></form>
         <small>{{ $playersCount < $minimumPlayers ? 'Faltam '.($minimumPlayers - $playersCount).' '.($minimumPlayers - $playersCount === 1 ? 'jogador' : 'jogadores').'.' : 'Tudo pronto para começar.' }}</small>
     </aside>
     @endif
@@ -211,14 +212,14 @@
 
 @if($canManage)
 <details class="card tourney-repeat" id="repetir" @if($repeatOpen) open @endif>
-    <summary><span><span class="eyebrow">Liga toda semana?</span><strong>Repetir torneio</strong></span></summary>
-    <p class="muted">Cria um torneio novo com o mesmo formato, sistema, regras e premiação{{ $tournament->club_id ? ', no mesmo clube' : '' }}. Ele começa em preparação, com links de inscrição novos.</p>
+    <summary><span><span class="eyebrow">Acontece toda semana?</span><strong>Repetir {{ $noun }}</strong></span></summary>
+    <p class="muted">Cria um {{ $noun }} novo com o mesmo formato, sistema, regras e premiação{{ $tournament->club_id ? ', no mesmo clube' : '' }}. Ele começa em preparação, com links de inscrição novos.</p>
     <form method="POST" action="{{ route('tournaments.repeat', $tournament) }}" class="repeat-form">@csrf
         <label>Nome<input name="name" value="{{ old('name', $repeat['name']) }}" maxlength="120" required></label>
         <label>Data<input type="date" name="tournament_date" value="{{ old('tournament_date', $repeat['date']) }}" required></label>
         <input type="hidden" name="copy_players" value="0">
         <label class="check-label"><input type="checkbox" name="copy_players" value="1" @checked(old('copy_players', true))> Trazer os mesmos {{ $playersCount }} jogadores (com os decks)</label>
-        <button class="btn btn-secondary">Criar próximo torneio</button>
+        <button class="btn btn-secondary">Criar próximo {{ $noun }}</button>
     </form>
 </details>
 @endif

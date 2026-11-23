@@ -9,7 +9,7 @@ class CompetitionService
     {
         DB::transaction(function () use ($tournament): void {
             $t=Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
-            if ($t->status!=='setup'||$t->matches()->exists()) throw new LogicException('Este torneio já foi iniciado.');
+            if ($t->status!=='setup'||$t->matches()->exists()) throw new LogicException('Este '.$t->kindNoun().' já foi iniciado.');
             $n=$t->players()->count();
             if ($n<4) throw new LogicException('Cadastre pelo menos quatro jogadores.');
             if (!in_array($t->system,['swiss','single_elimination','double_elimination','commander_pods'],true)) throw new LogicException('Sistema não suportado.');
@@ -27,7 +27,7 @@ class CompetitionService
         DB::transaction(function () use ($tournament,$expectedRound): void {
             $t=Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
             $round=(int)$t->matches()->max('round');
-            if ($t->system==='round_robin'||$t->status!=='league'||$round!==$expectedRound) throw new LogicException('A rodada mudou ou o torneio já foi encerrado.');
+            if ($t->system==='round_robin'||$t->status!=='league'||$round!==$expectedRound) throw new LogicException('A rodada mudou ou o '.$t->kindNoun().' já foi encerrado.');
             if ($t->matches()->where('status','pending')->exists()) throw new LogicException('Registre todos os resultados antes de avançar.');
             if (in_array($t->system,['swiss','commander_pods'])&&$round>=$t->round_limit) { $t->update(['status'=>'finished']); app(PrizeService::class)->sync($t); return; }
             $this->generate($t,$round+1);

@@ -32,16 +32,16 @@
     <header class="dash-head">
         <div>
             <h1>Meu painel</h1>
-            <p>Olá, {{ $firstName }}. Acompanhe seus torneios, partidas e atividades no ManaLeague.</p>
+            <p>Olá, {{ $firstName }}. Acompanhe seus eventos, partidas e atividades no ManaLeague.</p>
         </div>
         <div class="dash-actions">
             <a class="ui-btn ui-btn-outline" href="{{ route('challenges.create') }}"><x-icon name="swords" />Desafiar amigo</a>
-            <a class="ui-btn ui-btn-primary" href="{{ route('tournaments.create') }}"><x-icon name="plus" />Criar torneio</a>
+            <a class="ui-btn ui-btn-primary" href="{{ route('tournaments.create') }}"><x-icon name="plus" />Criar evento</a>
         </div>
     </header>
 
     <section class="dash-stats" aria-label="Resumo">
-        <x-ui.stat label="Torneios ativos" :value="$activeTournaments" icon="trophy" :href="route('tournaments.index')"
+        <x-ui.stat label="Eventos ativos" :value="$activeTournaments" icon="trophy" :href="route('tournaments.index')"
             :hint="$activeTournaments ? $playing->count().' jogando · '.$activeOrganizing->count().' organizando' : 'Nenhum em andamento'" />
         <x-ui.stat label="Partidas pendentes" :value="$pendingMatches" icon="target" :href="route('matches.mine')"
             :hint="$actionCount ? $actionCount.' '.($actionCount === 1 ? 'ação aguarda' : 'ações aguardam').' você' : 'Nada aguardando você'" />
@@ -62,7 +62,7 @@
                 @if($nextMatch)
                     <div class="next-match-top">
                         <div>
-                            <p class="next-match-eyebrow">{{ $nextMatch['kind'] === 'ranked' ? 'Ranked' : 'Torneio' }}</p>
+                            <p class="next-match-eyebrow">{{ $nextMatch['kind'] === 'ranked' ? 'Ranked' : ($nextMatch['label'] ?? 'Evento') }}</p>
                             <h3 class="next-match-title">{{ $nextMatch['context'] }}</h3>
                             <p class="next-match-sub">{{ $nextMatch['detail'] }}</p>
                         </div>
@@ -78,7 +78,7 @@
                         @if($nextMatch['secondaryUrl'])<a class="ui-btn ui-btn-outline" href="{{ $nextMatch['secondaryUrl'] }}">{{ $nextMatch['secondary'] }}</a>@endif
                     </div>
                 @else
-                    <x-ui.empty icon="circle-check" title="Nenhuma partida pendente." text="Entre num torneio pelo link do organizador ou chame alguém para jogar."
+                    <x-ui.empty icon="circle-check" title="Nenhuma partida pendente." text="Entre num evento pelo link do organizador ou chame alguém para jogar."
                         :href="route('challenges.create')" action="Desafiar amigo" />
                 @endif
             </x-ui.card>
@@ -94,7 +94,7 @@
                 @endif
                 <ul class="ui-list">
                     @foreach($needDeck as $tournament)
-                        <li><a class="ui-row" href="{{ route('arena.public', $tournament->public_slug) }}"><span class="ui-row-icon"><x-icon name="alert" /></span><span class="ui-row-main"><span class="ui-row-title">Cadastre seu deck para o torneio</span><span class="ui-row-sub">{{ $tournament->name }} · escolha um deck de {{ $tournament->format }} da sua conta para fazer o check-in</span></span><x-icon name="chevron-right" class="ui-chevron" /></a></li>
+                        <li><a class="ui-row" href="{{ route('arena.public', $tournament->public_slug) }}"><span class="ui-row-icon"><x-icon name="alert" /></span><span class="ui-row-main"><span class="ui-row-title">Cadastre seu deck para o {{ $tournament->kindNoun() }}</span><span class="ui-row-sub">{{ $tournament->name }} · escolha um deck de {{ $tournament->format }} da sua conta para fazer o check-in</span></span><x-icon name="chevron-right" class="ui-chevron" /></a></li>
                     @endforeach
                     @foreach($toReport as $match)
                         <li><a class="ui-row" href="{{ route('matches.mine') }}"><span class="ui-row-icon"><x-icon name="target" /></span><span class="ui-row-main"><span class="ui-row-title">Enviar resultado</span><span class="ui-row-sub">{{ $match->tournament->name }} · R{{ $match->round }} · {{ $match->playerOne?->displayName() }} × {{ $match->playerTwo?->displayName() }}</span></span><x-icon name="chevron-right" class="ui-chevron" /></a></li>
@@ -140,9 +140,9 @@
 
     {{-- As três listas lado a lado, com a mesma altura --}}
     <div class="dash-grid">
-        <x-ui.card title="Torneios" icon="trophy" :href="route('tournaments.index')">
+        <x-ui.card title="Eventos" icon="trophy" :href="route('tournaments.index')">
             @if($tournamentRows->isEmpty())
-                <x-ui.empty icon="trophy" title="Nenhum torneio por enquanto." text="Crie um torneio ou peça o link ao organizador." :href="route('tournaments.create')" action="Criar" />
+                <x-ui.empty icon="trophy" title="Nenhum evento por enquanto." text="Crie um evento ou peça o link ao organizador." :href="route('tournaments.create')" action="Criar" />
             @else
                 <ul class="ui-list">
                     @foreach($tournamentRows as $row)
@@ -166,7 +166,7 @@
 
         <x-ui.card title="Atividade recente" icon="activity" :href="$activities->isNotEmpty() ? route('feed.index') : null">
             @if($activities->isEmpty())
-                <x-ui.empty icon="activity" title="Suas atividades aparecerão aqui." text="Resultados confirmados, torneios encerrados e desafios dos seus grupos." />
+                <x-ui.empty icon="activity" title="Suas atividades aparecerão aqui." text="Resultados confirmados, eventos encerrados e desafios dos seus grupos." />
             @else
                 <ul class="ui-list">
                     @foreach($activities->take(6) as $activity)

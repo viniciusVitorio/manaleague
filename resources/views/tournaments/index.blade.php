@@ -1,24 +1,30 @@
 @extends('layouts.app')
 @section('content')
 @php
-    $statusLabel = fn ($t) => match($t->status) {'setup' => 'Preparação', 'league' => 'Liga em andamento', 'finals' => 'Finais', 'finished' => 'Encerrado', default => $t->status};
+    $statusLabel = fn ($t) => match($t->status) {'setup' => 'Preparação', 'league' => 'Em andamento', 'finals' => 'Finais', 'finished' => 'Encerrado', default => $t->status};
 @endphp
 <header class="hero compact">
-    <div><span class="eyebrow">Torneios</span><h1>Seus torneios</h1><p>Os torneios que você organiza e os que você joga, em um só lugar.</p></div>
-    <a class="btn btn-primary" href="{{ route('tournaments.create') }}">Novo torneio</a>
+    <div><span class="eyebrow">Eventos</span><h1>Seus eventos</h1><p>Os campeonatos e torneios que você organiza e os que você joga, em um só lugar.</p></div>
+    <a class="btn btn-primary" href="{{ route('tournaments.create') }}">Novo evento</a>
 </header>
+
+<nav class="mm-tabs" aria-label="Tipo de evento">
+    @foreach($filters as $key => [$name])
+        <a class="mm-tab @if($filter === $key) is-active @endif" href="{{ route('tournaments.index', $key === 'todos' ? [] : ['tipo' => $key]) }}" @if($filter === $key) aria-current="page" @endif>{{ $name }} <span class="mm-tab-count">{{ $counts[$key] }}</span></a>
+    @endforeach
+</nav>
 
 <section class="tournament-section" aria-labelledby="organizing-title">
     <div class="section-heading"><h2 id="organizing-title">Organizados por você @if($tournaments->isNotEmpty())<span class="count">{{ $tournaments->count() }}</span>@endif</h2></div>
     <div class="card-grid">
     @forelse($tournaments as $tournament)
         <a class="tournament-card" href="{{ route('tournaments.show', $tournament) }}">
-            <div class="card-top"><span class="format-badge">{{ $tournament->format }}</span><span class="status status-{{ $tournament->status }}">{{ $statusLabel($tournament) }}</span></div>
+            <div class="card-top"><span class="card-badges"><span class="ui-badge event-kind">{{ $tournament->kindLabel() }}</span><span class="format-badge">{{ $tournament->format }}</span></span><span class="status status-{{ $tournament->status }}">{{ $statusLabel($tournament) }}</span></div>
             <h2>{{ $tournament->name }}</h2>
             <div class="card-meta"><span>{{ $tournament->tournament_date?->format('d/m/Y') ?? 'Data a definir' }} · {{ $tournament->players_count }} jogadores</span><span>Abrir →</span></div>
         </a>
     @empty
-        <x-ui.empty class="tournament-empty" icon="trophy" title="Nenhum torneio criado" text="Comece com quatro amigos e deixe o ManaLeague montar as rodadas." />
+        <x-ui.empty class="tournament-empty" icon="trophy" :title="'Nenhum '.$noun.' criado'" text="Comece com quatro amigos e deixe o ManaLeague montar as rodadas." />
     @endforelse
     </div>
 </section>
@@ -29,12 +35,12 @@
     @forelse($playing as $tournament)
         {{-- Quem só joga não gerencia o torneio: abre a página do torneio quando tem acesso (clube) ou a página pública. --}}
         <a class="tournament-card" href="{{ auth()->user()->can('view', $tournament) ? route('tournaments.show', $tournament) : route('arena.public', $tournament->public_slug) }}">
-            <div class="card-top"><span class="format-badge">{{ $tournament->format }}</span><span class="status status-{{ $tournament->status }}">{{ $statusLabel($tournament) }}</span></div>
+            <div class="card-top"><span class="card-badges"><span class="ui-badge event-kind">{{ $tournament->kindLabel() }}</span><span class="format-badge">{{ $tournament->format }}</span></span><span class="status status-{{ $tournament->status }}">{{ $statusLabel($tournament) }}</span></div>
             <h2>{{ $tournament->name }}</h2>
             <div class="card-meta"><span>{{ $tournament->tournament_date?->format('d/m/Y') ?? 'Data a definir' }} · {{ $tournament->players_count }} jogadores @if($tournament->user?->playerProfile)· por {{ $tournament->user->playerProfile->nickname }}@endif</span><span>Ver →</span></div>
         </a>
     @empty
-        <x-ui.empty class="tournament-empty" icon="users" title="Você ainda não está em nenhum torneio" text="Quando você entrar em um torneio pelo link de convite, ele aparece aqui." />
+        <x-ui.empty class="tournament-empty" icon="users" :title="'Você ainda não está em nenhum '.$noun" :text="'Quando você entrar em um '.$noun.' pelo link de convite, ele aparece aqui.'" />
     @endforelse
     </div>
 </section>

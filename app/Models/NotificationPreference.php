@@ -4,7 +4,7 @@ use Illuminate\Database\Eloquent\Model;
 class NotificationPreference extends Model {
  /** Categorias da tela de configuração: rótulo e descrição. Silenciar uma silencia todos os tipos dela (match.submitted...). */
  public const CATEGORIES = [
-  'tournament' => ['Torneios', 'Rodadas prontas, resultados finais, pódio e estatísticas'],
+  'tournament' => ['Eventos', 'Rodadas prontas, resultados finais, pódio e estatísticas de campeonatos e torneios'],
   'match' => ['Partidas', 'Placares enviados, confirmados e contestados'],
   'challenge' => ['Desafios', 'Convites, aceites e placares de desafios'],
   'ranked' => ['Ranked', 'Partidas ranqueadas e variação de pontos'],

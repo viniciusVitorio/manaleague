@@ -49,8 +49,8 @@
             <ul>
                 <li>Cada desafio 1v1 vira uma <strong>série</strong> (melhor de 1, 3 ou 5). Quem ganha mais games leva a série; o placar fica como vitórias–derrotas (–empates, se houver).</li>
                 <li>Só contam séries com <strong>placar confirmado pelos dois</strong>. Convites recusados, expirados ou contestados não entram.</li>
-                <li>Valem desafios casuais e ranqueados. Partidas de torneio ficam nas estatísticas do perfil, não aqui.</li>
-                <li>A rivalidade é só um retrospecto: ela <strong>não mexe</strong> no seu ELO nem nas estatísticas de torneio. Use <em>Revanche</em> para desafiar de novo.</li>
+                <li>Valem desafios casuais e ranqueados. Partidas de eventos ficam nas estatísticas do perfil, não aqui.</li>
+                <li>A rivalidade é só um retrospecto: ela <strong>não mexe</strong> no seu ELO nem nas estatísticas de eventos. Use <em>Revanche</em> para desafiar de novo.</li>
             </ul>
         </details>
     </x-ui.card>

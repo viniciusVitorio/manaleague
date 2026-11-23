@@ -16,7 +16,7 @@ use Illuminate\Support\Collection;
 /** Dados da página Comunidade: feed filtrável, ranking entre amigos, destaques da semana e agenda. */
 class CommunityHubService
 {
-    public const FILTERS = ['all' => 'Tudo', 'tournament' => 'Torneios', 'match' => 'Partidas', 'challenge' => 'Desafios', 'ranked' => 'Ranked', 'club' => 'Clubes'];
+    public const FILTERS = ['all' => 'Tudo', 'tournament' => 'Eventos', 'match' => 'Partidas', 'challenge' => 'Desafios', 'ranked' => 'Ranked', 'club' => 'Clubes'];
 
     public function __construct(private readonly CommunityAccess $access, private readonly FriendshipService $friends) {}
 

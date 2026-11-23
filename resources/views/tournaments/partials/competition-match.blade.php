@@ -67,7 +67,7 @@
                 </form>
             </details>
         @elseif($manage && $isFinished)
-            <p class="tmatch-note" title="Uma fase seguinte já foi gerada ou o torneio foi encerrado.">Resultado travado.</p>
+            <p class="tmatch-note" title="Uma fase seguinte já foi gerada ou o {{ $tournament->kindNoun() }} foi encerrado.">Resultado travado.</p>
         @endif
     @endif
     {{-- Jogada com o contador de vida: abre o gráfico na janela (ou a página dele, sem JavaScript). --}}

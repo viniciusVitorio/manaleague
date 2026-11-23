@@ -600,17 +600,54 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 .player-row .ban-tag{margin-left:0;margin-top:4px}
 .ban-tag.is-invalid{border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);color:var(--ui-warning)}
 .ban-tag.is-neutral{border-color:var(--ui-border-strong);background:var(--ui-accent);color:var(--ui-fg-muted);font-weight:500}
-.rules-fieldset{border:1px solid var(--ui-border);border-radius:8px;padding:4px 14px 12px;margin:16px 0}
-.rules-fieldset legend{padding:0 6px;color:var(--ui-fg-soft);font-size:.82rem;font-weight:500}
-.rules-fieldset .check-row{margin:10px 0 0}
-.rules-fieldset textarea{width:100%;margin-top:6px;min-height:84px;padding:9px 11px;border:1px solid var(--ui-border-strong);border-radius:7px;background:var(--ui-bg);color:var(--ui-fg);font:inherit;resize:vertical}
-.rules-custom{display:none}
-.rules-fieldset:has(input[name="rules"][value="custom"]:checked) .rules-custom{display:block}
+/* Tipo do evento (Campeonato ou Torneio): selo nos cards e no cabeçalho */
+.card-badges{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}
+.ui-badge.event-kind{color:var(--ui-fg-soft);border-color:var(--ui-border-strong)}
+
+/* ---------- Formulário de evento (criar/editar): cards; tipo, sistema e regras em cartões com explicação ---------- */
+.event-form{display:grid;gap:var(--s4)}
+.event-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s3) var(--s4);align-items:start}
+.event-form-grid > label{margin:0}
+.event-field-wide{grid-column:1/-1}
+.event-group{min-width:0;margin:0 0 var(--s4);padding:0;border:0}
+.event-group legend{margin:0 0 var(--s2);padding:0;color:var(--ui-fg-soft);font-size:.82rem;font-weight:500}
+.event-choices{display:grid;gap:var(--s2)}
+.event-choices.is-two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.event-choices.is-three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.event-choice{position:relative;display:flex!important;align-items:flex-start;gap:var(--s3);margin:0!important;padding:var(--s3) var(--s4);border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);background:var(--ui-bg);color:var(--ui-fg);cursor:pointer;transition:border-color .15s,background-color .15s}
+.event-choice[hidden]{display:none!important}
+/* Mais específico que label:has(> input[type=radio]) do legado, que centraliza o conteúdo. */
+.event-choices .event-choice{align-items:flex-start;gap:var(--s3)}
+.event-choice:hover{border-color:var(--ui-border-strong)}
+.event-choice input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.event-choice:has(input:checked){border-color:var(--ui-primary);background:var(--ui-muted);box-shadow:0 0 0 1px var(--ui-primary)}
+.event-choice:has(input:focus-visible){outline:2px solid var(--ui-ring);outline-offset:2px}
+.event-choice:has(input:disabled){opacity:.5;cursor:not-allowed}
+.event-choice:has(input:disabled) input{cursor:not-allowed}
+.event-choice-icon{flex:0 0 auto;margin-top:2px;color:var(--ui-fg-muted)}
+.event-choice:has(input:checked) .event-choice-icon{color:var(--ui-fg)}
+.event-choice-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.event-choice-title{font-size:.9rem;font-weight:600}
+.event-choice-desc{color:var(--ui-fg-subtle);font-size:.78rem;font-weight:400;line-height:1.45}
+.event-choice-note{margin-top:4px;color:var(--ui-warning);font-size:.72rem;font-weight:500}
+.event-choice:not(:has(input:disabled)) .event-choice-note{display:none}
+.event-sub{display:grid;gap:var(--s3);margin:0 0 var(--s4);padding:var(--s3) var(--s4);border:1px dashed var(--ui-border-strong);border-radius:var(--ui-radius-sm);background:var(--ui-bg)}
+.event-sub[hidden]{display:none}
+.event-sub > label,.event-sub .check-label{margin:0}
+.event-sub .event-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.event-sub-title{margin:0;font-size:.84rem;font-weight:600}
+.event-sub-hint{margin:0;color:var(--ui-fg-subtle);font-size:.76rem}
+.event-rules .rules-custom{display:none;gap:var(--s3);margin-top:var(--s3)}
+.event-rules:has(input[name="rules"][value="custom"]:checked) .rules-custom{display:grid}
+.event-rules .rules-custom > label{margin:0}
+.event-rules textarea{width:100%;margin-top:6px;min-height:84px;padding:9px 11px;border:1px solid var(--ui-border-strong);border-radius:7px;background:var(--ui-bg);color:var(--ui-fg);font:inherit;resize:vertical}
+.event-form .ui-option-box{border-bottom:1px solid var(--ui-border)}
+.event-form-actions{display:flex;justify-content:flex-end;gap:var(--s2)}
+.event-invite{margin-top:var(--s6)}
+@media(max-width:780px){.event-form-grid,.event-choices.is-three,.event-sub .event-form-grid{grid-template-columns:1fr}}
+@media(max-width:480px){.event-choices.is-two{grid-template-columns:1fr}.event-form-actions{flex-direction:column-reverse}.event-form-actions .ui-btn{justify-content:center}}
 .tournament-rules{margin:6px 0 0;font-size:.85rem;color:var(--ui-fg-muted)}
 .house-rules{white-space:pre-line;margin:8px 0 0;font-size:.88rem}
-.rules-option{display:flex!important;align-items:flex-start;gap:10px;margin:12px 0 0!important}
-.rules-option input{width:auto;min-height:0;margin:3px 0 0;box-shadow:none}
-.rules-option small{margin-top:2px}
 .profile-handle{margin:-4px 0 8px;color:var(--ui-fg-muted);font-size:.9rem}
 
 /* ---------- Adicionar cartas: buscar no Scryfall ou na coleção ---------- */

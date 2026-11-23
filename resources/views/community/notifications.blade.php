@@ -7,7 +7,7 @@
     $unreadCount = $notifications->getCollection()->whereNull('read_at')->count();
 @endphp
 <header class="page-head">
-    <div><h1>Notificações</h1><p>Avisos do ManaLeague sobre suas partidas, torneios e desafios.</p></div>
+    <div><h1>Notificações</h1><p>Avisos do ManaLeague sobre suas partidas, eventos e desafios.</p></div>
     <div class="page-head-actions">
         <a class="ui-btn ui-btn-ghost" href="{{ route('profiles.edit') }}#notificacoes"><x-icon name="settings" />Configurar notificações</a>
         @if($unreadCount)<form method="POST" action="{{ route('notifications.read-all') }}">@csrf @method('PATCH')<button class="ui-btn ui-btn-outline"><x-icon name="check-check" />Marcar todas como lidas</button></form>@endif

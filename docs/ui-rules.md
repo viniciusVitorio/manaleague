@@ -246,6 +246,10 @@ Campo com regra rígida também ajuda no cliente (ex.: `emoji-input.js` mantém 
 - Plural certo: `1 desafio` / `2 desafios`, `1 vitória` / `2 vitórias`.
 - Data `dd/mm/aaaa` no fuso do app. Estados com o mesmo nome em todo lugar ("Aguardando confirmação", "Confirmar placar").
 - Vazio diz o que fazer: "Nenhum desafio ainda. Chame um amigo para a primeira série."
+- **Evento, campeonato e torneio.** A seção e o que vale para todos se chamam **evento** ("Eventos", "Novo evento", "Dia do evento").
+  Dentro de um evento, use o tipo dele: **campeonato** (pontos corridos: liga, suíço, pods Commander) ou **torneio** (mata-mata:
+  eliminação simples, dupla, por pods), com `$tournament->kindLabel()` / `kindNoun()`. O tipo sai do sistema, nunca é escrito à mão.
+  No código, rotas e banco o nome continua `Tournament`/`tournaments`.
 
 ---
 

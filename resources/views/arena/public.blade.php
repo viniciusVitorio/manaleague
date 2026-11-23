@@ -31,7 +31,7 @@
 @section('content')
 <header class="public-hero">
     <span class="eyebrow">{{ $running ? 'Placar ao vivo' : 'Placar oficial' }}</span>
-    <div class="title-line"><span class="format-badge">{{ $tournament->format }}</span><span class="status status-{{ $tournament->status }}">{{ $statusLabel }}</span></div>
+    <div class="title-line"><span class="ui-badge event-kind">{{ $tournament->kindLabel() }}</span><span class="format-badge">{{ $tournament->format }}</span><span class="status status-{{ $tournament->status }}">{{ $statusLabel }}</span></div>
     <h1>{{ $tournament->name }}</h1>
     <p class="tourney-meta">
         <span>{{ $systemLabel }}</span>

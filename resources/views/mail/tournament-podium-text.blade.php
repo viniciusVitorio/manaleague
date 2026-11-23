@@ -24,7 +24,7 @@ Seus prêmios:
 Ver meus prêmios: {!! $podium['prizes_url'] !!}
 @endif
 
-Ver resultado do torneio: {!! $podium['url'] !!}
+Ver resultado do {{ $podium['kind'] }}: {!! $podium['url'] !!}
 
-Você recebeu este e-mail porque subiu ao pódio de um torneio no ManaLeague.
-Para não receber mais, desligue o e-mail de Torneios em Editar perfil > Notificações: {!! $podium['preferences_url'] !!}
+Você recebeu este e-mail porque subiu ao pódio de um {{ $podium['kind'] }} no ManaLeague.
+Para não receber mais, desligue o e-mail de Eventos em Editar perfil > Notificações: {!! $podium['preferences_url'] !!}

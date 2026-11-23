@@ -1,12 +1,19 @@
 @extends('layouts.app')
 @section('content')
-<div class="form-shell card"><a class="back-link" href="{{ route('tournaments.show',$tournament) }}">← Voltar ao torneio</a><span class="eyebrow">Configurações</span><h1>Editar torneio</h1><form method="POST" action="{{ route('tournaments.update',$tournament) }}">@csrf @method('PUT')
-<label>Nome do torneio<input name="name" value="{{ old('name',$tournament->name??'') }}" maxlength="120" required autofocus></label>
-<label>Data<input type="date" name="tournament_date" value="{{ old('tournament_date',isset($tournament)?$tournament->tournament_date?->format('Y-m-d'):now()->format('Y-m-d')) }}" required></label>
-<label>Formato<select name="format" required>@foreach(['Pauper','Commander','Standard','Modern','Draft','Outro'] as $format)<option value="{{ $format }}" @selected(old('format',$tournament->format??'Pauper')===$format)>{{ $format }}</option>@endforeach</select></label>
-@include('tournaments.partials.rules-fields')
-@include('tournaments.partials.competition-fields')
-<label>Limite de participantes <small data-player-limit-hint>Opcional, entre {{ old('system',$tournament->system??'') === 'pod_elimination' ? 3 : 4 }} e 128</small><input type="number" name="max_players" min="{{ old('system',$tournament->system??'') === 'pod_elimination' ? 3 : 4 }}" max="128" value="{{ old('max_players',$tournament->max_players??'') }}" placeholder="Sem limite"></label>
-<div class="button-row"><button class="btn btn-primary">Salvar alterações</button><a class="btn btn-ghost" href="{{ route('tournaments.show',$tournament) }}">Cancelar</a></div></form>
-<hr class="separator"><h2>Link de convite</h2><p class="muted">Ao gerar outro link, o anterior deixa de funcionar imediatamente.</p><form method="POST" action="{{ route('tournaments.invite.regenerate',$tournament) }}" onsubmit="return confirm('Invalidar o convite atual?')">@csrf<button class="btn btn-danger">Gerar novo link</button></form></div>
+<a class="back-link" href="{{ route('tournaments.show', $tournament) }}">← Voltar ao {{ $tournament->kindNoun() }}</a>
+<header class="page-head">
+    <div><h1>Editar {{ $tournament->kindNoun() }}</h1><p>{{ $tournament->name }}. Dá para mudar tudo até o {{ $tournament->kindNoun() }} começar.</p></div>
+</header>
+<form method="POST" action="{{ route('tournaments.update', $tournament) }}" class="event-form">@csrf @method('PUT')
+    @include('tournaments.partials.event-form')
+    <div class="event-form-actions">
+        <a class="ui-btn ui-btn-ghost" href="{{ route('tournaments.show', $tournament) }}">Cancelar</a>
+        <button class="ui-btn ui-btn-primary">Salvar alterações</button>
+    </div>
+</form>
+
+<x-ui.card title="Link de convite" icon="link" class="event-invite">
+    <p class="muted small">Ao gerar outro link, o anterior deixa de funcionar imediatamente.</p>
+    <form method="POST" action="{{ route('tournaments.invite.regenerate', $tournament) }}" data-confirm="Invalidar o convite atual?">@csrf<button class="ui-btn ui-btn-outline"><x-icon name="repeat" />Gerar novo link</button></form>
+</x-ui.card>
 @endsection

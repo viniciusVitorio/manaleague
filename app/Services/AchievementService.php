@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
  */
 class AchievementService
 {
-    public const CATEGORIES = ['matches' => 'Partidas', 'tournaments' => 'Torneios', 'social' => 'Social', 'collection' => 'Coleção', 'special' => 'Especial'];
+    public const CATEGORIES = ['matches' => 'Partidas', 'tournaments' => 'Eventos', 'social' => 'Social', 'collection' => 'Coleção', 'special' => 'Especial'];
 
     /** Conquistas concedidas a mao por um admin (nao ha metrica de jogo que as libere). */
     public const GRANTED = ['builder'];
@@ -31,7 +31,7 @@ class AchievementService
     {
         return [
             'secret_comeback' => ['↗', 'De virada', 'Vença uma série casual confirmada após perder o primeiro game, com ordem registrada.', 'matches', 1, 'casual_comeback'],
-            'secret_tribal' => ['✦', 'Uma só tribo', 'Vença uma partida de torneio com um deck que tenha 20 criaturas do mesmo subtipo no deck principal (sem sideboard).', 'collection', 20, 'tribal_count'],
+            'secret_tribal' => ['✦', 'Uma só tribo', 'Vença uma partida de evento com um deck que tenha 20 criaturas do mesmo subtipo no deck principal (sem sideboard).', 'collection', 20, 'tribal_count'],
             // Partidas
             'first_win' => ['🗡️', 'First Blood', 'Vença sua primeira partida', 'matches', 1, 'wins'],
             'clean_sweep' => ['🧹', 'Clean Sweep', 'Vença uma partida sem perder nenhum game (2–0 ou 3–0)', 'matches', 1, 'clean_sweeps'],
@@ -42,20 +42,20 @@ class AchievementService
             'zero_two' => ['💀', '0–2 Enjoyer', 'Sobreviva a uma derrota sem vencer nenhum game (0–2 ou 0–3)', 'matches', 1, 'zero_two'],
             'bye' => ['🎲', 'BYE Merchant', 'Ganhe uma rodada de BYE', 'matches', 1, 'bye'],
             // Torneios
-            'debut' => ['🎟️', 'Estreia', 'Dispute seu primeiro torneio', 'tournaments', 1, 'tournaments_played'],
-            'regular' => ['📅', 'Figurinha Carimbada', 'Dispute 10 torneios', 'tournaments', 10, 'tournaments_played'],
-            'podium' => ['🥉', 'No Pódio', 'Termine um torneio entre os 3 primeiros', 'tournaments', 1, 'podiums'],
-            'almost_there' => ['🥈', 'Almost There', 'Chegue à final de um torneio', 'tournaments', 1, 'finals_reached'],
-            'champion' => ['👑', 'Champion', 'Vença um torneio', 'tournaments', 1, 'titles'],
-            'dynasty' => ['🏰', 'Dinastia', 'Vença 3 torneios', 'tournaments', 3, 'titles'],
-            'undefeated' => ['🐐', 'Undefeated', 'Termine um torneio sem nenhuma derrota', 'tournaments', 1, 'undefeated_runs'],
+            'debut' => ['🎟️', 'Estreia', 'Dispute seu primeiro evento', 'tournaments', 1, 'tournaments_played'],
+            'regular' => ['📅', 'Figurinha Carimbada', 'Dispute 10 eventos', 'tournaments', 10, 'tournaments_played'],
+            'podium' => ['🥉', 'No Pódio', 'Termine um evento entre os 3 primeiros', 'tournaments', 1, 'podiums'],
+            'almost_there' => ['🥈', 'Almost There', 'Chegue à final de um evento', 'tournaments', 1, 'finals_reached'],
+            'champion' => ['👑', 'Champion', 'Vença um evento', 'tournaments', 1, 'titles'],
+            'dynasty' => ['🏰', 'Dinastia', 'Vença 3 eventos', 'tournaments', 3, 'titles'],
+            'undefeated' => ['🐐', 'Undefeated', 'Termine um evento sem nenhuma derrota', 'tournaments', 1, 'undefeated_runs'],
             'clutch' => ['🎯', 'Clutch', 'Vença uma final ou disputa de 3º lugar perdendo um game', 'tournaments', 1, 'comebacks'],
-            'multiformat' => ['🧭', 'Multiformato', 'Jogue torneios em 3 formatos diferentes', 'tournaments', 3, 'formats_played'],
+            'multiformat' => ['🧭', 'Multiformato', 'Jogue eventos em 3 formatos diferentes', 'tournaments', 3, 'formats_played'],
             // Social
             'first_friend' => ['🤝', 'Parceiro de Mesa', 'Faça seu primeiro amigo', 'social', 1, 'friends'],
             'playgroup' => ['🍕', 'Playgroup', 'Tenha 5 amigos', 'social', 5, 'friends'],
-            'organizer' => ['📋', 'Organizador', 'Conclua um torneio como organizador', 'social', 1, 'organized_finished'],
-            'host' => ['🎪', 'Anfitrião', 'Conclua 5 torneios como organizador', 'social', 5, 'organized_finished'],
+            'organizer' => ['📋', 'Organizador', 'Conclua um evento como organizador', 'social', 1, 'organized_finished'],
+            'host' => ['🎪', 'Anfitrião', 'Conclua 5 eventos como organizador', 'social', 5, 'organized_finished'],
             // Colecao
             'deckbuilder' => ['🃏', 'Deckbuilder', 'Monte um deck com pelo menos 60 cartas', 'collection', 60, 'max_deck_cards'],
             'arsenal' => ['🗃️', 'Arsenal', 'Tenha 5 decks cadastrados', 'collection', 5, 'decks'],

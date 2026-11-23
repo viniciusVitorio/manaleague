@@ -7,7 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'ManaLeague' }}</title>
     {{-- Prévia de link (WhatsApp, Telegram, redes): páginas podem definir $og = ['title' => ..., 'description' => ...]. --}}
-    @php($og = ($og ?? []) + ['title' => $title ?? 'ManaLeague', 'description' => 'Decks, coleção, desafios valendo ELO e torneios de Magic. Seu Magic inteiro num lugar só.'])
+    @php($og = ($og ?? []) + ['title' => $title ?? 'ManaLeague', 'description' => 'Decks, coleção, desafios valendo ELO, campeonatos e torneios de Magic. Seu Magic inteiro num lugar só.'])
     <meta name="description" content="{{ $og['description'] }}">
     <meta property="og:site_name" content="ManaLeague">
     <meta property="og:type" content="website">
@@ -76,6 +76,6 @@
 <script src="{{ \App\Support\VersionedAsset::url('js/live-notify.js') }}" defer></script>
 @endif
 @endauth
-<footer class="footer">ManaLeague &middot; Decks, coleção, partidas e torneios de Magic.</footer>
+<footer class="footer">ManaLeague &middot; Decks, coleção, partidas, campeonatos e torneios de Magic.</footer>
 </body>
 </html>

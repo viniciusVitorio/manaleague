@@ -63,7 +63,7 @@
         @endif
     </article>
 @empty
-    <x-ui.empty class="card" icon="inbox" title="Nenhum resultado enviado ainda" text="Quando um jogador mandar o placar pelo celular (em Minhas partidas), ele aparece aqui. Você também pode lançar o resultado direto no card da mesa." :href="route('tournaments.show', $tournament)" action="Voltar ao torneio" />
+    <x-ui.empty class="card" icon="inbox" title="Nenhum resultado enviado ainda" text="Quando um jogador mandar o placar pelo celular (em Minhas partidas), ele aparece aqui. Você também pode lançar o resultado direto no card da mesa." :href="route('tournaments.show', $tournament)" :action="'Voltar ao '.$tournament->kindNoun()" />
 @endforelse
 {{ $submissions->links() }}
 @endsection

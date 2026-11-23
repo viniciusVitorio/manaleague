@@ -41,7 +41,7 @@ class DashboardLayoutTest extends TestCase
         $user->ensurePlayerProfile();
 
         $page = $this->actingAs($user)->get('/dashboard')->assertOk();
-        $page->assertSee('Meu painel')->assertSee('Desafiar amigo')->assertSee('Criar torneio')
+        $page->assertSee('Meu painel')->assertSee('Desafiar amigo')->assertSee('Criar evento')
             ->assertSee('Nenhuma partida pendente.')->assertSee('Tudo em dia por aqui.')
             ->assertSee('Você não tem desafios em aberto.')->assertSee('Suas atividades aparecerão aqui.')
             ->assertSee('Sem partidas ainda')->assertDontSee('Precisa de você');
@@ -73,7 +73,7 @@ class DashboardLayoutTest extends TestCase
         $page->assertSee('Minha próxima partida')->assertSee('Copa da Loja')->assertSee('Rodada 1 · Pauper')
             ->assertSee('Affinity')->assertSee($opponent)->assertSee('Aguardando resultado')->assertSee('Enviar resultado')
             ->assertSee('Precisa de você')->assertDontSee('Nenhuma partida pendente.');
-        $this->assertMatchesRegularExpression('/Torneios ativos.*?ui-stat-value">1</s', $page->getContent());
+        $this->assertMatchesRegularExpression('/Eventos ativos.*?ui-stat-value">1</s', $page->getContent());
         $this->assertMatchesRegularExpression('/Partidas pendentes.*?ui-stat-value">1</s', $page->getContent());
     }
 

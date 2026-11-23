@@ -19,7 +19,7 @@
     <section class="card settings-card" id="foto">
         <div class="settings-card-body">
             <h2>Foto de perfil</h2>
-            <p class="settings-card-desc">Aparece no seu perfil, nas partidas e nos torneios.</p>
+            <p class="settings-card-desc">Aparece no seu perfil, nas partidas e nos eventos.</p>
             @error('photo')<div class="alert alert-danger" role="alert">{{ $message }}</div>@enderror
             <div class="avatar-upload">
                 <x-avatar :of="$profile" class="profile-avatar large" id="photo-preview" />
@@ -47,7 +47,7 @@
                 <h2>Dados pessoais</h2>
                 <p class="settings-card-desc">Como os outros jogadores veem você.</p>
                 <div class="settings-fields settings-fields-emoji">
-                    <label>Nome de exibição <small>Aparece no perfil, nos torneios e no ranking. Pode ter espaços e acentos.</small><input name="nickname" value="{{ old('nickname', $profile->nickname) }}" maxlength="80" required></label>
+                    <label>Nome de exibição <small>Aparece no perfil, nos eventos e no ranking. Pode ter espaços e acentos.</small><input name="nickname" value="{{ old('nickname', $profile->nickname) }}" maxlength="80" required></label>
                     <label>Avatar <small>Só 1 emoji. Digitar outro troca o atual.</small><input class="emoji-input" name="avatar" value="{{ old('avatar', $profile->emoji()) }}" maxlength="20" placeholder="🧙" autocomplete="off" spellcheck="false" data-single-emoji></label>
                 </div>
             </div>

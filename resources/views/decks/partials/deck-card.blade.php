@@ -28,7 +28,7 @@
         @if($record || $coverage)
             <dl class="deck-card-stats">
                 @if($record)
-                    <div><dt>Torneios</dt><dd>{{ $record['tournaments'] }} · {{ $record['wins'] }}V {{ $record['losses'] }}D</dd></div>
+                    <div><dt>Eventos</dt><dd>{{ $record['tournaments'] }} · {{ $record['wins'] }}V {{ $record['losses'] }}D</dd></div>
                 @endif
                 @if($coverage)
                     <div><dt>Na coleção</dt><dd><a href="{{ route('collection.missing', $deck) }}">{{ $coverage['percent'] }}%</a></dd></div>

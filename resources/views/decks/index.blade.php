@@ -18,7 +18,7 @@
     @if($hasCollection)
         <x-ui.stat label="Prontos na coleção" :value="$stats['complete'].' de '.$stats['decks']" icon="circle-check" :hint="'Decks com todas as cartas na sua coleção'" :href="route('collection.index')" />
     @else
-        <x-ui.stat label="Em torneios" :value="$played ? $stats['wins'].'V – '.$stats['losses'].'D' : '—'" icon="swords" :hint="$stats['tournaments'] ? $stats['tournaments'].' '.($stats['tournaments'] === 1 ? 'inscrição' : 'inscrições').' com decks salvos' : 'Escolha um deck salvo ao entrar num torneio'" />
+        <x-ui.stat label="Em eventos" :value="$played ? $stats['wins'].'V – '.$stats['losses'].'D' : '—'" icon="swords" :hint="$stats['tournaments'] ? $stats['tournaments'].' '.($stats['tournaments'] === 1 ? 'inscrição' : 'inscrições').' com decks salvos' : 'Escolha um deck salvo ao entrar num evento'" />
     @endif
 </section>
 

@@ -25,7 +25,7 @@ class PairingService
             $locked = Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
 
             if ($locked->status !== Tournament::STATUS_SETUP || $locked->matches()->exists()) {
-                throw new LogicException('Este torneio ja foi iniciado.');
+                throw new LogicException('Este '.$locked->kindNoun().' já foi iniciado.');
             }
 
             $slots = $locked->players()->pluck('id')->all();

@@ -24,7 +24,7 @@ class TournamentInviteController extends Controller
     public function store(Request $request, string $token): RedirectResponse
     {
         $tournament = Tournament::query()->where('invite_token', $token)->firstOrFail();
-        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'As inscrições deste torneio foram encerradas.');
+        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'As inscrições deste '.$tournament->kindNoun().' foram encerradas.');
         $profile = $request->user()->ensurePlayerProfile();
 
         $validated = TournamentEntryController::validatedDeck($request, $profile, $tournament);
@@ -50,10 +50,10 @@ class TournamentInviteController extends Controller
         });
 
         return match ($result) {
-            'closed' => abort(409, 'As inscrições deste torneio foram encerradas.'),
-            'full' => abort(409, 'O torneio atingiu o limite de participantes.'),
-            'already' => back()->with('status', 'Você já está inscrito neste torneio.'),
-            'name_taken' => back()->withErrors(['nickname' => 'Já existe um jogador com o apelido "'.$profile->nickname.'" neste torneio. Altere seu apelido no perfil e tente de novo.']),
+            'closed' => abort(409, 'As inscrições deste '.$tournament->kindNoun().' foram encerradas.'),
+            'full' => abort(409, 'O '.$tournament->kindNoun().' atingiu o limite de participantes.'),
+            'already' => back()->with('status', 'Você já está inscrito neste '.$tournament->kindNoun().'.'),
+            'name_taken' => back()->withErrors(['nickname' => 'Já existe um jogador com o apelido "'.$profile->nickname.'" neste '.$tournament->kindNoun().'. Altere seu apelido no perfil e tente de novo.']),
             default => redirect()->route('arena.public', $tournament->public_slug)->with('status', 'Inscrição confirmada!'),
         };
     }

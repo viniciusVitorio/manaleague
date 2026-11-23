@@ -5,13 +5,13 @@
 @section('content')
 <header class="page-head">
     <div>
-        <span class="eyebrow">Torneios, desafios e ranked</span>
+        <span class="eyebrow">Eventos, desafios e ranked</span>
         <h1>Minhas partidas</h1>
         <p>
             @if($total['played'])
                 {{ $total['played'] }} {{ $total['played'] === 1 ? 'partida encerrada' : 'partidas encerradas' }} · campanha <b class="mm-record" title="Vitórias–Derrotas–Empates">{{ $total['label'] }}</b><span class="sr-only"> ({{ $total['w'] }} {{ $total['w'] === 1 ? 'vitória' : 'vitórias' }}, {{ $total['l'] }} {{ $total['l'] === 1 ? 'derrota' : 'derrotas' }}, {{ $total['d'] }} {{ $total['d'] === 1 ? 'empate' : 'empates' }})</span>
             @else
-                Tudo o que você joga: torneios, desafios entre amigos e ranked. O placar vale quando o adversário confirma.
+                Tudo o que você joga: eventos, desafios entre amigos e ranked. O placar vale quando o adversário confirma.
             @endif
         </p>
     </div>
@@ -38,7 +38,7 @@
                 <x-ui.empty icon="medal" title="Nenhuma partida ranqueada ainda." text="Entre na fila do Ranked ou mande um desafio ranqueado para um amigo." :href="route('challenges.create', ['ranked' => 1])" action="Desafio ranqueado" />
                 @break
             @default
-                <x-ui.empty icon="trophy" title="Nenhuma partida vinculada à sua conta." text="Entre num torneio pelo link de convite do organizador ou desafie um amigo. As partidas aparecem aqui." :href="route('challenges.create')" action="Desafiar amigo" />
+                <x-ui.empty icon="trophy" title="Nenhuma partida vinculada à sua conta." text="Entre num evento pelo link de convite do organizador ou desafie um amigo. As partidas aparecem aqui." :href="route('challenges.create')" action="Desafiar amigo" />
         @endswitch
     </x-ui.card>
 @else

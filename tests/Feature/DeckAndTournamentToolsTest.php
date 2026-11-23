@@ -176,12 +176,12 @@ class DeckAndTournamentToolsTest extends TestCase
         $old->players()->create(['name' => 'Ana', 'player_profile_id' => $ana->playerProfile->id, 'deck_id' => $deck->id, 'deck_name' => 'Burn', 'deck_colors' => 'R']);
         $old->players()->create(['name' => 'Convidado'])->forceFill(['checked_in_at' => now()])->save();
 
-        $this->actingAs($owner)->get(route('tournaments.show', $old))->assertOk()->assertSee('Repetir torneio')
+        $this->actingAs($owner)->get(route('tournaments.show', $old))->assertOk()->assertSee('Repetir campeonato')
             ->assertSee('value="Liga de Quinta #5"', false)->assertSee('value="2026-11-08"', false)->assertSee('Trazer os mesmos 2 jogadores');
         $this->actingAs($ana)->post(route('tournaments.repeat', $old), ['name' => 'X', 'tournament_date' => '2026-11-08', 'copy_players' => 1])->assertForbidden();
 
         $this->actingAs($owner)->post(route('tournaments.repeat', $old), ['name' => 'Liga de Quinta #5', 'tournament_date' => '2026-11-08', 'copy_players' => 1])
-            ->assertSessionHas('status', 'Torneio criado a partir de "Liga de Quinta #4" com 2 jogadores. Confira a lista antes de começar.');
+            ->assertSessionHas('status', 'Campeonato criado a partir de "Liga de Quinta #4" com 2 jogadores. Confira a lista antes de começar.');
         $new = Tournament::query()->latest('id')->first();
         $this->assertNotSame($old->id, $new->id);
         $this->assertSame(['Liga de Quinta #5', 'setup', 'Pauper', 'swiss', 3, 16, 40, '2026-11-08'],

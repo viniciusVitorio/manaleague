@@ -4,7 +4,7 @@
     $unreadNotifications = app(\App\Services\Community\NotificationService::class)->unreadCount($user);
     $primary = [
         ['dashboard', 'Painel', 'layout-dashboard', 'dashboard'],
-        ['tournaments.index', 'Torneios', 'trophy', 'tournaments.*|clubs.tournaments.*|matches.submissions.queue|tournaments.qr.*'],
+        ['tournaments.index', 'Eventos', 'trophy', 'tournaments.*|clubs.tournaments.*|matches.submissions.queue|tournaments.qr.*'],
         ['matches.mine', 'Partidas', 'target', 'matches.mine'],
     ];
     $primary[] = ['challenges.index', 'Desafios', 'swords', 'challenges.*|achievements.*|ranked.matches.*'];

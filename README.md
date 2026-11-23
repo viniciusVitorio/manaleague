@@ -1,6 +1,6 @@
 # ManaLeague
 
-A **Magic: The Gathering** platform for players and playgroups. ManaLeague lets you run tournaments, challenge friends, climb the Ranked ladder and keep your decks and collection in one place, built mobile-first.
+A **Magic: The Gathering** platform for players and playgroups. ManaLeague lets you run championships and tournaments, challenge friends, climb the Ranked ladder and keep your decks and collection in one place, built mobile-first.
 
 **Live:** [manaleague.com.br](https://manaleague.com.br) (the interface is in Brazilian Portuguese)
 
@@ -10,16 +10,16 @@ The project started as an academic **SSDLC** (Secure Software Development Life C
 
 | Area | What you can do |
 |---|---|
-| **Account** | e-mail confirmation for new accounts, signed expiring links and resend with cooldown; existing accounts keep access; e-mail consent at sign-up; "Notificações" in Edit profile chooses, per category, what arrives in the app and by e-mail (today tournaments are the only category with e-mail) |
-| **Tournaments** | round-robin leagues, Swiss, single or double elimination, Commander pods and [Commander pod elimination](docs/pod-elimination.md) (3/4-seat multiplayer phases, explicit organizer confirmation and optional consolation); finals and third-place match; standard format rules or custom house rules; repeat a tournament with the same settings; prizes per placement (boosters and a trophy or medal, with an optional image stored as a 512×512 square), handed out automatically when the tournament ends; e-mail to the top three with their placement, record, win rate and prizes |
+| **Account** | e-mail confirmation for new accounts, signed expiring links and resend with cooldown; existing accounts keep access; e-mail consent at sign-up; "Notificações" in Edit profile chooses, per category, what arrives in the app and by e-mail (today events are the only category with e-mail) |
+| **Events** | every event is a **championship** (points: round-robin league with finals and third-place match, Swiss or Commander pods) or a **tournament** (knockout brackets: single or double elimination and [Commander pod elimination](docs/pod-elimination.md), with 3/4-seat multiplayer phases, explicit organizer confirmation and optional consolation); the type comes from the chosen system, is picked first when creating the event and filters the Events page; standard format rules or custom house rules; repeat a tournament with the same settings; prizes per placement (boosters and a trophy or medal, with an optional image stored as a 512×512 square), handed out automatically when the tournament ends; e-mail to the top three with their placement, record, win rate and prizes |
 | **Event day** | sign-up by invite link or QR code, player check-in on the event day, round timer and removal of no-shows |
-| **Live** | players submit scores from their phones, with confirmation or dispute; public tournament page (no account needed) and TV mode; pairings, scores, the round timer and notifications show up in real time (WebSocket) |
+| **Live** | players submit scores from their phones, with confirmation or dispute; public event page (no account needed) and TV mode; pairings, scores, the round timer and notifications show up in real time (WebSocket) |
 | **Challenges** | 1v1 matches between friends, casual or ranked: the Challenges page has the ones in progress, answered right on their cards (accept, send the score, confirm or dispute), and your rivalries; finished series live in My matches. A score the opponent does not confirm or dispute within 7 days is confirmed automatically |
 | **Ranked** | seasons with ELO/PDL, rank on the profile and moderation ([rules](docs/ranked.md)) |
 | **Life counter** | life counter for tournament matches, challenges and Ranked, shared between the players' phones in real time (works offline and syncs back); counters are only available from their registered match. Matches played with it get a life chart of each game, with misclicks filtered out. Clicking a played match in My matches opens its summary: players, decks, score, winner, the ELO each player won or lost in ranked matches, and the life chart, which can be collapsed |
 | **Decks** | deck building with Scryfall search, a short description written by the owner and shown to everyone who can see the deck, import and export (Arena format and ManaBox CSV), foils, Commander decks where any eligible card in the list can be set as commander, swapped or moved back, banned-card tag, Pauper legality check (cards never printed at common are tagged and blocked from official-rules tournaments), opening-hand simulator, version history and deck comparison; share a deck through a link that anyone can open, even without an account, and turn it off at any time |
 | **Collection** | ManaBox CSV import, search only your own cards and see what is missing to build a deck |
-| **Profile** | personal address (`/p/your-handle`), photo or emoji, showcase, stats, recent form, achievements (some of them secret) and a shelf with the trophies and medals won in tournaments, up to 3 of them highlighted; "Meus prêmios" lists the boosters still to be collected |
+| **Profile** | personal address (`/p/your-handle`), photo or emoji, showcase, stats, recent form, achievements (some of them secret) and a shelf with the trophies and medals won in events, up to 3 of them highlighted; "Meus prêmios" lists the boosters still to be collected |
 | **Community** | friends, dashboard, feed, notifications and clubs |
 | **Patch notes** | an in-app tab with what changed in each version, published from GitHub Releases |
 

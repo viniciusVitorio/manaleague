@@ -32,7 +32,7 @@
     </header>
 
     @if($entryBanned)<div class="alert alert-danger" role="status">{{ \App\Services\Decks\BanListService::messageForOwner($tournament, $entryBanned) }}</div>@endif
-    @if($entryNeedsDeck)<div class="alert alert-warning" role="status"><strong>Cadastre seu deck para este torneio.</strong> @if($entry->deck_name)"{{ $entry->deck_name }}" foi só digitado na inscrição e não é um deck salvo. @endif Para fazer o check-in, escolha um deck de {{ $tournament->format }} salvo na sua conta. @unless($hasDeckToPick)Você ainda não tem nenhum: <a href="{{ route('decks.index') }}">criar um deck</a>.@endunless</div>@endif
+    @if($entryNeedsDeck)<div class="alert alert-warning" role="status"><strong>Cadastre seu deck para este {{ $tournament->kindNoun() }}.</strong> @if($entry->deck_name)"{{ $entry->deck_name }}" foi só digitado na inscrição e não é um deck salvo. @endif Para fazer o check-in, escolha um deck de {{ $tournament->format }} salvo na sua conta. @unless($hasDeckToPick)Você ainda não tem nenhum: <a href="{{ route('decks.index') }}">criar um deck</a>.@endunless</div>@endif
 
     <ul class="entry-steps">
         <li @class(['entry-step', 'is-done' => ! $deckProblem, 'is-blocked' => $deckProblem])>
@@ -40,7 +40,7 @@
             <div class="entry-step-body">
                 <span class="entry-step-label">Deck</span>
                 <strong>{{ $deckLabel ?? 'Nenhum deck escolhido' }} @if($entryColors)@include('partials.color-pips', ['colors' => $entryColors])@endif</strong>
-                <small>Dá para trocar até o organizador começar o torneio.</small>
+                <small>Dá para trocar até o organizador começar o {{ $tournament->kindNoun() }}.</small>
             </div>
             <button type="button" @class(['ui-btn', 'ui-btn-sm', 'ui-btn-primary' => $entryNeedsDeck, 'ui-btn-outline' => ! $entryNeedsDeck]) data-dialog-open="entry-deck-dialog" aria-haspopup="dialog">{{ $entryNeedsDeck ? 'Escolher deck' : 'Trocar deck' }}</button>
         </li>
@@ -86,11 +86,11 @@
                 <button type="button" class="ui-icon-btn" data-dialog-close aria-label="Fechar"><x-icon name="x" /></button>
             </header>
             <div class="ui-dialog-body">
-                <p class="muted entry-deck-hint">{{ $tournament->requiresDeck() ? 'Decks de '.$tournament->format.' salvos na sua conta.' : 'Neste draft o deck é montado na mesa; escolher um deck salvo é opcional.' }} Dá para trocar até o organizador começar o torneio.</p>
+                <p class="muted entry-deck-hint">{{ $tournament->requiresDeck() ? 'Decks de '.$tournament->format.' salvos na sua conta.' : 'Neste draft o deck é montado na mesa; escolher um deck salvo é opcional.' }} Dá para trocar até o organizador começar o {{ $tournament->kindNoun() }}.</p>
                 @error('deck_id')<div class="alert alert-danger" role="alert">{{ $message }}</div>@enderror
                 @if($hasDeckToPick || ! $tournament->requiresDeck())
                     <fieldset class="deck-choices">
-                        <legend class="sr-only">Deck para o torneio</legend>
+                        <legend class="sr-only">Deck para o {{ $tournament->kindNoun() }}</legend>
                         @unless($tournament->requiresDeck())
                             <label class="deck-choice"><input type="radio" name="deck_id" value="" @checked($pickedDeckId === '')><span class="deck-choice-body"><strong>Sem deck salvo</strong><small>Montado no draft</small></span></label>
                         @endunless

@@ -71,7 +71,7 @@ class DecksPageTest extends TestCase
         }
 
         // sem coleção: o 4º indicador mostra o desempenho em torneios
-        $this->actingAs($user)->get('/me/decks')->assertOk()->assertSee('Em torneios')->assertSee('2V – 1D')->assertSee('1 · 2V 1D');
+        $this->actingAs($user)->get('/me/decks')->assertOk()->assertSee('Em eventos')->assertSee('2V – 1D')->assertSee('1 · 2V 1D');
 
         // com coleção: mostra quantos decks estão prontos e o % de cada um
         CollectionItem::create(['user_id' => $user->id, 'scryfall_id' => (string) Str::uuid(), 'name' => 'Lightning Bolt', 'quantity' => 4, 'condition' => 'NM']);
@@ -95,7 +95,7 @@ class DecksPageTest extends TestCase
         $user->playerProfile->decks()->create(['name' => 'Burn', 'format' => 'Pauper']);
 
         $this->actingAs($user)->get(route('profiles.index'))->assertOk()
-            ->assertSeeInOrder(['<h2>Vitrine de decks', 'Decks nos torneios', 'Campeonatos', 'Conquistas'], false);
+            ->assertSeeInOrder(['<h2>Vitrine de decks', 'Decks nos eventos', 'Campeonatos', 'Conquistas'], false);
     }
 
     /** @return array{0: User, 1: User, 2: \App\Models\Deck, 3: \App\Models\Deck, 4: \App\Models\Deck} */

@@ -312,7 +312,7 @@ class TournamentPodiumEmailTest extends TestCase
         // Sem preferência gravada, tudo ligado. E-mail só onde existe; o resto fica "Só no app".
         $html = $this->actingAs($user)->get(route('profiles.edit'))->assertOk()
             ->assertSee('href="#notificacoes"', false)
-            ->assertSeeInOrder(['id="notificacoes"', 'App', 'E-mail', 'Todas as notificações', 'Torneios', 'Partidas', 'Só no app', 'Salvar notificações'], false)
+            ->assertSeeInOrder(['id="notificacoes"', 'App', 'E-mail', 'Todas as notificações', 'Eventos', 'Partidas', 'Só no app', 'Salvar notificações'], false)
             ->assertSee('name="email_enabled" value="1" aria-label="Todas as notificações por e-mail" checked', false)
             ->assertSee('data-mute="email.tournament" checked', false)
             ->assertDontSee('data-mute="email.match"', false)

@@ -60,7 +60,7 @@ class PodEliminationService
                 throw new LogicException('Eliminação por Pods exige Commander e não pode ser ranqueada.');
             }
             if ($t->status !== 'setup' || $t->matches()->exists()) {
-                throw new LogicException('Este torneio já foi iniciado.');
+                throw new LogicException('Este '.$t->kindNoun().' já foi iniciado.');
             }
             $players = $t->players()->lockForUpdate()->get();
             $plan = $this->validateConfiguration($players->count(), $t->pod_qualifiers, $t->pod_consolation);

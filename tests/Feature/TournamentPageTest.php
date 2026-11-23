@@ -22,8 +22,8 @@ class TournamentPageTest extends TestCase
 
         $this->actingAs($owner)->get(route('tournaments.show', $t))->assertOk()
             // Link e QR ficam na janela Compartilhar (menu Mais), não no card de jogadores.
-            ->assertSeeInOrder(['data-dialog-open="tourney-share"', 'Compartilhar inscrições', 'Link de inscrição', 'Exibir QR em tela cheia', 'Gerar novo link', '</dialog>', 'Inscrições', 'Jogadores', 'Check-in 0 de 4', 'Começar torneio'], false)
-            ->assertSee('Todos contra todos')
+            ->assertSeeInOrder(['data-dialog-open="tourney-share"', 'Compartilhar inscrições', 'Link de inscrição', 'Exibir QR em tela cheia', 'Gerar novo link', '</dialog>', 'Inscrições', 'Jogadores', 'Check-in 0 de 4', 'Começar campeonato'], false)
+            ->assertSee('Liga (todos contra todos)')
             ->assertDontSee('class="standings"', false)
             ->assertDontSee('Rodada atual')
             ->assertDontSee('Resultados enviados');
@@ -59,7 +59,7 @@ class TournamentPageTest extends TestCase
         $final = $t->matches()->where('stage', 'final')->sole();
         $page = $this->get(route('tournaments.show', $t))->assertOk()
             // Pódio no palco: na leitura 1º, 2º e 3º (o CSS põe o 1º no meio), cada um com foto e nome.
-            ->assertSeeInOrder(['Retrospectiva do campeonato', $final->playerOne->name.'</a> é o campeão', 'podium-step is-1', 'podium-crown', 'podium-avatar', $final->playerOne->name, 'Campeão', 'podium-step is-2', $final->playerTwo->name, '2º lugar', 'podium-step is-3', '3º lugar', 'Classificação final', 'Rodadas', 'Repetir torneio'], false);
+            ->assertSeeInOrder(['Retrospectiva do campeonato', $final->playerOne->name.'</a> é o campeão', 'podium-step is-1', 'podium-crown', 'podium-avatar', $final->playerOne->name, 'Campeão', 'podium-step is-2', $final->playerTwo->name, '2º lugar', 'podium-step is-3', '3º lugar', 'Classificação final', 'Rodadas', 'Repetir campeonato'], false);
         $this->assertSame(1, substr_count($page->getContent(), 'é o campeão de'), 'campeão aparece uma vez só');
         $this->assertMatchesRegularExpression('/id="repetir"\s+open/', $page->getContent(), 'repetir já vem aberto no encerrado');
     }
@@ -99,8 +99,8 @@ class TournamentPageTest extends TestCase
 
         $this->actingAs($member)->get(route('tournaments.show', $t))->assertOk()
             ->assertSee('Jogadores')
-            ->assertDontSee('Link de inscrição')->assertDontSee('Compartilhar')->assertDontSee('Marcar presença')->assertDontSee('Começar torneio')
-            ->assertDontSee('Excluir torneio')->assertDontSee('Repetir torneio');
+            ->assertDontSee('Link de inscrição')->assertDontSee('Compartilhar')->assertDontSee('Marcar presença')->assertDontSee('Começar campeonato')
+            ->assertDontSee('Excluir campeonato')->assertDontSee('Repetir campeonato');
 
         $this->actingAs($owner)->post(route('tournaments.start', $t));
         $this->actingAs($member)->get(route('tournaments.show', $t))->assertOk()

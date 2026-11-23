@@ -18,10 +18,10 @@ use Illuminate\Support\Collection;
 class PlayerStatsService
 {
     /** Tipos de partida, na ordem das abas do perfil. */
-    public const KINDS = ['tournament' => 'Torneios', 'casual' => 'Desafios', 'ranked' => 'Ranked'];
+    public const KINDS = ['tournament' => 'Eventos', 'casual' => 'Desafios', 'ranked' => 'Ranked'];
 
     /** Nome de uma partida só, para a dica da forma recente. */
-    public const KIND_SINGULAR = ['tournament' => 'Torneio', 'casual' => 'Desafio', 'ranked' => 'Ranked'];
+    public const KIND_SINGULAR = ['tournament' => 'Evento', 'casual' => 'Desafio', 'ranked' => 'Ranked'];
 
     /** Quantas partidas a "forma recente" mostra. */
     public const RECENT_FORM = 5;

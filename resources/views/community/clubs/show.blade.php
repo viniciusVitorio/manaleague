@@ -14,7 +14,7 @@
     </div>
     <div class="hub-actions">
         @if(! $role && $club->privacy === 'public')<form method="POST" action="{{ route('clubs.join', $club) }}">@csrf<button class="ui-btn ui-btn-primary"><x-icon name="user-plus" />Entrar no clube</button></form>@endif
-        @if($manage)<a class="ui-btn ui-btn-primary" href="#novo-torneio"><x-icon name="trophy" />Novo torneio</a>@endif
+        @if($manage)<a class="ui-btn ui-btn-primary" href="#novo-torneio"><x-icon name="trophy" />Novo evento</a>@endif
     </div>
 </header>
 
@@ -41,12 +41,12 @@
         @endforelse
     </x-ui.card>
 
-    <x-ui.card title="Ranking do clube" icon="medal" meta="todos os torneios">
+    <x-ui.card title="Ranking do clube" icon="medal" meta="todos os eventos">
         @if($ranking->isEmpty())
-            <x-ui.empty icon="medal" title="Ranking começa no primeiro torneio." text="Cada vitória vale 3 pontos e cada empate 1, somando todos os torneios do clube." />
+            <x-ui.empty icon="medal" title="Ranking começa no primeiro evento." text="Cada vitória vale 3 pontos e cada empate 1, somando todos os eventos do clube." />
         @else
             <div class="tools-table-wrap"><table class="rank-table">
-                <thead><tr><th scope="col">#</th><th scope="col">Jogador</th><th scope="col" class="num">Pts</th><th scope="col" class="num">V-E-D</th><th scope="col" class="num">Torneios</th><th scope="col" class="num">Títulos</th></tr></thead>
+                <thead><tr><th scope="col">#</th><th scope="col">Jogador</th><th scope="col" class="num">Pts</th><th scope="col" class="num">V-E-D</th><th scope="col" class="num">Eventos</th><th scope="col" class="num">Títulos</th></tr></thead>
                 <tbody>
                 @php($rankProfiles = \App\Models\PlayerProfile::whereIn('id', $ranking->take(20)->pluck('profile_id')->filter())->get()->keyBy('id'))
                 @foreach($ranking->take(20) as $i => $r)
@@ -58,9 +58,9 @@
         @endif
     </x-ui.card>
 
-    <x-ui.card title="Torneios" icon="trophy">
+    <x-ui.card title="Eventos" icon="trophy">
         @if($upcoming->isEmpty() && $finished->isEmpty())
-            <x-ui.empty icon="trophy" title="Nenhum torneio do clube ainda." :text="$manage ? 'Crie um novo ou vincule um torneio que você já tem, logo abaixo. Todos os membros são avisados.' : 'Quando os organizadores criarem um, aparece aqui.'" />
+            <x-ui.empty icon="trophy" title="Nenhum evento do clube ainda." :text="$manage ? 'Crie um novo ou vincule um evento que você já tem, logo abaixo. Todos os membros são avisados.' : 'Quando os organizadores criarem um, aparece aqui.'" />
         @endif
         @foreach($upcoming as $t)
             <a class="ui-row" href="{{ route('tournaments.show', $t) }}"><span class="ui-row-icon"><x-icon name="calendar" /></span><span class="ui-row-main"><span class="ui-row-title">{{ $t->name }}</span><span class="ui-row-sub">{{ $t->format }} · {{ $t->tournament_date?->format('d/m/Y') }} · {{ $t->status === 'setup' ? 'inscrições abertas' : 'em andamento' }}</span></span><x-ui.badge :tone="$t->status === 'setup' ? 'neutral' : 'info'">{{ $t->status === 'setup' ? 'Em breve' : 'Rolando' }}</x-ui.badge></a>
@@ -70,7 +70,7 @@
         @endforeach
         @if($manage)
             <details class="club-new" id="novo-torneio" @if($upcoming->isEmpty() && $finished->isEmpty()) open @endif>
-                <summary><x-icon name="plus" />Novo torneio do clube</summary>
+                <summary><x-icon name="plus" />Novo evento do clube</summary>
                 <form method="POST" action="{{ route('clubs.tournaments.store', $club) }}" class="stack-form">@csrf
                     <label>Nome<input name="name" maxlength="120" required placeholder="Ex.: Pauper de Sexta #12"></label>
                     <div class="add-row">
@@ -83,10 +83,10 @@
             </details>
             @if($linkable->isNotEmpty())
             <details class="club-new" id="vincular-torneio">
-                <summary><x-icon name="link" />Vincular torneio existente</summary>
-                <form method="POST" action="{{ route('clubs.tournaments.link', $club) }}" class="stack-form" data-confirm="Vincular ao clube? Os membros passam a ver o torneio e os organizadores do clube podem gerenciá-lo.">@csrf
-                    <label>Seus torneios fora de clubes<select name="tournament_id" required>@foreach($linkable as $lt)<option value="{{ $lt->id }}">{{ $lt->name }} · {{ $lt->format }} · {{ $lt->tournament_date?->format('d/m/Y') ?? 'sem data' }} · {{ ['setup' => 'inscrições', 'finished' => 'encerrado'][$lt->status] ?? 'em andamento' }}</option>@endforeach</select></label>
-                    <p class="muted small">O torneio entra no ranking do clube (vale também para torneios já encerrados) e os membros são avisados.</p>
+                <summary><x-icon name="link" />Vincular evento existente</summary>
+                <form method="POST" action="{{ route('clubs.tournaments.link', $club) }}" class="stack-form" data-confirm="Vincular ao clube? Os membros passam a ver o evento e os organizadores do clube podem gerenciá-lo.">@csrf
+                    <label>Seus eventos fora de clubes<select name="tournament_id" required>@foreach($linkable as $lt)<option value="{{ $lt->id }}">{{ $lt->name }} · {{ $lt->format }} · {{ $lt->tournament_date?->format('d/m/Y') ?? 'sem data' }} · {{ ['setup' => 'inscrições', 'finished' => 'encerrado'][$lt->status] ?? 'em andamento' }}</option>@endforeach</select></label>
+                    <p class="muted small">O evento entra no ranking do clube (vale também para eventos já encerrados) e os membros são avisados.</p>
                     <button class="ui-btn ui-btn-primary">Vincular ao clube</button>
                 </form>
             </details>

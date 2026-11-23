@@ -28,7 +28,7 @@ class ClubTournamentLinkTest extends TestCase
         $club->members()->attach($member->id, ['role' => 'member']);
         $finished = $this->tournament($owner, ['name' => 'Copa Antiga', 'status' => 'finished']);
 
-        $this->actingAs($owner)->get(route('clubs.show', $club))->assertOk()->assertSee('Vincular torneio existente')->assertSee('Copa Antiga');
+        $this->actingAs($owner)->get(route('clubs.show', $club))->assertOk()->assertSee('Vincular evento existente')->assertSee('Copa Antiga');
         $this->actingAs($member)->get(route('tournaments.show', $finished))->assertForbidden();
 
         $this->actingAs($owner)->post(route('clubs.tournaments.link', $club), ['tournament_id' => $finished->id])
@@ -39,8 +39,8 @@ class ClubTournamentLinkTest extends TestCase
         // Membros passam a ver, sao avisados e o torneio aparece no clube.
         $this->actingAs($member)->get(route('tournaments.show', $finished))->assertOk()->assertSee('Eagle TJS');
         $this->assertTrue(CommunityNotification::where('user_id', $member->id)->where('type', 'club.tournament')->exists());
-        $this->actingAs($member)->get(route('clubs.show', $club))->assertOk()->assertSee('Copa Antiga')->assertDontSee('Vincular torneio existente');
-        $this->actingAs($owner)->get(route('clubs.show', $club))->assertDontSee('Vincular torneio existente');
+        $this->actingAs($member)->get(route('clubs.show', $club))->assertOk()->assertSee('Copa Antiga')->assertDontSee('Vincular evento existente');
+        $this->actingAs($owner)->get(route('clubs.show', $club))->assertDontSee('Vincular evento existente');
 
         // Segunda tentativa: ja e do clube.
         $this->actingAs($owner)->post(route('clubs.tournaments.link', $club), ['tournament_id' => $finished->id])->assertStatus(409);
@@ -101,6 +101,6 @@ class ClubTournamentLinkTest extends TestCase
         $this->assertNull($t->fresh()->club_id);
         $this->actingAs($member)->get(route('tournaments.show', $t))->assertForbidden();
         $this->actingAs($owner)->get(route('tournaments.show', $t))->assertOk()->assertDontSee('Desvincular do clube');
-        $this->actingAs($owner)->get(route('clubs.show', $club))->assertSee('Vincular torneio existente');
+        $this->actingAs($owner)->get(route('clubs.show', $club))->assertSee('Vincular evento existente');
     }
 }

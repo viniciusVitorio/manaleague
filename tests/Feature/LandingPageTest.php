@@ -26,7 +26,7 @@ class LandingPageTest extends TestCase
             ->assertDontSee('@include', false);
 
         // A landing nao e so de torneios: cada area do produto tem a sua secao, com ancora no menu.
-        foreach (['decks', 'colecao', 'mesa', 'ranked', 'torneios', 'comunidade'] as $anchor) {
+        foreach (['decks', 'colecao', 'mesa', 'ranked', 'eventos', 'comunidade'] as $anchor) {
             $response->assertSee('id="'.$anchor.'"', false)->assertSee('href="#'.$anchor.'"', false);
         }
         foreach (['Simulador de mão', 'Fichário de trocas', 'Contador de vida', 'Rivalidades', 'Modo TV', 'Clubes', 'Política de Conteúdo de Fãs'] as $text) {

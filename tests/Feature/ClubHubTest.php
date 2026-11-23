@@ -84,7 +84,7 @@ class ClubHubTest extends TestCase
         $this->assertSame([3, 1], [$ranking[1]['points'], $ranking[1]['titles']]);
 
         $this->actingAs($caio)->get('/clubs/'.$club->id)->assertOk()->assertSee('Ranking do clube')->assertSee('Entrar no clube')->assertDontSee('campeão: Ana');
-        $this->actingAs($caio)->get('/clubs')->assertOk()->assertSee('Liga')->assertSee('2 torneios');
+        $this->actingAs($caio)->get('/clubs')->assertOk()->assertSee('Liga')->assertSee('2 eventos');
         $this->actingAs($caio)->post('/clubs/'.$club->id.'/join')->assertRedirect();
         $this->actingAs($caio)->get('/clubs/'.$club->id)->assertSee('campeão: Ana')->assertSee('campeão: Bia');
         $this->actingAs($caio)->get('/clubs')->assertSee('Meus clubes')->assertSee('Membro');

@@ -10,13 +10,13 @@
 @endphp
 <div class="prize-narrow">
 <header class="page-head">
-    <div><h1>Meus prêmios</h1><p>Boosters que você ganhou em torneios. Troféus e medalhas ficam na estante do seu perfil.</p></div>
+    <div><h1>Meus prêmios</h1><p>Boosters que você ganhou em eventos. Troféus e medalhas ficam na estante do seu perfil.</p></div>
     @if($trophies)<div class="page-head-actions"><a class="ui-btn ui-btn-outline" href="{{ route('profiles.index') }}#trofeus"><x-icon name="trophy" />Ver estante <span class="count">{{ $trophies }}</span></a></div>@endif
 </header>
 
 @if($pending->isEmpty() && $redeemed->isEmpty())
     <x-ui.card>
-        <x-ui.empty icon="gift" title="Nenhum booster ainda." text="Quando um torneio com premiação encerrar, o que você ganhou aparece aqui." :href="route('tournaments.index')" action="Ver torneios" />
+        <x-ui.empty icon="gift" title="Nenhum booster ainda." text="Quando um evento com premiação encerrar, o que você ganhou aparece aqui." :href="route('tournaments.index')" action="Ver eventos" />
     </x-ui.card>
 @else
     @if($pending->isNotEmpty())

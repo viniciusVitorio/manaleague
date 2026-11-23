@@ -19,7 +19,28 @@ class Tournament extends Model
 
     public const STATUS_FINISHED = 'finished';
 
-    public const SYSTEMS = ['round_robin' => 'Todos contra todos', 'swiss' => 'Suíço', 'single_elimination' => 'Eliminação simples', 'double_elimination' => 'Dupla eliminação', 'commander_pods' => 'Pods Commander', 'pod_elimination' => 'Eliminação por Pods'];
+    public const SYSTEMS = ['round_robin' => 'Liga (todos contra todos)', 'swiss' => 'Suíço', 'single_elimination' => 'Eliminação simples', 'double_elimination' => 'Dupla eliminação', 'commander_pods' => 'Pods Commander', 'pod_elimination' => 'Eliminação por Pods'];
+
+    /** Uma frase por sistema, para o organizador escolher sem precisar conhecer o nome. */
+    public const SYSTEM_HINTS = [
+        'round_robin' => 'Todos jogam contra todos. No fim, os melhores fazem a final e a disputa de 3º.',
+        'swiss' => 'Rodadas contra quem tem pontuação parecida, sem revanche. Vence quem somar mais pontos.',
+        'commander_pods' => 'Mesas de 3 ou 4 a cada rodada, misturadas pela classificação. A colocação na mesa vale pontos.',
+        'single_elimination' => 'Chave de mata-mata: perdeu, saiu. Vai até a final.',
+        'double_elimination' => 'Só sai quem perde duas vezes: quem perde a primeira cai na repescagem.',
+        'pod_elimination' => 'Mesas de 3 ou 4 em fases: os melhores de cada mesa avançam até a mesa final.',
+    ];
+
+    /**
+     * Tipo do evento, pelo jeito de disputar: campeonato (pontos corridos) ou torneio (mata-mata em chaves).
+     * Sai do sistema de competição, então o rótulo nunca contradiz o que acontece na mesa.
+     *
+     * @var array<string, array{0: string, 1: string, 2: list<string>}> chave => [rótulo, explicação, sistemas]
+     */
+    public const KINDS = [
+        'championship' => ['Campeonato', 'Pontos corridos: vence quem somar mais pontos.', ['round_robin', 'swiss', 'commander_pods']],
+        'tournament' => ['Torneio', 'Mata-mata em chaves: quem perde sai, até a final.', ['single_elimination', 'double_elimination', 'pod_elimination']],
+    ];
 
     /** Regras do formato: banidas não entram. Personalizadas: o organizador decide (e pode escrever regras da casa). */
     public const RULES_STANDARD = 'standard';
@@ -43,6 +64,29 @@ class Tournament extends Model
                 $tournament->finished_at = now();
             }
         });
+    }
+
+    public static function kindOf(?string $system): string
+    {
+        return in_array($system, self::KINDS['tournament'][2], true) ? 'tournament' : 'championship';
+    }
+
+    /** championship ou tournament. */
+    public function kind(): string
+    {
+        return self::kindOf($this->system);
+    }
+
+    /** "Campeonato" ou "Torneio", para selo e título. */
+    public function kindLabel(): string
+    {
+        return self::KINDS[$this->kind()][0];
+    }
+
+    /** "campeonato" ou "torneio", no meio da frase. As duas palavras são masculinas: "o", "do", "neste" servem para ambas. */
+    public function kindNoun(): string
+    {
+        return mb_strtolower($this->kindLabel());
     }
 
     /**

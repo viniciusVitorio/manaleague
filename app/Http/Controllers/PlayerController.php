@@ -11,7 +11,7 @@ class PlayerController extends Controller
     public function destroy(Tournament $tournament, Player $player): RedirectResponse
     {
         $this->authorize('update', $tournament);
-        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'O torneio ja comecou.');
+        abort_unless($tournament->status === Tournament::STATUS_SETUP, 409, 'O '.$tournament->kindNoun().' já começou.');
         abort_unless($player->tournament_id === $tournament->id, 404);
         $player->delete();
 

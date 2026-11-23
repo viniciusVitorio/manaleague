@@ -72,7 +72,7 @@ class PrizeService
                 }
             }
         }
-        $this->require($tournament->status !== Tournament::STATUS_FINISHED, 'prizes', 'O torneio já encerrou e os prêmios foram entregues. A premiação não pode mais mudar.');
+        $this->require($tournament->status !== Tournament::STATUS_FINISHED, 'prizes', 'O '.$tournament->kindNoun().' já encerrou e os prêmios foram entregues. A premiação não pode mais mudar.');
 
         // As artes novas são gravadas antes da transação; se algo falhar depois, saem do storage.
         $stored = [];
@@ -88,7 +88,7 @@ class PrizeService
         try {
             $replaced = DB::transaction(function () use ($tournament, $wanted, $stored, $drop): array {
                 $t = Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
-                $this->require($t->status !== Tournament::STATUS_FINISHED, 'prizes', 'O torneio já encerrou e os prêmios foram entregues. A premiação não pode mais mudar.');
+                $this->require($t->status !== Tournament::STATUS_FINISHED, 'prizes', 'O '.$t->kindNoun().' já encerrou e os prêmios foram entregues. A premiação não pode mais mudar.');
                 $replaced = [];
 
                 foreach ($t->prizes()->get() as $prize) {
