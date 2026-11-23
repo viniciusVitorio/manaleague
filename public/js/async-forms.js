@@ -136,6 +136,8 @@
             }
         });
         restoreDetails(opened);
+        // Only server-marked validation groups override the person's disclosure state.
+        document.querySelectorAll('details[data-async-open-errors]').forEach(function (d) { d.open = true; });
         announce();
         document.dispatchEvent(new CustomEvent('manaleague:updated'));
     }

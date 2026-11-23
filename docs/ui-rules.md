@@ -182,6 +182,14 @@ Campos agrupados em cards com título ("Adversário", "Série"). Escolhas curtas
 `<datalist>` de sugestões. Erros: mensagem em português dizendo o que fazer (vem do servidor; o layout já mostra).
 Campo com regra rígida também ajuda no cliente (ex.: `emoji-input.js` mantém um emoji só), mas o servidor sempre valida.
 
+**Formulários contextuais:** mostre apenas opções e explicações compatíveis com o formato e o modo atuais.
+Campos ocultos por incompatibilidade ficam desabilitados (não enviam valores antigos); preserve o que foi digitado
+para quando voltar a uma opção compatível. Agrupe a configuração essencial em cartões e deixe regras da casa,
+sorteio e critérios avançados em `<details>`, aberto quando há personalização ou erro nessa seção.
+Na edição, um modo legado salvo precisa de uma escolha explícita “configuração atual”: nunca o converta só por
+abrir o formulário. Filtrar a apresentação não deve remover compatibilidade do servidor com torneios existentes.
+Ao trocar de formato, selecione um modo compatível e atualize também o texto das regras, sem notas de outros formatos.
+
 ---
 
 ## 6. Movimento e animação
