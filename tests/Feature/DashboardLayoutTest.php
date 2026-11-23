@@ -90,6 +90,26 @@ class DashboardLayoutTest extends TestCase
         $page->assertSee('aria-controls="menu-mobile"', false)->assertSee('aria-controls="menu-account"', false);
     }
 
+    public function test_turning_a_channel_off_locks_its_categories_but_keeps_their_choices(): void
+    {
+        $user = User::factory()->create();
+        $user->ensurePlayerProfile();
+        NotificationPreference::create(['user_id' => $user->id, 'enabled' => false, 'muted_types' => ['club'], 'email_enabled' => true, 'email_muted_types' => []]);
+        $html = $this->actingAs($user)->get('/me/profile/edit')->assertOk()->getContent();
+
+        // App pausado: as categorias do app aparecem desligadas e travadas, e cada uma lembra a escolha (data-saved).
+        $this->assertMatchesRegularExpression('/data-mute="challenge" data-channel="app" data-saved="1"\s+disabled>/', $html);
+        $this->assertMatchesRegularExpression('/data-mute="club" data-channel="app" data-saved="0"\s+disabled>/', $html);
+        // O e-mail continua ligado e livre.
+        $this->assertMatchesRegularExpression('/data-mute="email.tournament" data-channel="email" data-saved="1" checked\s*>/', $html);
+
+        // Salvar com o app pausado não apaga as categorias silenciadas: ao religar, tudo volta como estava.
+        $this->patch(route('notifications.preferences'), ['enabled' => 0, 'muted_types' => ['club'], 'email_enabled' => 1, 'email_muted_types' => []])->assertRedirect();
+        $this->assertSame(['club'], NotificationPreference::where('user_id', $user->id)->value('muted_types'));
+        $this->patch(route('notifications.preferences'), ['enabled' => 1, 'muted_types' => ['club'], 'email_enabled' => 1, 'email_muted_types' => []])->assertRedirect();
+        $this->assertMatchesRegularExpression('/data-mute="challenge" data-channel="app" data-saved="1" checked\s*>/', $this->get('/me/profile/edit')->getContent());
+    }
+
     public function test_notification_settings_use_switches_and_mute_only_switched_off_categories(): void
     {
         $user = User::factory()->create();
@@ -99,9 +119,9 @@ class DashboardLayoutTest extends TestCase
             ->assertDontSee('Silenciar categorias')->assertDontSee('Marcar todas como lidas');
         $html = $this->get('/me/profile/edit')->assertOk()->assertSee('Notificações')->getContent();
         // clube silenciado: switch desligado e hidden habilitado; desafio: switch ligado e hidden desabilitado
-        $this->assertMatchesRegularExpression('/data-mute="club"\s*>/', $html);
+        $this->assertMatchesRegularExpression('/data-mute="club" data-channel="app" data-saved="0"\s*>/', $html);
         $this->assertMatchesRegularExpression('/value="club"\s+data-mute-field/', $html);
-        $this->assertMatchesRegularExpression('/data-mute="challenge" checked/', $html);
+        $this->assertMatchesRegularExpression('/data-mute="challenge" data-channel="app" data-saved="1" checked/', $html);
         $this->assertMatchesRegularExpression('/value="challenge" disabled/', $html);
         $this->patch('/notifications/preferences', ['enabled' => 1, 'muted_types' => ['ranked']])->assertRedirect();
         $this->assertSame(['ranked'], NotificationPreference::where('user_id', $user->id)->value('muted_types'));

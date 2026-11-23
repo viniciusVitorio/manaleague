@@ -313,8 +313,8 @@ class TournamentPodiumEmailTest extends TestCase
         $html = $this->actingAs($user)->get(route('profiles.edit'))->assertOk()
             ->assertSee('href="#notificacoes"', false)
             ->assertSeeInOrder(['id="notificacoes"', 'App', 'E-mail', 'Todas as notificações', 'Eventos', 'Partidas', 'Só no app', 'Salvar notificações'], false)
-            ->assertSee('name="email_enabled" value="1" aria-label="Todas as notificações por e-mail" checked', false)
-            ->assertSee('data-mute="email.tournament" checked', false)
+            ->assertSee('name="email_enabled" value="1" aria-label="Todas as notificações por e-mail" data-channel-master="email" checked', false)
+            ->assertSee('data-mute="email.tournament" data-channel="email" data-saved="1" checked', false)
             ->assertDontSee('data-mute="email.match"', false)
             ->getContent();
         $this->assertSame(6, substr_count($html, 'Só no app'));
@@ -322,7 +322,7 @@ class TournamentPodiumEmailTest extends TestCase
         // Desligar só o e-mail de Torneios grava e volta desligado.
         $this->patch(route('notifications.preferences'), ['enabled' => 1, 'muted_types' => [], 'email_enabled' => 1, 'email_muted_types' => ['tournament']])->assertRedirect();
         $this->assertSame(['tournament'], NotificationPreference::where('user_id', $user->id)->value('email_muted_types'));
-        $this->get(route('profiles.edit'))->assertSee('data-mute="email.tournament" >', false);
+        $this->assertMatchesRegularExpression('/data-mute="email.tournament" data-channel="email" data-saved="0"\s*>/', $this->get(route('profiles.edit'))->getContent());
 
         // Desligar o canal inteiro de e-mail.
         $this->patch(route('notifications.preferences'), ['enabled' => 1, 'muted_types' => [], 'email_enabled' => 0])->assertRedirect();

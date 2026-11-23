@@ -117,10 +117,24 @@
     }
 
     // Switches "ligado = recebe": desligar habilita o hidden que envia a categoria como silenciada.
+    // Chave geral de um canal ([data-channel-master], ex.: "Todas as notificações" no app) desligada: as categorias desse
+    // canal aparecem desligadas e travadas. A escolha de cada uma fica em data-saved e volta quando o canal religa;
+    // os campos enviados (muted_types) não mudam, então pausar o canal não apaga a configuração.
     function initMuteSwitches() {
         document.addEventListener('change', function (event) {
-            var sw = event.target.closest && event.target.closest('[data-mute]');
+            if (!event.target.closest) return;
+            var master = event.target.closest('[data-channel-master]');
+            if (master) {
+                var scope = master.form || document;
+                scope.querySelectorAll('[data-channel="' + master.dataset.channelMaster + '"]').forEach(function (sw) {
+                    sw.disabled = !master.checked;
+                    sw.checked = master.checked && sw.dataset.saved === '1';
+                });
+                return;
+            }
+            var sw = event.target.closest('[data-mute]');
             if (!sw) return;
+            sw.dataset.saved = sw.checked ? '1' : '0';
             var field = document.querySelector('[data-mute-field="' + sw.dataset.mute + '"]');
             if (field) field.disabled = sw.checked;
         });

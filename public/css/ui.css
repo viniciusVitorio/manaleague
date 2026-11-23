@@ -449,8 +449,8 @@ form.is-submitting [data-async-busy] { opacity: .6; }
 .notify-prefs-row>*{padding:var(--s3) 0;border-bottom:1px solid var(--ui-border)}
 .notify-prefs-row:last-child>*{border-bottom:0}
 .notify-prefs-row.is-master>*{background:var(--ui-muted)}
-.notify-prefs-row.is-master>:first-child{padding-left:var(--s3);border-radius:var(--ui-radius-sm) 0 0 var(--ui-radius-sm)}
-.notify-prefs-row.is-master>:last-child{border-radius:0 var(--ui-radius-sm) var(--ui-radius-sm) 0}
+.notify-prefs-row.is-master>:first-child{margin-left:calc(-1 * var(--s3));padding-left:var(--s3);border-radius:var(--ui-radius-sm) 0 0 var(--ui-radius-sm)}
+.notify-prefs-row.is-master>:last-child{margin-right:calc(-1 * var(--s3));padding-right:var(--s3);border-radius:0 var(--ui-radius-sm) var(--ui-radius-sm) 0}
 .notify-prefs-cell{display:flex;align-items:center;justify-content:center;align-self:stretch}
 .notify-prefs-none{color:var(--ui-fg-faint);font-size:.72rem;text-align:center;line-height:1.2}
 @media(max-width:900px){
