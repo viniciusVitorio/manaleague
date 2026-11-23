@@ -175,3 +175,29 @@ resource "aws_vpc_security_group_egress_rule" "nodes" {
   ip_protocol       = "-1"
   description       = "Private nodes reach AWS APIs, ECR/S3 and package downloads through the lab NAT"
 }
+
+variable "enable_public_lab_web" {
+  description = "Allow public IPv4 access to the lab ALB website."
+  type        = bool
+  default     = false
+}
+
+resource "aws_vpc_security_group_ingress_rule" "alb_public_http" {
+  count             = var.enable_public_lab_web ? 1 : 0
+  security_group_id = aws_security_group.alb.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+  description       = "Authorized public lab website HTTP"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "alb_public_https" {
+  count             = var.enable_public_lab_web && var.enable_lab_https ? 1 : 0
+  security_group_id = aws_security_group.alb.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  description       = "Authorized public lab website HTTPS"
+}
